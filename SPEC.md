@@ -1,4 +1,6 @@
-# BountyEscrow v1 — normative design, not implemented
+# PostmarkEscrow v1 — normative design, not implemented
+
+Project: **Postmark**, a QoreChain Build Before Q-Day entry.
 
 Build Before Q-Day, Post-Quantum dApp track. GitHub work is real; on diana
 (EVM chain ID 9800, native ID `qorechain-diana`) payouts are **test QOR**.
@@ -113,7 +115,7 @@ behalf; caller equality prevents a copied signature claiming for the copier.
 
 ### VerdictV1
 
-Define `VERDICT_TYPEHASH = keccak256("BountyEscrowVerdictV1(uint256 chainId,address escrow,uint256 bountyId,uint8 phase,uint8 outcome,address payee,uint64 mergedAt,bytes32 evidenceHash,uint256 nonce,uint256 claimRound,bytes32 disputedVerdictHash,bytes32 disputeEvidenceHash)")`.
+Define `VERDICT_TYPEHASH = keccak256("PostmarkEscrowVerdictV1(uint256 chainId,address escrow,uint256 bountyId,uint8 phase,uint8 outcome,address payee,uint64 mergedAt,bytes32 evidenceHash,uint256 nonce,uint256 claimRound,bytes32 disputedVerdictHash,bytes32 disputeEvidenceHash)")`.
 `payload = abi.encode(VERDICT_TYPEHASH, block.chainid, address(this), bountyId,
 uint8(phase), uint8(outcome), payee, mergedAt, evidenceHash, nonce, claimRound,
 disputedVerdictHash, disputeEvidenceHash)` with ordinary ABI 32-byte fields,

@@ -1,7 +1,8 @@
-# Build plan — QoreChain Build Before Q-Day
+# Build plan — Postmark (QoreChain Build Before Q-Day)
 
 **Category:** Post-Quantum dApp (1st $1,500 / 2nd $750 / 3rd $500). Agents are a feature here, not the category.
 **Product:** a post-quantum bounty board that pays out on verified outcomes, in native test QOR only. A funder locks QOR on a GitHub PR or issue; a contributor makes a PQ-signed, time-limited identity claim. Payout to that claimant needs ML-DSA-87 signatures from 2 of 3 independent verifiers, then a 24-hour challenge window. A bonded dispute freezes the payout; the same verifier set resolves it, not an independent appeal panel.
+**Repo:** Ololadestephen/Postmark (draft; create/push only after owner approval).
 **Deadline:** Dec 2, 23:59 UTC. **Our target:** Dec 2, 12:00 UTC (1:00 PM WAT).
 **Wording rule:** "real issues, testnet payouts". Diana QOR has no monetary value.
 **Prior-work rule:** all code is new, in this repo. The README names Proven as prior work.
@@ -15,7 +16,7 @@ The threat-model review runs in parallel rather than blocking all implementation
 | ID | Dates | Milestone | Exit check |
 |----|-------|-----------|------------|
 | T1 | Nov 19 | Spec + PQC test library | `forge test` 12/12 passing; SPEC.md written (done) |
-| T2 | Nov 19–20 | Accounts and chain setup: register (GitHub, X, QoreX testnet address), faucet QOR, register an ML-DSA-87 key, attend workshop 3 (Nov 20, 16:30 UTC) | `pqcKeyStatus` returns live for our key on diana |
+| T2 | Nov 19–20 | Accounts and chain setup: register (GitHub, X, QoreX testnet address), faucet QOR, register an ML-DSA-87 key, attend workshop 3 (Nov 20, 16:30 UTC) | `pqcKeyStatus` returns live for our key on diana (exit check passed Nov 19: qor1y5t5h5af3nvr8t909zxefaxvxfpz06vawzg8sk / 0x25174bd3…e99d, alg 1, 2592-byte key sha256 31fc187d…788f, possession proven, registered by QoreX at height 10375785; `npm run key-status -- <addr>`. Workshop 3 still open) |
 | T3 | Nov 20 | Recruit 2 outside verifiers (co-founder plus one other person); ask on QoreChain Discord about demoing bounties on their lightnode docs issues | 3 verifier keys from 3 different people, registered; Discord answer logged (yes, or fall back to Soryn/fibcheck issues) |
 | T4a | Nov 21 | Create/fund slice: native QOR accounting, immutable verifier accounts, Open state | Foundry tests: exact msg.value, parameter bounds, live distinct verifier keys, liability accounting |
 | T4b | Nov 22 | Claim slice: ClaimV1 signing, live claimant key, timeout and round replacement | Foundry tests: valid/invalid/replayed claims, excluded roles, active/expired/deadline boundaries |
