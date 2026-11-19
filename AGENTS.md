@@ -29,3 +29,4 @@ Design source of truth: `SPEC.md`. Schedule and milestones: `PLAN.md`.
 
 ## Milestone reporting
 After each milestone in PLAN.md, report the milestone ID, its exit check output, and links (PR, tx, explorer). Then mark it done in PLAN.md.
+Progress reports, working notes and design reasoning go in `notes/` (gitignored), not in commits. Commit messages stay short and plain.
