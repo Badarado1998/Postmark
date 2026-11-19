@@ -29,14 +29,14 @@ binary. Initialize the pinned forge-std submodule with
 
 | Item | Value |
 |---|---|
-| PostmarkEscrow | [`0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2`](https://dashboard.qorechain.io/explorer/address/0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2) (chain 9800, `qorechain-diana`) |
-| Deploy tx | [`0x5f38a4eb…8891be`](https://dashboard.qorechain.io/explorer/tx/0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be), block 10391519, 5,198,980 gas |
-| Deployer | `0x9d7d0f1364d6F37115d1d5be1C89362595287313` (testnet-only key, ML-DSA-87 registered in `779144F4…C4B017`) |
-| Scoped EVM window | opened `28AC7A1C…4CC29B` (600 blocks, 3 txs, 2 QOR cap; unscoped targets, because a target list refuses contract creation), closed right after the deploy in `D42BD1BB…02C3BA` |
+| PostmarkEscrow | [`0xb781E296FB35ccd2497589526114373bA0bff79b`](https://dashboard.qorechain.io/explorer/address/0xb781E296FB35ccd2497589526114373bA0bff79b) (chain 9800, `qorechain-diana`) |
+| Deploy tx | [`0xe993fe8a…e4a34b`](https://dashboard.qorechain.io/explorer/tx/0xe993fe8a73deb05bf6f780dba2a08a0e9e65db9453de53cf1c6394ea7fe4a34b), block 10395350, 3,382,207 gas |
+| Deployer | `0x9d7d0f1364d6F37115d1d5be1C89362595287313` (testnet-only key with a registered ML-DSA-87 key) |
+| Scoped EVM window | opened `4CCED589…AFF0F9` (600 blocks, 3 txs, 2 QOR cap; no target list, because a target list refuses contract creation), closed right after the deploy in `472BE49D…45C9DC` |
 
-The on-chain code matches `forge inspect PostmarkEscrow deployedBytecode` byte for byte. Full record:
-[`deployments/diana.json`](deployments/diana.json). Window tooling: `npm run window -- status|register|open|close`.
-In the explorer, switch the network to Testnet (diana).
+The on-chain code matches `forge inspect PostmarkEscrow deployedBytecode` byte for byte. Full record, including the
+superseded first deployment: [`deployments/diana.json`](deployments/diana.json). Window tooling:
+`npm run window -- status|register|open|close`. In the explorer, switch the network to Testnet (diana).
 
 * [Library setup, API, example and limitations](src/test-utils/README.md)
 * [PostmarkEscrow specification and test plan](SPEC.md)

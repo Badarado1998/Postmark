@@ -187,7 +187,7 @@ contract ClaimTest is EscrowFixture {
         // create with a tight claimTimeout so late claims still fit until close
         vm.prank(funder);
         uint256 id = escrow.createBounty{value: AMOUNT + REWARD}(
-            AMOUNT, WORK, deadline, 7 days, verifiers, BOND, REWARD);
+            AMOUNT, OWNER_REPO, KIND, NUMBER, deadline, 7 days, verifiers, BOND, REWARD);
         // warp inside deadline but with less than 7 days remaining
         vm.warp(deadline - 1 days);
         bytes memory m = escrow.claimMessage(id, claimant, IDENTITY, 1);

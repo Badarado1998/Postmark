@@ -1,8 +1,14 @@
 #!/usr/bin/env node
-// Postmark diana deploy window helper. Reads DEPLOYER_KEY and
-// DEPLOYER_PQC_RECOVERY_CODE from the environment; never prints secrets.
-// Subcommands: recovery-code | status | register | open | close
-import { writeFileSync, existsSync } from 'node:fs';
+// Postmark diana deploy window helper. Account profiles live outside the
+// repo: a pair `<base>.env` (KEY=0x..., ADDRESS=0x...) and `<base>-pqc.env`
+// (PQC_RECOVERY_CODE=QRC1...). --env <base> selects the profile; the default
+// is the deployer pair under ~/.config/postmark, whose vars keep the legacy
+// DEPLOYER_ names. Nothing secret is ever printed.
+// Subcommands:
+//   new-account <name>   create e2e/<name>.env + <name>-pqc.env
+//   recovery-code        write the -pqc.env file for the selected profile
+//   status | register | send <to> <uqor> | open <b> <n> <v> [targets] | close
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import {
@@ -26,42 +32,66 @@ const REST = process.env.QORE_REST || 'https://api-testnet.qore.host';
 const RPC = process.env.QORE_RPC || 'https://rpc-testnet.qore.host';
 const CHAIN_ID = 'qorechain-diana';
 const DENOM = 'uqor';
-const PQC_ENV = `${process.env.HOME}/.config/postmark/deployer-pqc.env`;
+const CONFIG_DIR = `${process.env.HOME}/.config/postmark`;
+const E2E_DIR = `${CONFIG_DIR}/e2e`;
 const FEE = { amount: [{ denom: DENOM, amount: '60000' }], gas: '600000' };
 
 const die = (msg, code = 2) => { console.error(`window: ${msg}`); process.exit(code); };
 const hex = (b) => Buffer.from(b).toString('hex');
 const toBytes = (h) => Uint8Array.from(Buffer.from(h.replace(/^0x/, ''), 'hex'));
 
-function deployerKeyBytes() {
-  const k = process.env.DEPLOYER_KEY;
-  if (!k) die('DEPLOYER_KEY not set in environment');
+// Parse --env <base> then load the profile files into process.env (real env wins).
+let profileBase = `${CONFIG_DIR}/deployer`;
+{
+  const i = process.argv.indexOf('--env');
+  if (i !== -1) {
+    const p = process.argv[i + 1];
+    if (!p) die('--env needs a path');
+    profileBase = p.endsWith('.env') ? p.slice(0, -4) : p;
+    process.argv.splice(i, 2);
+  }
+}
+const ENV_FILE = `${profileBase}.env`;
+const PQC_FILE = `${profileBase}-pqc.env`;
+
+for (const f of [ENV_FILE, PQC_FILE]) {
+  if (!existsSync(f)) continue;
+  for (const line of readFileSync(f, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2];
+  }
+}
+const envVar = (name, legacy) => process.env[name] || (legacy && process.env[legacy]);
+
+function keyBytes() {
+  const k = envVar('KEY', 'DEPLOYER_KEY');
+  if (!k) die(`KEY not set (env or ${ENV_FILE})`);
   const b = toBytes(k);
-  if (b.length !== 32) die('DEPLOYER_KEY is not 32 bytes');
+  if (b.length !== 32) die('KEY is not 32 bytes');
   return b;
 }
 
-// Classical address check: DEPLOYER_KEY must produce DEPLOYER_ADDRESS.
+// Classical address check: KEY must produce ADDRESS.
 function classicalAccount() {
-  const seed = deployerKeyBytes();
+  const seed = keyBytes();
   const pub = secp256k1.getPublicKey(seed, true);
   const uncompressed = secp256k1.getPublicKey(seed, false).slice(1);
   const addr20 = keccak256(uncompressed).slice(12);
   const addrs = qoreAddresses({ hex: hex(addr20) });
-  const want = (process.env.DEPLOYER_ADDRESS || '').toLowerCase();
+  const want = (envVar('ADDRESS', 'DEPLOYER_ADDRESS') || '').toLowerCase();
   if (addrs.evm.toLowerCase() !== want) {
-    die(`signer mismatch: DEPLOYER_KEY derives ${addrs.evm}, expected ${want}`);
+    die(`signer mismatch: KEY derives ${addrs.evm}, expected ${want}`);
   }
   return { seed, pub, cosmos: addrs.cosmos, evm: addrs.evm };
 }
 
 // Unified account incl. PQC key from the recovery code.
 function unified() {
-  const code = process.env.DEPLOYER_PQC_RECOVERY_CODE;
-  if (!code) die('DEPLOYER_PQC_RECOVERY_CODE not set in environment');
+  const code = envVar('PQC_RECOVERY_CODE', 'DEPLOYER_PQC_RECOVERY_CODE');
+  if (!code) die(`PQC_RECOVERY_CODE not set (env or ${PQC_FILE})`);
   const { seed } = classicalAccount();
   const account = unifiedAccountFromSeed(seed, { recoveryCode: code });
-  const expected = qoreAddresses({ evm: process.env.DEPLOYER_ADDRESS });
+  const expected = qoreAddresses({ evm: envVar('ADDRESS', 'DEPLOYER_ADDRESS') });
   if (account.cosmos !== expected.cosmos) {
     die(`signer mismatch: account derives ${account.cosmos}, expected ${expected.cosmos}`);
   }
@@ -109,16 +139,44 @@ function checkBroadcast(res) {
   return res;
 }
 
+const json = (o) => JSON.stringify(o,
+  (k, v) => typeof v === 'bigint' ? v.toString() : v, 2);
 const [cmd, ...args] = process.argv.slice(2);
 
+if (cmd === 'new-account') {
+  const name = args[0];
+  if (!/^[a-z0-9_-]+$/i.test(name || '')) die('usage: new-account <name> ([a-z0-9_-])');
+  const envF = `${E2E_DIR}/${name}.env`;
+  const pqcF = `${E2E_DIR}/${name}-pqc.env`;
+  if (existsSync(envF) || existsSync(pqcF)) {
+    die(`${envF} or ${pqcF} already exists; refusing to overwrite`);
+  }
+  mkdirSync(E2E_DIR, { recursive: true, mode: 0o700 });
+  const seed = secp256k1.utils.randomSecretKey();
+  const uncompressed = secp256k1.getPublicKey(seed, false).slice(1);
+  const addrs = qoreAddresses({ hex: hex(keccak256(uncompressed).slice(12)) });
+  const code = generatePqcRecoveryCode();
+  writeFileSync(envF, `KEY=0x${hex(seed)}\nADDRESS=${addrs.evm}\n`, { mode: 0o600 });
+  writeFileSync(pqcF, `PQC_RECOVERY_CODE=${code}\n`, { mode: 0o600 });
+  const key = pqcKeyFromRecoveryCode(code, addrs.cosmos);
+  console.log(json({
+    evm: addrs.evm, cosmos: addrs.cosmos,
+    pubkeySha256: createHash('sha256').update(key.publicKey).digest('hex'),
+    files: [envF, pqcF],
+  }));
+  process.exit(0);
+}
+
 if (cmd === 'recovery-code') {
-  if (existsSync(PQC_ENV)) die(`${PQC_ENV} already exists; refusing to overwrite`);
+  if (existsSync(PQC_FILE)) die(`${PQC_FILE} already exists; refusing to overwrite`);
   const { cosmos } = classicalAccount();
   const code = generatePqcRecoveryCode();
   const key = pqcKeyFromRecoveryCode(code, cosmos);
-  writeFileSync(PQC_ENV, `DEPLOYER_PQC_RECOVERY_CODE=${code}\n`, { mode: 0o600 });
-  console.log(JSON.stringify({
-    file: PQC_ENV,
+  const varName = profileBase.endsWith('/deployer')
+    ? 'DEPLOYER_PQC_RECOVERY_CODE' : 'PQC_RECOVERY_CODE';
+  writeFileSync(PQC_FILE, `${varName}=${code}\n`, { mode: 0o600 });
+  console.log(json({
+    file: PQC_FILE,
     account: cosmos,
     pubkeySha256: createHash('sha256').update(key.publicKey).digest('hex'),
   }));
@@ -131,8 +189,8 @@ if (cmd === 'status') {
   const window = await fetchEvmWindow({ rest: REST, address: cosmos });
   const bal = await fetch(`${REST}/cosmos/bank/v1beta1/balances/${cosmos}`);
   const { balances } = await bal.json();
-  console.log(JSON.stringify({ cosmos, evm, pqc, window,
-    balances: balances || [] }, (k, v) => typeof v === 'bigint' ? v.toString() : v, 2));
+  console.log(json({ profile: profileBase, cosmos, evm, pqc, window,
+    balances: balances || [] }));
   process.exit(0);
 }
 
@@ -142,7 +200,7 @@ if (cmd === 'register') {
   if (status.registered) {
     const match = isRegisteredPqcKey(status, account.pqc.publicKey);
     if (match === false) die('account already has a DIFFERENT PQC key registered', 1);
-    console.log(JSON.stringify({ alreadyRegistered: true, keyVerified: match !== false }));
+    console.log(json({ alreadyRegistered: true, keyVerified: match !== false }));
     process.exit(0);
   }
   const proof = signProofOfPossession({
@@ -155,9 +213,30 @@ if (cmd === 'register') {
   const res = await signer.signAndBroadcast({ broadcastTx: tmBroadcast }, {
     chainId: CHAIN_ID, ...seq, fee: FEE, messages: [message] });
   checkBroadcast(res);
-  console.log(JSON.stringify({
+  console.log(json({
     transactionHash: res.transactionHash, height: res.height.toString(),
     gasUsed: res.gasUsed.toString() }));
+  process.exit(0);
+}
+
+if (cmd === 'send') {
+  const [to, uqor] = args;
+  if (!to || !uqor || !/^[0-9]+$/.test(uqor)) {
+    die('usage: send <to-qor1-or-0x> <uqor>');
+  }
+  const account = unified();
+  const status = await fetchPqcStatus({ rest: REST, address: account.cosmos });
+  if (!status.registered) die('sender has no registered PQC key; run register first', 1);
+  const toQor = to.startsWith('0x')
+    ? qoreAddresses({ evm: to }).cosmos : to;
+  const signer = new EthNativeSigner(account, { rest: REST });
+  const seq = await accountSeq(account.cosmos);
+  const res = await signer.bankSend({ broadcastTx: tmBroadcast }, toQor,
+    [{ denom: DENOM, amount: uqor }],
+    { chainId: CHAIN_ID, ...seq, fee: FEE });
+  checkBroadcast(res);
+  console.log(json({ from: account.cosmos, to: toQor, uqor,
+    transactionHash: res.transactionHash, height: res.height?.toString() }));
   process.exit(0);
 }
 
@@ -176,9 +255,8 @@ if (cmd === 'open') {
     chainId: CHAIN_ID, ...seq, fee: FEE, messages: [message] });
   checkBroadcast(res);
   const window = await fetchEvmWindow({ rest: REST, address: account.cosmos });
-  console.log(JSON.stringify({ transactionHash: res.transactionHash,
-    height: res.height.toString(), gasUsed: res.gasUsed.toString(), window },
-    (k, v) => typeof v === 'bigint' ? v.toString() : v, 2));
+  console.log(json({ transactionHash: res.transactionHash,
+    height: res.height.toString(), gasUsed: res.gasUsed.toString(), window }));
   process.exit(0);
 }
 
@@ -190,9 +268,9 @@ if (cmd === 'close') {
     chainId: CHAIN_ID, ...seq, fee: FEE,
     messages: [closeEvmWindowMsg(account.cosmos)] });
   checkBroadcast(res);
-  console.log(JSON.stringify({ transactionHash: res.transactionHash,
+  console.log(json({ transactionHash: res.transactionHash,
     height: res.height.toString(), gasUsed: res.gasUsed.toString() }));
   process.exit(0);
 }
 
-die('usage: window.mjs recovery-code|status|register|open <blocks> <maxTxs> <maxValue> [targets]|close');
+die('usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close');

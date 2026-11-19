@@ -57,7 +57,8 @@ contract EscrowHandler is PqcTest {
         vm.deal(funder, amount + reward);
         vm.prank(funder);
         try escrow.createBounty{value: amount + reward}(
-            amount, keccak256(abi.encode(seed, idCount)), dl, timeout,
+            amount, "acme/widgets", uint8(bound(seed >> 140, 0, 1)),
+            bound(seed >> 160, 1, 1_000_000), dl, timeout,
             verifiers, bond, reward
         ) returns (uint256 id) {
             idCount = id;

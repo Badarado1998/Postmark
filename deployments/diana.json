@@ -3,50 +3,143 @@
   "chainId": 9800,
   "nativeChainId": "qorechain-diana",
   "contract": "PostmarkEscrow",
-  "address": "0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2",
+  "address": "0xb781E296FB35ccd2497589526114373bA0bff79b",
   "deployer": {
     "evm": "0x9d7d0f1364d6F37115d1d5be1C89362595287313",
     "cosmos": "qor1n47s7ymy6mehz9w36klpezfkyk2jsucnhgk58p"
   },
   "deploy": {
-    "txHash": "0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be",
-    "block": 10391519,
-    "blockHash": "0x7d7b7e844f0e1a1bd5d151db6395d85ff12492e44b0d4ea9771ca843c03acf8d",
-    "gasUsed": 5198980,
+    "txHash": "0xe993fe8a73deb05bf6f780dba2a08a0e9e65db9453de53cf1c6394ea7fe4a34b",
+    "block": 10395350,
+    "blockHash": "0x816bdbd1dfb552d548a1e00d1c462a427fb7db3e64632fc9e9ff12f05e2c953f",
+    "gasUsed": 3382207,
     "gasPriceWei": "112500000000",
     "gasLimit": 6500000,
     "status": "success"
   },
   "compiler": {
     "solc": "0.8.24",
-    "optimizer": false,
+    "optimizer": true,
+    "optimizerRuns": 200,
     "viaIR": false,
     "evmVersion": "cancun"
   },
-  "gitCommit": "176d194",
+  "gitCommit": "1c7acb0+uncommitted D11",
   "pqc": {
     "algorithmId": 1,
     "registerTxHash": "779144F4B96A0048A076DB0DFC5537B589A932BA5EFA0CE053D7DD7FDAC4B017",
     "registerHeight": 10391428
   },
   "window": {
-    "openTxHash": "28AC7A1C3E32EE5D18CA0584D63FEDE94724E3E6EE6D983D102A44FF364CC29B",
-    "openHeight": 10391437,
+    "openTxHash": "4CCED589F0B8D68052B839066E20019534CE9D41FDD2A821B189E05FD0AFF0F9",
+    "openHeight": 10395346,
     "params": {
       "blocks": 600,
       "maxTxs": 3,
       "maxValueUqor": "2000000",
       "allowedTargets": []
     },
-    "closeTxHash": "D42BD1BBA358CF9B487C9BCE329C6BB1F911377873DAF1B4220C450ED602C3BA",
-    "closeHeight": 10391526
+    "closeTxHash": "472BE49D1C7485C3204C321499C0C7F5F8A566ABE635CEDFF2C0ED6D7645C9DC",
+    "closeHeight": 10395355
+  },
+  "e2eAccounts": {
+    "funder": {
+      "evm": "0x4Fe9f2B175f6D533c9b88902Dc257A34384873bD",
+      "cosmos": "qor1fl5l9vt47m2n8jdc3ypdcft6xsuysuaa8r6394",
+      "fundTxHash": "7080ACB19D759315C88D4C11D52E4F84FD700F5B296D9CB2F893E462BC0A01A7",
+      "registerTxHash": "83A62C450C678A1DA926EE0BA96709F43320E86AE8ABBCF29AB349B91E9DEBFD"
+    },
+    "claimant": {
+      "evm": "0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6",
+      "cosmos": "qor1g78j5z9gr0nuafpt6d9adyq9j0a9d39kcf9w77",
+      "fundTxHash": "E0B934DAF18796BAAD27FF0CE8E12D5D65AF2B0B1F7200446CC59EF08508FF5F",
+      "registerTxHash": "6478E93BF368E80FD4CA2D7ED23C86178C182621C412EB937F31DD2A7A3E74EE"
+    },
+    "verifier0": {
+      "evm": "0x01B451550bEf4cc51Bb24B8C5E5b4b23a368a9cE",
+      "cosmos": "qor1qx69z4gtaaxv2xajfwx9uk6tyw3k32wwjut3uw",
+      "fundTxHash": "300DCD71A8B2EBC24E065167D013726428C46E2DCCCAD48A3729585B2193A315",
+      "registerTxHash": "A43863A01FE2B5FA2030A86B35321E2D544D9B4011F8602C7929A92DD2CA9E67"
+    },
+    "verifier1": {
+      "evm": "0x8e815476f878b05a2a0E4BC452112311eAEcEa31",
+      "cosmos": "qor136q4gahc0zc952swf0z9yyfrz84we633dmutpu",
+      "fundTxHash": "0CA3724FC353A1C941199F219F4A0B1CA6A3DEA863F036F3D2A153E7785F0A0D",
+      "registerTxHash": "2BBABAC374E25DCE11EA2E66C77D0F4897135E998E4623C4A35EA06F4E5E6536"
+    },
+    "verifier2": {
+      "evm": "0xFac4a64980C8777799EBae562a82825185e20558",
+      "cosmos": "qor1ltz2vjvqepmh0x0t4etz4q5z2xz7yp2c4cwx7y",
+      "fundTxHash": "2470C960BDA0BC9D446E35B4CBF9C2E404380BEAAC08AF8FF22AAD95A005F41A",
+      "registerTxHash": "BDA744DA18E2B5C703EC61FBE174E8E039B77B5ADB15BB371966C2C92DE65E2B"
+    },
+    "disputer": {
+      "evm": "0x2B18957281E6cA2f5a8226E8acAF2bc5aF251412",
+      "cosmos": "qor19vvf2u5pum9z7k5zym52etetckhj29qj2mglpx",
+      "fundTxHash": "D19292F07F148317589C34485B559F92E07E3F2DDEA30D2F12F59AECE790E8E6",
+      "registerTxHash": "B7E3B5FE6027D6F85384EE611F8A702AC843AF68E22F491802D8FFC06ED4F967"
+    }
   },
   "explorer": {
     "base": "https://dashboard.qorechain.io/explorer",
-    "contract": "https://dashboard.qorechain.io/explorer/address/0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2",
-    "deployTx": "https://dashboard.qorechain.io/explorer/tx/0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be",
-    "deployBlock": "https://dashboard.qorechain.io/explorer/block/10391519",
+    "contract": "https://dashboard.qorechain.io/explorer/address/0xb781E296FB35ccd2497589526114373bA0bff79b",
+    "deployTx": "https://dashboard.qorechain.io/explorer/tx/0xe993fe8a73deb05bf6f780dba2a08a0e9e65db9453de53cf1c6394ea7fe4a34b",
+    "deployBlock": "https://dashboard.qorechain.io/explorer/block/10395350",
     "note": "testnet/mainnet toggle is cookie-based (qore-network); set Testnet/diana"
   },
-  "deployedAt": "2026-11-19T20:05:27.531Z"
+  "deployedAt": "2026-11-19T21:36:03.517Z",
+  "previous": [
+    {
+      "network": "diana",
+      "chainId": 9800,
+      "nativeChainId": "qorechain-diana",
+      "contract": "PostmarkEscrow",
+      "address": "0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2",
+      "deployer": {
+        "evm": "0x9d7d0f1364d6F37115d1d5be1C89362595287313",
+        "cosmos": "qor1n47s7ymy6mehz9w36klpezfkyk2jsucnhgk58p"
+      },
+      "deploy": {
+        "txHash": "0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be",
+        "block": 10391519,
+        "blockHash": "0x7d7b7e844f0e1a1bd5d151db6395d85ff12492e44b0d4ea9771ca843c03acf8d",
+        "gasUsed": 5198980,
+        "gasPriceWei": "112500000000",
+        "gasLimit": 6500000,
+        "status": "success"
+      },
+      "compiler": {
+        "solc": "0.8.24",
+        "optimizer": false,
+        "viaIR": false,
+        "evmVersion": "cancun"
+      },
+      "gitCommit": "176d194",
+      "pqc": {
+        "algorithmId": 1,
+        "registerTxHash": "779144F4B96A0048A076DB0DFC5537B589A932BA5EFA0CE053D7DD7FDAC4B017",
+        "registerHeight": 10391428
+      },
+      "window": {
+        "openTxHash": "28AC7A1C3E32EE5D18CA0584D63FEDE94724E3E6EE6D983D102A44FF364CC29B",
+        "openHeight": 10391437,
+        "params": {
+          "blocks": 600,
+          "maxTxs": 3,
+          "maxValueUqor": "2000000",
+          "allowedTargets": []
+        },
+        "closeTxHash": "D42BD1BBA358CF9B487C9BCE329C6BB1F911377873DAF1B4220C450ED602C3BA",
+        "closeHeight": 10391526
+      },
+      "explorer": {
+        "base": "https://dashboard.qorechain.io/explorer",
+        "contract": "https://dashboard.qorechain.io/explorer/address/0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2",
+        "deployTx": "https://dashboard.qorechain.io/explorer/tx/0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be",
+        "deployBlock": "https://dashboard.qorechain.io/explorer/block/10391519",
+        "note": "testnet/mainnet toggle is cookie-based (qore-network); set Testnet/diana"
+      },
+      "note": "superseded: createBounty API changed (D11)"
+    }
+  ]
 }

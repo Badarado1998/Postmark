@@ -45,6 +45,13 @@ contract MessageTest is EscrowFixture {
         sigs[1] = pqcSign(vSks[b], msgBytes);
     }
 
+    function testWorkHashIsIndependentKeccak() public {
+        uint256 id = _create();
+        bytes32 expected = keccak256(
+            abi.encode("github", "acme/widgets", uint8(0), uint256(42)));
+        assertEq(escrow.getBounty(id).workHash, expected);
+    }
+
     function testTypehashConstants() public view {
         assertEq(escrow.CLAIM_TYPEHASH(), CLAIM_TYPEHASH);
         assertEq(escrow.VERDICT_TYPEHASH(), TYPEHASH);
@@ -193,7 +200,7 @@ contract MessageTest is EscrowFixture {
         PostmarkEscrow other = new PostmarkEscrow("qorechain-diana");
         vm.prank(funder);
         uint256 oid = other.createBounty{value: AMOUNT + REWARD}(
-            AMOUNT, WORK, deadline, CLAIM_TIMEOUT, verifiers, BOND, REWARD);
+            AMOUNT, OWNER_REPO, KIND, NUMBER, deadline, CLAIM_TIMEOUT, verifiers, BOND, REWARD);
         assertEq(oid, id);
         // claim on it too (round 1, same claimant)
         uint256 r = other.getBounty(oid).claimRound + 1;
@@ -211,7 +218,7 @@ contract MessageTest is EscrowFixture {
         PostmarkEscrow vladi = new PostmarkEscrow("qorechain-vladi");
         vm.prank(funder);
         uint256 vid = vladi.createBounty{value: AMOUNT + REWARD}(
-            AMOUNT, WORK, deadline, CLAIM_TIMEOUT, verifiers, BOND, REWARD);
+            AMOUNT, OWNER_REPO, KIND, NUMBER, deadline, CLAIM_TIMEOUT, verifiers, BOND, REWARD);
         r = vladi.getBounty(vid).claimRound + 1;
         csig = pqcSign(cSk, vladi.claimMessage(vid, claimant, IDENTITY, r));
         vm.prank(claimant);

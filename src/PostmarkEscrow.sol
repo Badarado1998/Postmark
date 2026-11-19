@@ -71,6 +71,8 @@ contract PostmarkEscrow is ReentrancyGuard {
     event BountyCreated(uint256 indexed bountyId, address indexed funder,
         uint256 amount, uint256 reward, bytes32 workHash, uint64 deadline,
         uint64 claimTimeout, address[3] verifiers, uint256 bondAmount);
+    event BountyWork(uint256 indexed bountyId, bytes32 indexed workHash,
+        string ownerRepo, uint8 kind, uint256 number);
     event Claimed(uint256 indexed bountyId, address indexed claimant,
         bytes32 identityHash, uint256 claimRound, uint64 expiresAt);
     event ClaimReleased(uint256 indexed bountyId, address indexed claimant, uint256 claimRound);
@@ -127,12 +129,15 @@ contract PostmarkEscrow is ReentrancyGuard {
 
     /// @notice Create and fund a bounty in native QOR. No payee is chosen;
     /// contributors claim with a PQ signature.
-    function createBounty(uint256 amount, bytes32 workHash, uint64 deadline,
-        uint64 claimTimeout, address[3] calldata verifiers, uint256 bondAmount,
+    function createBounty(uint256 amount, string calldata ownerRepo,
+        uint8 kind, uint256 number, uint64 deadline, uint64 claimTimeout,
+        address[3] calldata verifiers, uint256 bondAmount,
         uint256 challengeReward) external payable nonReentrant returns (uint256 bountyId)
     {
         if (amount == 0 || bondAmount == 0 || challengeReward == 0
-            || workHash == bytes32(0)) revert InvalidParameters();
+            || kind > 1 || number == 0 || !_validOwnerRepo(ownerRepo)) {
+            revert InvalidParameters();
+        }
         for (uint256 i; i < 3; ++i) {
             address v = verifiers[i];
             if (v == address(0) || v == msg.sender) revert InvalidParameters();
@@ -148,6 +153,7 @@ contract PostmarkEscrow is ReentrancyGuard {
         }
         _requireDistinctEligibleKeys(verifiers);
 
+        bytes32 workHash = keccak256(abi.encode("github", ownerRepo, kind, number));
         bountyId = nextBountyId++;
         Bounty storage b = bounties[bountyId];
         b.funder = msg.sender;
@@ -162,6 +168,26 @@ contract PostmarkEscrow is ReentrancyGuard {
         totalLiabilities += msg.value;
         emit BountyCreated(bountyId, msg.sender, amount, challengeReward,
             workHash, deadline, claimTimeout, verifiers, bondAmount);
+        emit BountyWork(bountyId, workHash, ownerRepo, kind, number);
+    }
+
+    /// @dev Canonical `owner/repo`: 3..140 bytes, exactly one '/', neither
+    /// first nor last, chars [a-z0-9._-/].
+    function _validOwnerRepo(string calldata s) internal pure returns (bool) {
+        bytes calldata r = bytes(s);
+        uint256 n = r.length;
+        if (n < 3 || n > 140 || r[0] == "/" || r[n - 1] == "/") return false;
+        uint256 slashes;
+        for (uint256 i; i < n; ++i) {
+            bytes1 c = r[i];
+            if (c == "/") {
+                ++slashes;
+            } else if (!(c >= "a" && c <= "z" || c >= "0" && c <= "9"
+                || c == "." || c == "_" || c == "-")) {
+                return false;
+            }
+        }
+        return slashes == 1;
     }
 
     /// @notice Claim an open bounty with an ML-DSA signature over ClaimV1

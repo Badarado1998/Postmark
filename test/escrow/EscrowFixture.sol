@@ -24,7 +24,11 @@ abstract contract EscrowFixture is PqcTest {
     uint256 internal constant REWARD = 0.1 ether;
     uint256 internal constant BOND = 0.2 ether;
     uint64 internal constant CLAIM_TIMEOUT = 1 days;
-    bytes32 internal constant WORK = keccak256("postmark.work");
+    string internal constant OWNER_REPO = "acme/widgets";
+    uint8 internal constant KIND = 0;
+    uint256 internal constant NUMBER = 42;
+    bytes32 internal constant WORK =
+        keccak256(abi.encode("github", "acme/widgets", uint8(0), uint256(42)));
     bytes32 internal constant IDENTITY = keccak256("postmark.identity");
     bytes32 internal constant EVIDENCE = keccak256("postmark.evidence");
     bytes32 internal constant DEVIDENCE = keccak256("postmark.dispute.evidence");
@@ -82,7 +86,8 @@ abstract contract EscrowFixture is PqcTest {
     function _create() internal returns (uint256 id) {
         vm.prank(funder);
         return escrow.createBounty{value: AMOUNT + REWARD}(
-            AMOUNT, WORK, deadline, CLAIM_TIMEOUT, verifiers, BOND, REWARD);
+            AMOUNT, OWNER_REPO, KIND, NUMBER, deadline, CLAIM_TIMEOUT,
+            verifiers, BOND, REWARD);
     }
 
     /// Real ML-DSA-87 claim by `who` (must have a registered key).

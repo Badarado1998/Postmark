@@ -215,7 +215,7 @@ timeout shortcut defeating the PQ quorum and must be prominent in the demo.
 
 ```solidity
 constructor(string memory nativeChainId_);
-function createBounty(uint256 amount, bytes32 workHash,
+function createBounty(uint256 amount, string calldata ownerRepo, uint8 kind, uint256 number,
     uint64 deadline, uint64 claimTimeout,
     address[3] calldata verifiers, uint256 bondAmount, uint256 challengeReward)
     external payable returns (uint256 bountyId);
@@ -255,6 +255,8 @@ Events (types and indexed fields):
 event BountyCreated(uint256 indexed bountyId, address indexed funder,
     uint256 amount, uint256 reward, bytes32 workHash, uint64 deadline,
     uint64 claimTimeout, address[3] verifiers, uint256 bondAmount);
+event BountyWork(uint256 indexed bountyId, bytes32 indexed workHash,
+    string ownerRepo, uint8 kind, uint256 number);
 event Claimed(uint256 indexed bountyId, address indexed claimant,
     bytes32 identityHash, uint256 claimRound, uint64 expiresAt);
 event VerdictSubmitted(uint256 indexed bountyId, bytes32 payloadHash, Outcome outcome,
@@ -450,6 +452,61 @@ D10 Smaller orders. `claim` on Pending/Disputed/terminal is `ClaimClosed()` befo
     `UnknownBounty`/`NotFunder` -> normalize -> state -> `DeadlineNotPassed`. An ineligible claimant key is
     `KeyIneligible(caller)`. PAY at exactly `now == deadline` cannot happen (a claim must end by the
     deadline), so exact-deadline submission is a REFUND case.
+
+D11 Work reference on chain (Nov 19, for the web app). `createBounty` takes `ownerRepo`, `kind` and
+    `number` instead of a precomputed `workHash`, computes `workHash` itself with the formula above,
+    stores it, and emits `BountyWork` right after `BountyCreated`. `ownerRepo` must be 3 to 140 bytes,
+    contain exactly one `/` that is neither first nor last, and use only `[a-z0-9._-]` (lowercase, so
+    the canonical form is enforced, not trusted); `kind` must be 0 (issue) or 1 (PR); `number > 0`.
+    Anything else is `InvalidParameters()`. Why: without a backend the app has to learn which GitHub
+    item a bounty pays for from the chain, and computing the hash on chain means a funder cannot
+    publish a reference that disagrees with the hash.
+    The extra code took the unoptimized runtime over 24,576 bytes, so the optimizer is on (200 runs).
+
+## Off-chain formats (web app, local signer, verifiers)
+
+All hashes are `keccak256(abi.encode(...))` with the listed Solidity types. Strings are lowercase
+where marked. GitHub numbers are the REST API ids.
+
+**Identity (`claim.identityHash`).** Before claiming, the claimant posts a comment on the bounty's
+issue or PR, from the GitHub account that will open the PR, containing this exact line:
+`postmark-claim v1 chain=9800 escrow=<escrow 0x, lowercase> bounty=<id> claimant=<0x, lowercase>`.
+`identityHash = keccak256(abi.encode("postmark-identity-v1", string githubLogin /*lowercase*/,
+address claimant, uint256 commentId))`. Verifiers fetch
+`GET /repos/{ownerRepo}/issues/comments/{commentId}`, check `user.login`, the line and the claimant,
+and recompute the hash. The comment id is found by scanning the item's comments for the line.
+
+**PAY evidence.** `evidenceHash = keccak256(abi.encode("postmark-evidence-v1", string ownerRepo,
+uint256 prNumber, string mergeCommitSha /*40 hex, lowercase*/, uint64 mergedAt, string prAuthorLogin
+/*lowercase*/))`. `mergedAt` is GitHub's `merged_at` in Unix seconds and must equal the verdict's
+`mergedAt`. `prAuthorLogin` must equal the identity login. For an issue bounty, the PR must be in the
+same repo and close or reference the issue (verifier judgment, shown by the tool from the issue
+timeline).
+
+**REFUND evidence.** `keccak256(abi.encode("postmark-refund-v1", string reasonCode, string detailsUrl))`,
+with `reasonCode` one of `not-merged`, `ineligible`, `identity-mismatch`, `withdrawn`, `other`.
+
+**Dispute evidence.** The disputer posts a comment on the bounty item containing
+`postmark-dispute v1 chain=9800 escrow=<0x> bounty=<id>` plus their reasons;
+`keccak256(abi.encode("postmark-dispute-v1", string githubLogin, uint256 commentId))`.
+
+**Resolution evidence.** `keccak256(abi.encode("postmark-resolution-v1", uint256 disputeCommentId,
+bytes32 basisHash))`, where `basisHash` is a PAY or REFUND evidence hash in the formats above.
+
+**Verdict bundle.** Verifiers sign separately and pass a JSON bundle along (file or paste):
+`{"format":"postmark-verdict-bundle-v1","chainId":9800,"nativeChainId":"qorechain-diana",
+"escrow":"0x…","verdict":{…all Verdict fields…},"evidence":{"format":"…","fields":{…}},
+"message":"0x…","signatures":{"<index>":"0x…"}}`. Anyone may merge bundles for the same message
+and submit. The app rebuilds the message from the verdict and the chain, recomputes the evidence
+hash from `evidence`, and verifies each signature locally against the live registered key before
+it offers to submit.
+
+**Local signer.** ML-DSA-87 secrets never reach the web app. The local signer binds `127.0.0.1`,
+accepts requests only from the configured app origin, rebuilds the message from the decoded fields
+itself (it does not trust the app's bytes), refuses anything that does not start with
+`qorechain-msg-v1|qorechain-diana|`, checks that its key is the account's live registered key, shows
+a decoded summary and signs only after the user confirms in the terminal. When QoreX ships
+`signArbitrary` (message signing v1, same prefix and bytes), the app uses it instead.
 
 ## Future work
 
