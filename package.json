@@ -1,0 +1,9 @@
+{
+  "name": "qore-pqc-forge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node node_modules/@foundry-rs/forge/bin.mjs test -vv" },
+  "dependencies": { "@qorechain/pqc": "0.2.3" },
+  "devDependencies": { "@foundry-rs/forge": "1.7.1" }
+}
