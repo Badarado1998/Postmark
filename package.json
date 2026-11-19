@@ -7,6 +7,11 @@
     "test": "node node_modules/@foundry-rs/forge/bin.mjs test -vv",
     "key-status": "node scripts/key-status.mjs"
   },
-  "dependencies": { "@qorechain/pqc": "0.2.3" },
-  "devDependencies": { "@foundry-rs/forge": "1.7.1" }
+  "dependencies": {
+    "@openzeppelin/contracts": "5.7.0",
+    "@qorechain/pqc": "0.2.3"
+  },
+  "devDependencies": {
+    "@foundry-rs/forge": "1.7.1"
+  }
 }

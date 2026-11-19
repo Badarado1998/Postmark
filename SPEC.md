@@ -1,10 +1,10 @@
-# PostmarkEscrow v1 — normative design, not implemented
+# PostmarkEscrow v1 — normative design (implemented in `src/PostmarkEscrow.sol`)
 
 Project: **Postmark**, a QoreChain Build Before Q-Day entry.
 
 Build Before Q-Day, Post-Quantum dApp track. GitHub work is real; on diana
 (EVM chain ID 9800, native ID `qorechain-diana`) payouts are **test QOR**.
-No mainnet claim. The shipped Solidity is test infrastructure only.
+No mainnet claim. `src/test-utils/` is test infrastructure only and is never deployed.
 
 ## Parties, assets and identity
 
@@ -307,6 +307,8 @@ The library intentionally does not simulate any of this chain admission logic.
 
 ## Threat model draft
 
+The full threat model is in THREAT_MODEL.md; this section is its summary.
+
 ### Indefinite lock — no dispute timeout
 
 **Two lost, unavailable or colluding operators can lock disputed funds forever.**
@@ -351,7 +353,7 @@ replay is bounded by both chain IDs and contract domain; same-address/same-ID
 fork replay remains a network-level risk. Relayer censorship,
 clock variance, and evidence availability remain explicit external risks.
 
-## Foundry implementation test plan (future escrow)
+## Foundry test plan (implemented in `test/escrow/`)
 
 Use PqcTest with three independently seeded test operators; never always-true stubs.
 Write tests for exact native funding, zero values, forced QOR,
@@ -385,6 +387,69 @@ fuzz nonce/claimRound/state transitions and invariant native liabilities <= addr
 Integration on diana separately covers scoped windows, exhausted/expired windows,
 real precompile return values, native PoP and hybrid key rotation; local FFI
 tests cannot certify those chain-level properties.
+
+## Implementation decisions (settled Nov 19)
+
+These close the choices the sections above leave open. Where they are more specific, they win.
+
+D1 Dependencies. OpenZeppelin Contracts 5.7.0 (exact pin) for `ReentrancyGuard` only; its
+   `ReentrancyGuardReentrantCall` is the chosen guard error. No SafeERC20 or token code in v1.
+
+D2 Creation. `amount > 0`, `bondAmount > 0`, `challengeReward > 0`, `workHash != 0`, verifiers nonzero,
+   pairwise distinct and none equal to `msg.sender`, else `InvalidParameters()`. `claimTimeout` outside
+   `[1 hours, 7 days]` is `InvalidClaimTimeout()`. `deadline <= now` is `InvalidParameters()`;
+   `now + claimTimeout > deadline` is `ClaimWindowTooShort()`. `msg.value != amount + challengeReward` is
+   `WrongValue(expected, got)`. All three verifiers must be eligible (`KeyIneligible(verifier)`) with
+   pairwise distinct key hashes (`DuplicateVerifierKey()`).
+
+D3 Claim check order: `UnknownBounty` -> normalize expiry -> state not Open/Claimed is `ClaimClosed()` ->
+   active claim is `ClaimActive(expiresAt)` (same address too) -> `now >= deadline` is `ClaimClosed()` ->
+   `now + claimTimeout > deadline` is `ClaimWindowTooShort()` -> `identityHash == 0` is
+   `InvalidParameters()` -> funder or verifier caller is `ClaimantExcluded(caller)` -> caller key ineligible is
+   `KeyIneligible(caller)` -> caller key hash equal to any verifier's present live key is
+   `ClaimantExcluded(caller)` -> signature length != 4627 or well-formed false is `BadClaimSignature()`.
+   Why the key check: a verifier must not be paid through a second account that shares its key.
+
+D4 Expiry. Any mutation on a bounty first normalizes: stored Claimed with `now >= claimExpiresAt` becomes
+   Open, payee/identity/expiry are cleared, `claimRound` is kept, and `ClaimReleased(bountyId, claimant,
+   claimRound)` is emitted. `reopen(bountyId)` lets anyone do this explicitly (`ClaimActive` if still
+   active, `InvalidState(current, Claimed)` if there is nothing to release). Views report normalized
+   values without writing. Why: the event keeps "an event for every state change" true while the spec's
+   lazy expiry still needs no transaction.
+
+D5 Verdict check order (both phases): `UnknownBounty` -> normalize -> `InvalidState(current, expected)`
+   (INITIAL expects Open/Claimed and reports `Open`; DISPUTE expects Disputed) -> `InvalidPhase()` ->
+   `InvalidNonce(expected, got)` -> `InvalidClaimRound(expected, got)` -> INITIAL `now > deadline` is
+   `SubmissionClosed()` -> fields -> signer shape -> verifier keys -> signatures -> PAY payee eligibility.
+   Field rules: PAY with no active (INITIAL) or frozen (DISPUTE) claimant is `ClaimExpired()`; PAY payee
+   != that claimant is `NotClaimant()`; then PAY needs `0 < mergedAt <= now`, `mergedAt <= deadline`,
+   `evidenceHash != 0`, and REFUND needs `payee == 0`, `mergedAt == 0`, `evidenceHash != 0`, else
+   `InvalidVerdict()`.
+
+D6 Keys at submission, precompile handling, signer shape and time boundaries are unchanged from the
+   escrow-only design: signing verifiers must be eligible, present keys pairwise distinct, a lone revoked
+   non-signer is ignored; low-level `staticcall`s, malformed or missing responses are
+   `PrecompileUnavailable()`, signatures of the wrong length are `BadSignature(index)`; dispute
+   `now < challengeEndsAt`, finalize `now >= challengeEndsAt`, refund `now > deadline`.
+
+D7 Credits (P principal, R reward, B bond; credits to the frozen claimant are gated, all others ungated):
+   no-dispute PAY: P to claimant, R to funder. No-dispute REFUND: P+R to funder. Upheld: P per
+   outcome, B+R to disputer. Rejected: P per outcome, B to frozen claimant or to the funder if none,
+   R to funder. refundExpired: P+R to funder. Every PAY transition re-checks payee eligibility.
+
+D8 Native ledger. `totalLiabilities` grows by every exact funding and bond and shrinks by every
+   withdrawal. Invariant: `totalLiabilities <= address(this).balance`, and it equals escrowed-unsettled
+   plus outstanding credits. `withdraw()` zeroes both credit kinds, then sends with `call`; failure is
+   `TransferFailed()`. No `receive`/`fallback`.
+
+D9 Events. `VerdictSubmitted.nonce` and `DisputeResolved.nonce` are the nonce the verdict signed. Storage
+   writes and events come before receiving value (CEI); exact `msg.value` checks come first.
+
+D10 Smaller orders. `claim` on Pending/Disputed/terminal is `ClaimClosed()` before any active-claim check.
+    `reopen`: `UnknownBounty` -> `InvalidState(current, Claimed)` -> `ClaimActive`. `refundExpired`:
+    `UnknownBounty`/`NotFunder` -> normalize -> state -> `DeadlineNotPassed`. An ineligible claimant key is
+    `KeyIneligible(caller)`. PAY at exactly `now == deadline` cannot happen (a claim must end by the
+    deadline), so exact-deadline submission is a REFUND case.
 
 ## Future work
 

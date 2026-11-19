@@ -4,4 +4,4 @@ test = "test"
 libs = ["lib"]
 solc_version = "0.8.24"
 ffi = true
-remappings = ["forge-std/=lib/forge-std/src/"]
+remappings = ["forge-std/=lib/forge-std/src/", "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"]
