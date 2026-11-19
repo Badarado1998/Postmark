@@ -66,3 +66,7 @@ Claims (ClaimV1, claim rounds, timeout), native test QOR only, 2-of-3 verdicts b
 THREAT_MODEL.md: T-1 to T-11 (claims, same-set disputes, native-only), with a threat-to-test map. Waiting on owner review.
 
 Next: T8 deploy on diana through a scoped EVM window with the fresh testnet-only deployer `0x9d7d0f1364d6F37115d1d5be1C89362595287313` (`qor1n47s7ymy6mehz9w36klpezfkyk2jsucnhgk58p`), once the owner funds it.
+
+### T8 deploy on diana (Nov 19, partly done)
+PostmarkEscrow at `0x4f15e9Ca6dFD3a3f38940A84E592f8bC1e816AD2`, deploy tx `0x5f38a4ebdb56ff6c015616db0d2e61096446f0c1660a4e99f131899aeb8891be` (status 1, 5,198,980 gas, block 10391519). Deployer PQ key registered in `779144F4…C4B017`; window opened `28AC7A1C…4CC29B` (600 blocks / 3 txs / 2 QOR) and closed `D42BD1BB…02C3BA`. On-chain code equals the compiled runtime; typehashes, chain ID and constants checked with `cast call`. Record: deployments/diana.json.
+Still open for T8: QCAI audit run 1 (dashboard sign-in, owner) and the workshop 4 clinic (Nov 27, 16:30 UTC).
