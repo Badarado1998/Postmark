@@ -1,131 +1,211 @@
 import { useRef } from "react";
 import { Link } from "react-router";
-import { motion, useReducedMotion, useScroll, useTransform, useInView } from "motion/react";
+import {
+  motion, useReducedMotion, useScroll, useTransform,
+  type MotionValue,
+} from "motion/react";
 import { formatUnits } from "viem";
-import { useIndex, useTotalLiabilities, usePqcStatus } from "../hooks/queries";
+import { useIndex, useTotalLiabilities } from "../hooks/queries";
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const ACTS = 6;
 
-function Reveal({ children, delay = 0, className = "" }:
-  { children: React.ReactNode; delay?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
-  return (
-    <motion.div className={className}
-      initial={{ opacity: 0, y: 32 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-15% 0px" }}
-      transition={{ duration: 0.8, delay, ease: EASE }}>
-      {children}
-    </motion.div>
-  );
+/* Cross-fade window for act i inside [0,1] progress. */
+function useAct(progress: MotionValue<number>, i: number) {
+  const a = i / ACTS, b = (i + 1) / ACTS;
+  const fade = Math.min(0.05, (b - a) * 0.3);
+  return useTransform(progress,
+    [a, a + fade, b - fade, Math.min(b, 1)],
+    [i === 0 ? 1 : 0, 1, 1, i === ACTS - 1 ? 1 : 0]);
 }
 
-/** Cancellation waves: three concentric arcs that draw themselves in. */
-function CancelWaves({ animate }: { animate: boolean }) {
-  const waves = [
-    "M0 60 Q60 30 120 60 T240 60 T360 60",
-    "M0 75 Q60 45 120 75 T240 75 T360 75",
-    "M0 90 Q60 60 120 90 T240 90 T360 90",
-  ];
+/** Cancellation waves — full-bleed, endlessly drawing, parallax. */
+function Waves({ progress }: { progress: MotionValue<number> }) {
+  const y = useTransform(progress, [0, 1], [0, -80]);
+  const d = (k: number) =>
+    `M-60 ${60 + k * 26} Q 80 ${30 + k * 26} 220 ${60 + k * 26} T 500 ${60 + k * 26} T 780 ${60 + k * 26} T 1060 ${60 + k * 26} T 1340 ${60 + k * 26} T 1620 ${60 + k * 26}`;
   return (
-    <svg viewBox="0 0 360 130" className="w-full max-w-md text-vermilion" aria-hidden>
-      {waves.map((d, i) => (
-        <motion.path key={i} d={d} fill="none" stroke="currentColor" strokeWidth="3"
-          strokeLinecap="round" opacity={0.85 - i * 0.25}
-          initial={animate ? { pathLength: 0 } : { pathLength: 1 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.6, delay: 0.4 + i * 0.25, ease: "easeInOut" }} />
+    <motion.svg viewBox="0 0 1560 210" preserveAspectRatio="xMidYMid slice"
+      className="absolute inset-x-0 top-1/2 -z-10 h-[30vh] w-full -translate-y-1/2 text-vermilion"
+      style={{ y }} aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <motion.path key={i} d={d(i)} fill="none" stroke="currentColor"
+          strokeWidth={2.5 - i * 0.35} strokeLinecap="round"
+          opacity={0.5 - i * 0.09}
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+          transition={{ duration: 2.2, delay: 0.3 + i * 0.18, ease: "easeInOut" }} />
       ))}
-    </svg>
+    </motion.svg>
   );
 }
 
-/** The rubber stamp pressing down: VERIFIED · 2 OF 3 · ML-DSA-87 */
-function Stamp({ animate }: { animate: boolean }) {
+function Stamp({ size = "size-48 md:size-64" }: { size?: string }) {
   return (
-    <motion.div
-      className="relative grid size-44 place-items-center rounded-full border-4 border-vermilion/90 text-vermilion md:size-52"
-      style={{ rotate: "-8deg" }}
-      initial={animate ? { scale: 2.2, opacity: 0, rotate: "-14deg" } : false}
-      animate={{ scale: 1, opacity: 1, rotate: "-8deg" }}
-      transition={{ type: "spring", stiffness: 240, damping: 16, delay: 1.1 }}>
-      <div className="grid size-36 place-items-center rounded-full border-2 border-vermilion/60 text-center md:size-40">
-        <div className="font-mono text-[10px] font-bold uppercase leading-relaxed tracking-[0.25em] md:text-xs">
+    <div className={`relative grid ${size} place-items-center rounded-full border-4 border-vermilion/90 text-vermilion`}
+      style={{ rotate: "-8deg" }}>
+      <div className="grid size-[78%] place-items-center rounded-full border-2 border-vermilion/60 text-center">
+        <div className="font-mono text-xs font-bold uppercase leading-relaxed tracking-[0.25em] md:text-sm">
           Verified<br />2 of 3<br />ML-DSA-87
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-/** Three verifier slots; two seals light up on scroll. */
-function SealTrio() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-30% 0px" });
-  const reduce = useReducedMotion();
-  return (
-    <div ref={ref} className="flex items-center gap-6" aria-label="Two of three verifier seals lit">
-      {[0, 1, 2].map((i) => {
-        const lit = inView && i < 2;
-        return (
-          <motion.div key={i}
-            className={`grid size-16 place-items-center rounded-full border-2 font-mono text-[10px] uppercase tracking-wider transition-colors duration-700 ${
-              lit ? "border-vermilion bg-vermilion/15 text-vermilion shadow-[0_0_30px_rgba(225,72,47,0.35)]"
-                  : "border-paper-300/20 text-ink-400"}`}
-            initial={reduce ? false : { opacity: 0.4 }}
-            animate={{ opacity: lit ? 1 : 0.55 }}
-            transition={{ delay: i * 0.5 }}>
-            {lit ? "sealed" : `v${i + 1}`}
-          </motion.div>
-        );
-      })}
     </div>
   );
 }
 
-/** 24 h challenge ring counting down. */
-function ChallengeRing() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-30% 0px" });
-  const reduce = useReducedMotion();
-  const r = 44, c = 2 * Math.PI * r;
+/** Perforated postage-stamp frame (radial notches). */
+const PERFORATION =
+  "radial-gradient(circle at 8px 8px, transparent 5px, black 5.5px)";
+
+function ActVisual({ act, progress }: { act: number; progress: MotionValue<number> }) {
+  const local = useTransform(progress, [act / ACTS, (act + 1) / ACTS], [0, 1]);
+  if (act === 1) return <IssueCard />;
+  if (act === 2) return <ClaimStamp local={local} />;
+  if (act === 3) return <SealTrio local={local} />;
+  if (act === 4) return <Ring local={local} />;
+  if (act === 5) return <Slam local={local} />;
+  return null;
+}
+
+function IssueCard() {
   return (
-    <div ref={ref} className="relative grid place-items-center">
-      <svg viewBox="0 0 100 100" className="size-36 -rotate-90" aria-hidden>
-        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="5" className="stroke-white/10" />
-        <motion.circle cx="50" cy="50" r={r} fill="none" strokeWidth="5" strokeLinecap="round"
-          className="stroke-vermilion"
-          strokeDasharray={c}
-          initial={reduce ? { strokeDashoffset: 0 } : { strokeDashoffset: c }}
-          animate={inView || reduce ? { strokeDashoffset: c * 0.35 } : {}}
-          transition={{ duration: 2.4, ease: "easeOut" }} />
+    <div className="w-full max-w-sm rounded-xl border border-white/15 bg-ink-900/90 p-5 shadow-2xl shadow-black/60">
+      <div className="flex items-center gap-2 font-mono text-xs text-ink-300">
+        <span className="size-2 rounded-full bg-emerald-400" /> postmark-e2e/sandbox
+        <span className="text-ink-500">#1</span>
+      </div>
+      <p className="mt-3 font-serif text-xl text-paper-100">Bridge the escrow to the app</p>
+      <div className="mt-3 flex gap-1.5">
+        {["bounty", "good first issue", "pq"].map((l) => (
+          <span key={l} className="rounded-full bg-white/8 px-2.5 py-0.5 font-mono text-[10px] text-ink-200">{l}</span>
+        ))}
+      </div>
+      <p className="mt-4 border-t border-white/8 pt-3 font-mono text-[11px] text-ink-400">
+        octocat opened 3 days ago
+      </p>
+    </div>
+  );
+}
+
+function ClaimStamp({ local }: { local: MotionValue<number> }) {
+  const draw = useTransform(local, [0.15, 0.85], [0, 1]);
+  return (
+    <div className="relative rounded-sm bg-paper-100 p-3 shadow-2xl shadow-black/60"
+      style={{ WebkitMaskImage: PERFORATION, maskImage: PERFORATION,
+        WebkitMaskSize: "16px 16px", maskSize: "16px 16px" }}>
+      <div className="grid place-items-center rounded-sm border border-ink-900/15 bg-[#f6efdd] px-8 py-10 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-900/60">postmark-claim v1</p>
+        <p className="mt-2 font-serif text-2xl font-semibold text-ink-950">chain 9800</p>
+        <svg viewBox="0 0 220 60" className="mt-2 w-44 text-ink-950/80" aria-hidden>
+          <motion.path
+            d="M10 40 C 40 10, 70 55, 100 30 S 160 45, 210 22"
+            fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"
+            style={{ pathLength: draw }} />
+          <motion.path
+            d="M8 48 C 60 34, 120 52, 214 38"
+            fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5"
+            style={{ pathLength: draw }} />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function SealTrio({ local }: { local: MotionValue<number> }) {
+  // hooks can't run in a loop callback — unrolled instead
+  const l0 = useTransform(local, [0.2, 0.22], [0, 1]);
+  const l1 = useTransform(local, [0.55, 0.57], [0, 1]);
+  const lits = [l0, l1, useTransform(local, [0, 1], [0, 0])];
+  return (
+    <div className="flex items-center gap-6 md:gap-8">
+      {lits.map((lit, i) => (
+        <motion.div key={i}
+          className={`grid size-16 place-items-center rounded-full border-2 font-mono text-[10px] uppercase tracking-wider md:size-20 ${
+            i < 2 ? "border-vermilion/60 text-vermilion" : "border-paper-300/20 text-ink-400"}`}
+          style={{
+            opacity: useTransform(lit, [0, 1], [0.45, 1]),
+            boxShadow: useTransform(lit, (v) =>
+              `0 0 ${v * 34}px rgba(225,72,47,${v * 0.45})`),
+            backgroundColor: useTransform(lit, (v) =>
+              `rgba(225,72,47,${v * 0.16})`),
+          }}>
+          {i < 2 ? "sealed" : `v${i + 1}`}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function Ring({ local }: { local: MotionValue<number> }) {
+  const r = 52, c = 2 * Math.PI * r;
+  const off = useTransform(local, [0.1, 0.9], [c, c * 0.32]);
+  return (
+    <div className="relative grid place-items-center">
+      <svg viewBox="0 0 120 120" className="size-44 -rotate-90 md:size-52" aria-hidden>
+        <circle cx="60" cy="60" r={r} fill="none" strokeWidth="6" className="stroke-white/10" />
+        <motion.circle cx="60" cy="60" r={r} fill="none" strokeWidth="6"
+          strokeLinecap="round" className="stroke-vermilion"
+          strokeDasharray={c} style={{ strokeDashoffset: off }} />
       </svg>
       <div className="absolute text-center font-mono">
-        <div className="text-2xl text-paper-100">24h</div>
+        <div className="text-3xl text-paper-100">24h</div>
         <div className="text-[10px] uppercase tracking-widest text-ink-300">challenge</div>
       </div>
     </div>
   );
 }
 
+function Slam({ local }: { local: MotionValue<number> }) {
+  const scale = useTransform(local, [0, 0.28], [2.1, 1]);
+  const rot = useTransform(local, [0, 0.28], [-16, -8]);
+  const stampO = useTransform(local, [0, 0.18, 0.3], [0, 0.6, 1]);
+  const inkO = useTransform(local, [0.3, 0.55], [0, 0.55]);
+  const inkBlur = useTransform(local, [0.3, 0.6], [10, 0]);
+  const amount = useTransform(local, [0.45, 0.95], [0, 1.5]);
+  const amountText = useTransform(amount, (v) => `+${v.toFixed(3)} QOR`);
+  const amountO = useTransform(local, [0.5, 0.65], [0, 1]);
+  return (
+    <div className="relative grid place-items-center">
+      {/* ink impression */}
+      <motion.div className="absolute size-56 rounded-full bg-vermilion/25 blur-md md:size-72"
+        style={{ opacity: inkO, filter: useTransform(inkBlur, (b) => `blur(${b + 6}px)`) }} />
+      <motion.div style={{ scale, rotate: rot, opacity: stampO }}>
+        <Stamp />
+      </motion.div>
+      <motion.div className="absolute -bottom-16 font-serif text-4xl font-semibold text-paper-100 md:text-5xl"
+        style={{ opacity: amountO }}>
+        <motion.span>{amountText}</motion.span>
+        <span className="ml-2 align-middle font-mono text-[10px] uppercase tracking-[0.25em] text-vermilion">testnet</span>
+      </motion.div>
+    </div>
+  );
+}
+
+const CHAPTERS = [
+  { k: "01", title: "Fund a GitHub issue",
+    body: "A maintainer escrows test QOR against a real issue or PR. The work reference — owner/repo, kind, number — is hashed and emitted on chain, so the payout can never drift from the work." },
+  { k: "02", title: "Claim with a post-quantum signature",
+    body: "The contributor posts one public comment, then claims the bounty with an ML-DSA-87 signature verified by the chain itself. Stealing the ECDSA key is not enough." },
+  { k: "03", title: "Three verifiers, two seals",
+    body: "Independent verifiers — each with a registered ML-DSA-87 key — review the merged PR. Any two matching signatures settle the verdict." },
+  { k: "04", title: "A 24-hour challenge window",
+    body: "Every initial verdict sits in the open for a day. Anyone can post a bond and dispute it before it settles." },
+  { k: "05", title: "Payout in test QOR",
+    body: "The escrow credits the payee. They withdraw when their live PQ key is still registered — a pull payment, never a push." },
+];
+
 function LiveStrip() {
   const index = useIndex();
   const liab = useTotalLiabilities();
-    const verifiers = new Set<string>();
+  const verifiers = new Set<string>();
   for (const e of index.data?.events ?? []) {
     if (e.eventName === "BountyCreated") {
       for (const v of (e.args as unknown as { verifiers: readonly string[] }).verifiers) verifiers.add(v);
     }
   }
-  const vList = [...verifiers] as `0x${string}`[];
   return (
     <div className="grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-      <Stat label="bounties on diana"
-        value={index.data ? String(index.data.bountyIds.length) : "…"} />
-      <Stat label="test QOR in escrow"
-        value={liab.data !== undefined ? `${formatUnits(liab.data, 18)}` : "…"} />
-      <VerifierStat verifiers={vList} />
+      <Stat label="bounties on diana" value={index.data ? String(index.data.bountyIds.length) : "…"} />
+      <Stat label="test QOR in escrow" value={liab.data !== undefined ? `${formatUnits(liab.data, 18)}` : "…"} />
+      <Stat label="verifier slots used" value={index.data ? String(verifiers.size) : "…"} />
     </div>
   );
 }
@@ -137,114 +217,79 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-function VerifierStat({ verifiers }: { verifiers: `0x${string}`[] }) {
-  // bounded live check over unique verifier addresses (usually 0 today)
-  const first = verifiers[0];
-  const s = usePqcStatus(first);
-  const live = verifiers.length === 0 ? "0"
-    : (s.data?.live ? `${verifiers.length}` : "…");
-  return <Stat label="live verifier keys" value={live} />;
-}
-
-const CHAPTERS = [
-  {
-    k: "01", title: "Fund a GitHub issue",
-    body: "A maintainer escrows test QOR against a real issue or PR. The work reference — owner/repo, kind, number — is hashed and emitted on chain, so the payout can never drift from the work.",
-    art: <div className="font-mono text-sm text-paper-200/90">github.com/<span className="text-vermilion">acme/widgets</span>/issues/<span className="text-vermilion">42</span></div>,
-  },
-  {
-    k: "02", title: "Claim with a post-quantum signature",
-    body: "The contributor posts one public comment, then claims the bounty with an ML-DSA-87 signature verified by the chain itself. Stealing the ECDSA key is not enough.",
-    art: <div className="font-mono text-xs text-paper-200/80">postmark-claim v1 chain=9800 …</div>,
-  },
-  {
-    k: "03", title: "Three verifiers, two seals",
-    body: "Independent verifiers — each with a registered ML-DSA-87 key — review the merged PR. Any two matching signatures settle the verdict.",
-    art: <SealTrio />,
-  },
-  {
-    k: "04", title: "A 24-hour challenge window",
-    body: "Every initial verdict sits in the open for a day. Anyone can post a bond and dispute it before it settles.",
-    art: <ChallengeRing />,
-  },
-  {
-    k: "05", title: "Payout in testnet QOR",
-    body: "The escrow credits the payee. They withdraw when their live PQ key is still registered — a pull payment, never a push.",
-    art: <div className="font-serif text-4xl text-paper-100">+ tQOR</div>,
-  },
-];
 
 export default function Landing() {
   const reduce = useReducedMotion();
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef, offset: ["start start", "end start"],
-  });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: stageRef });
+
+  if (reduce) {
+    return <StaticLanding />;
+  }
+
+  const actRanges = Array.from({ length: ACTS }, (_, i) => i);
 
   return (
     <div>
-      {/* hero */}
-      <section ref={heroRef} className="relative flex min-h-[88dvh] items-center overflow-hidden py-16">
-        <motion.div style={reduce ? {} : { y: heroY, opacity: heroOpacity }}
-          className="grid w-full items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-vermilion">
-              Real issues · testnet payouts
-            </p>
-            <h1 className="mt-5 font-serif text-5xl font-semibold leading-[1.05] tracking-tight text-paper-100 sm:text-6xl lg:text-7xl">
-              Get stamped for<br />merged work.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-200">
-              Postmark is a bounty escrow on QoreChain diana. Fund a GitHub issue,
-              and a contributor collects test QOR when three post-quantum
-              verifiers stamp the merged PR — two seals are enough.
-            </p>
-            <CancelWaves animate={!reduce} />
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/explore"
-                className="rounded-lg bg-vermilion px-6 py-3 font-medium text-ink-950 transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vermilion">
-                Explore bounties
-              </Link>
-              <Link to="/create"
-                className="rounded-lg border border-paper-300/30 px-6 py-3 font-medium text-paper-100 transition hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-paper-200">
-                Fund an issue
-              </Link>
+      {/* pinned scroll stage: hero + 5 chapters, one morphing visual */}
+      <section ref={stageRef} className="relative" style={{ height: `${(ACTS + 1) * 82}vh` }}>
+        <div className="sticky top-0 flex h-dvh items-center overflow-hidden">
+          {/* depth: vignette + waves */}
+          <div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(7,11,20,0.9)_100%)]" />
+          <Waves progress={scrollYProgress} />
+
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 px-4 md:grid-cols-2 md:gap-14">
+            {/* text column */}
+            <div className="relative order-2 min-h-[40dvh] md:order-1 md:min-h-[55dvh]">
+              {/* act 0: hero text */}
+              <ActText progress={scrollYProgress} i={0}>
+                <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-vermilion">
+                  Real issues · testnet payouts
+                </p>
+                <h1 className="mt-5 font-serif text-5xl font-semibold leading-[1.02] tracking-tight text-paper-100 sm:text-6xl lg:text-7xl xl:text-8xl">
+                  Get stamped for<br />merged work.
+                </h1>
+                <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-200 lg:text-xl">
+                  Postmark is a bounty escrow on QoreChain diana. Fund a GitHub issue,
+                  and a contributor collects test QOR when three post-quantum
+                  verifiers stamp the merged PR — two seals are enough.
+                </p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link to="/explore" className="rounded-lg bg-vermilion px-6 py-3 font-medium text-ink-950 transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vermilion">Explore bounties</Link>
+                  <Link to="/create" className="rounded-lg border border-paper-300/30 px-6 py-3 font-medium text-paper-100 transition hover:bg-white/5">Fund an issue</Link>
+                </div>
+              </ActText>
+              {CHAPTERS.map((c, i) => (
+                <ActText key={c.k} progress={scrollYProgress} i={i + 1}>
+                  <div className="font-mono text-xs text-vermilion">{c.k}</div>
+                  <h2 className="mt-3 font-serif text-4xl font-semibold text-paper-100 md:text-5xl lg:text-6xl">{c.title}</h2>
+                  <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-200">{c.body}</p>
+                </ActText>
+              ))}
+            </div>
+            {/* visual column — stamp present from the hero on all sizes */}
+            <div className="relative order-1 flex min-h-[30dvh] items-center justify-center md:order-2 md:min-h-[55dvh]">
+              <ActVisual progress={scrollYProgress} act={0} />
+              <HeroVisual progress={scrollYProgress} />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <ActLayer key={i} progress={scrollYProgress} i={i}>
+                  <ActVisual act={i} progress={scrollYProgress} />
+                </ActLayer>
+              ))}
             </div>
           </div>
-          <div className="hidden justify-center lg:flex">
-            <Stamp animate={!reduce} />
+
+          {/* progress marks */}
+          <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 gap-2" aria-hidden>
+            {actRanges.map((i) => <Dot key={i} progress={scrollYProgress} i={i} />)}
           </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* live strip */}
       <section aria-label="Live chain numbers" className="py-8">
         <LiveStrip />
       </section>
 
-      {/* chapters */}
-      <section className="space-y-24 py-24">
-        {CHAPTERS.map((c) => (
-          <Reveal key={c.k}>
-            <div className="grid items-center gap-8 border-t border-white/5 pt-12 md:grid-cols-[0.9fr_1.1fr]">
-              <div>
-                <div className="font-mono text-xs text-vermilion">{c.k}</div>
-                <h2 className="mt-3 font-serif text-3xl font-semibold text-paper-100 md:text-4xl">
-                  {c.title}
-                </h2>
-                <p className="mt-4 max-w-md leading-relaxed text-ink-200">{c.body}</p>
-              </div>
-              <div className="flex min-h-28 items-center justify-start md:justify-center">
-                {c.art}
-              </div>
-            </div>
-          </Reveal>
-        ))}
-      </section>
-
-      {/* honest footer note + CTA */}
       <section className="border-t border-white/5 py-20 text-center">
         <p className="mx-auto max-w-2xl font-serif text-2xl leading-relaxed text-paper-200">
           Signatures are ML-DSA-87 — checked by a chain precompile, not by us.
@@ -254,6 +299,88 @@ export default function Landing() {
           className="mt-8 inline-block rounded-lg bg-vermilion px-8 py-3 font-medium text-ink-950 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vermilion">
           See what's stamped
         </Link>
+      </section>
+    </div>
+  );
+}
+
+function ActLayer({ progress, i, children }:
+  { progress: MotionValue<number>; i: number; children: React.ReactNode }) {
+  const o = useAct(progress, i);
+  return (
+    <motion.div className="absolute inset-0 grid place-items-center" style={{ opacity: o }}>
+      {children}
+    </motion.div>
+  );
+}
+
+function ActText({ progress, i, children }:
+  { progress: MotionValue<number>; i: number; children: React.ReactNode }) {
+  const o = useAct(progress, i);
+  const y = useTransform(o, [0, 1], [40, 0]);
+  return (
+    <motion.div className="absolute inset-0 flex flex-col justify-center"
+      style={{ opacity: o, y, pointerEvents: useTransform(o, (v) => v > 0.5 ? "auto" : "none") }}>
+      {children}
+    </motion.div>
+  );
+}
+
+function HeroVisual({ progress }: { progress: MotionValue<number> }) {
+  const o = useAct(progress, 0);
+  const scale = useTransform(o, [0, 1], [0.9, 1]);
+  return (
+    <motion.div className="absolute inset-0 grid place-items-center" style={{ opacity: o, scale }}>
+      <Stamp size="size-40 sm:size-48 md:size-64 lg:size-72" />
+    </motion.div>
+  );
+}
+
+function Dot({ progress, i }: { progress: MotionValue<number>; i: number }) {
+  const o = useAct(progress, i);
+  const bg = useTransform(o, [0, 0.5], ["rgba(255,255,255,0.15)", "rgba(225,72,47,1)"]);
+  return <motion.div className="size-1.5 rounded-full" style={{ backgroundColor: bg }} />;
+}
+
+/* Static composition for prefers-reduced-motion. */
+function StaticLanding() {
+  return (
+    <div className="py-10">
+      <div className="grid items-center gap-10 md:grid-cols-2">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-vermilion">
+            Real issues · testnet payouts
+          </p>
+          <h1 className="mt-5 font-serif text-5xl font-semibold leading-[1.02] tracking-tight text-paper-100 sm:text-6xl lg:text-7xl">
+            Get stamped for<br />merged work.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-200">
+            Postmark is a bounty escrow on QoreChain diana. Fund a GitHub issue,
+            and a contributor collects test QOR when three post-quantum
+            verifiers stamp the merged PR — two seals are enough.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link to="/explore" className="rounded-lg bg-vermilion px-6 py-3 font-medium text-ink-950">Explore bounties</Link>
+            <Link to="/create" className="rounded-lg border border-paper-300/30 px-6 py-3 font-medium text-paper-100">Fund an issue</Link>
+          </div>
+        </div>
+        <div className="flex justify-center"><Stamp /></div>
+      </div>
+      <section aria-label="Live chain numbers" className="mt-14"><LiveStrip /></section>
+      <div className="mt-16 space-y-10">
+        {CHAPTERS.map((c) => (
+          <div key={c.k} className="border-t border-white/5 pt-8">
+            <div className="font-mono text-xs text-vermilion">{c.k}</div>
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-paper-100">{c.title}</h2>
+            <p className="mt-3 max-w-xl leading-relaxed text-ink-200">{c.body}</p>
+          </div>
+        ))}
+      </div>
+      <section className="border-t border-white/5 py-16 text-center">
+        <p className="mx-auto max-w-2xl font-serif text-2xl leading-relaxed text-paper-200">
+          Signatures are ML-DSA-87 — checked by a chain precompile, not by us.
+          Payouts are diana test QOR: real flow, no monetary value.
+        </p>
       </section>
     </div>
   );

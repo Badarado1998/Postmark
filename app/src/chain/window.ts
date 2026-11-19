@@ -24,5 +24,22 @@ export async function fetchEvmWindow(addr: string): Promise<EvmWindow> {
   if (!res.ok) throw new Error(`evm_window REST ${res.status}`);
   const j = await res.json();
   const w = j.window ?? j;
-  return { found: Boolean(w && (w.opened_height || w.openedHeight)), live: Boolean(w?.live), ...w };
+  // REST keys are snake_case; normalize to camelCase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pick = (a: any, b: any) => a ?? b;
+  return {
+    found: Boolean(w && (w.opened_height || w.openedHeight)),
+    live: Boolean(w?.live),
+    openedHeight: pick(w.openedHeight, w.opened_height),
+    expiryHeight: pick(w.expiryHeight, w.expiry_height),
+    maxTxs: pick(w.maxTxs, w.max_txs),
+    usedTxs: pick(w.usedTxs, w.used_txs),
+    maxValue: pick(w.maxValue, w.max_value),
+    usedValue: pick(w.usedValue, w.used_value),
+    remainingBlocks: pick(w.remainingBlocks, w.remaining_blocks),
+    remainingTxs: pick(w.remainingTxs, w.remaining_txs),
+    remainingValue: pick(w.remainingValue, w.remaining_value),
+    nativeOnly: Boolean(pick(w.nativeOnly, w.native_only)),
+    allowedTargets: pick(w.allowedTargets, w.allowed_targets),
+  };
 }

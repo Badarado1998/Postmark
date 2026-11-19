@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router";
-import { ConnectButton } from "./Connect";
+import { DeferredConnect } from "./Deferred";
 import { useFeedStatus } from "../chain/IndexerProvider";
 
 function FeedDot() {
@@ -35,11 +35,12 @@ export function Shell({ children }: { children?: ReactNode }) {
             <nav className="hidden items-center gap-1 md:flex">
               <NavLink to="/explore" className={navLink}>Explore</NavLink>
               <NavLink to="/create" className={navLink}>Create</NavLink>
+              <NavLink to="/me" className={navLink}>Mine</NavLink>
             </nav>
           </div>
           <div className="flex items-center gap-3">
             <FeedDot />
-            <ConnectButton />
+            <DeferredConnect />
             <button className="md:hidden rounded-md p-1.5 text-ink-300 hover:text-paper-100"
               aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -52,6 +53,7 @@ export function Shell({ children }: { children?: ReactNode }) {
           <nav className="border-t border-white/5 px-4 pb-4 pt-2 md:hidden">
             <NavLink to="/explore" className={navLink} onClick={() => setOpen(false)}>Explore</NavLink>
             <NavLink to="/create" className={navLink} onClick={() => setOpen(false)}>Create</NavLink>
+            <NavLink to="/me" className={navLink} onClick={() => setOpen(false)}>Mine</NavLink>
           </nav>
         )}
       </header>

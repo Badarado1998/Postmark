@@ -57,14 +57,14 @@ export const useBounties = (ids: bigint[] | undefined) => useQuery({
   queryKey: ["bounties", ids?.map(String).join(",")],
   enabled: !!ids,
   queryFn: async () => {
-    const res = await httpClient.multicall({
-      contracts: ids!.map((id) => ({
-        ...escrow, functionName: "getBounty" as const, args: [id] as const,
-      })),
-    });
+    // diana has no multicall3 contract — plain parallel reads
+    const res = await Promise.allSettled(ids!.map((id) =>
+      httpClient.readContract({
+        ...escrow, functionName: "getBounty", args: [id],
+      })));
     return res.map((r, i) => ({
       id: ids![i]!,
-      bounty: r.status === "success" ? r.result : null,
+      bounty: r.status === "fulfilled" ? r.value : null,
     }));
   },
   staleTime: 10_000,

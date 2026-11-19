@@ -1,10 +1,11 @@
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
-import { useQorex } from "../wallet/qorex";
+import { useQorex } from "./qorex";
 import { useEvmWindow, usePqcStatus, useQorEvm } from "../hooks/queries";
+import WalletRoot from "./WalletRoot";
 import { diana } from "../chain/config";
-import { shortAddr } from "./ui";
+import { shortAddr } from "../components/ui";
 
-export function ConnectButton() {
+function ConnectButtonInner() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
@@ -67,4 +68,9 @@ export function ConnectButton() {
       </button>
     </div>
   );
+}
+
+/** Lazy boundary: wagmi + connector code stays out of the initial bundle. */
+export default function ConnectWallet() {
+  return <WalletRoot><ConnectButtonInner /></WalletRoot>;
 }

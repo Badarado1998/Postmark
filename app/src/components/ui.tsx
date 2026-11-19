@@ -47,7 +47,7 @@ export function Countdown({ to, className }: { to: number | bigint; className?: 
 export function Qor({ wei, className }: { wei: bigint; className?: string }) {
   return (
     <span className={className} title={`${wei.toString()} wei`}>
-      {formatUnits(wei, 18)} <span className="text-ink-400">tQOR</span>
+      {formatUnits(wei, 18)} <span className="text-ink-400">QOR</span>
     </span>
   );
 }

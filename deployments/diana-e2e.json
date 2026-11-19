@@ -1,0 +1,48 @@
+{
+  "network": "diana-e2e",
+  "chainId": 9800,
+  "nativeChainId": "qorechain-diana",
+  "contract": "PostmarkEscrow",
+  "address": "0xae80681E92b63eFEa78cB742dd612ecc940B896A",
+  "deployer": {
+    "evm": "0x9d7d0f1364d6F37115d1d5be1C89362595287313",
+    "cosmos": "qor1n47s7ymy6mehz9w36klpezfkyk2jsucnhgk58p"
+  },
+  "deploy": {
+    "txHash": "0xc83254079fa00c2b8b4a00173db3f290c613cd79e112b2c6941422171a076cd4",
+    "block": 10396129,
+    "blockHash": "0x1cb62fd78011e6b32e9c843f9f56bf7b78618165fd3a6417f743e173670bf87b",
+    "gasUsed": 3382207,
+    "gasPriceWei": "112500000000",
+    "gasLimit": 6500000,
+    "status": "success"
+  },
+  "compiler": {
+    "solc": "0.8.24",
+    "optimizer": true,
+    "optimizerRuns": 200,
+    "viaIR": false,
+    "evmVersion": "cancun"
+  },
+  "gitCommit": "bea2279",
+  "window": {
+    "openTxHash": "4FF15DD91114AA216402E8B15403064A9BA398432598E4D7237EC37BC93C5F2A",
+    "openHeight": 10396124,
+    "params": {
+      "blocks": 600,
+      "maxTxs": 3,
+      "maxValueUqor": "2000000",
+      "allowedTargets": []
+    },
+    "closeTxHash": "07DEA09A27291FE4A45FBAE6362DFF8E7346F6B9DFBFB8EF29A20D3E710FD24E",
+    "closeHeight": 10396132
+  },
+  "explorer": {
+    "base": "https://dashboard.qorechain.io/explorer",
+    "contract": "https://dashboard.qorechain.io/explorer/address/0xae80681E92b63eFEa78cB742dd612ecc940B896A",
+    "deployTx": "https://dashboard.qorechain.io/explorer/tx/0xc83254079fa00c2b8b4a00173db3f290c613cd79e112b2c6941422171a076cd4",
+    "note": "e2e instance — tests write here; production Explore uses diana.json"
+  },
+  "note": "Dedicated e2e escrow so test bounties never pollute the production deployment",
+  "deployedAt": "2026-11-19T21:54:08.145Z"
+}

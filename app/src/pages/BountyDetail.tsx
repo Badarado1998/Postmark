@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useBounty, useIndex, useNextBountyId, usePqcStatus } from "../hooks/queries";
@@ -5,6 +6,8 @@ import { StatusChip, Countdown, Qor, Skeleton, ErrorState, EmptyState, shortAddr
 import { explainError } from "../chain/errors";
 import { explorerAddress, explorerTx } from "../chain/config";
 import { getIssue, getPull, getLinkedPrs, GithubRateLimitError, type GhIssue, type GhPull } from "../github/client";
+
+const TxActions = lazy(() => import("../wallet/TxActions"));
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -119,6 +122,8 @@ const EVENT_LABEL: Record<string, string> = {
   Withdrawn: "Withdrawn",
 };
 
+const FunderShare = lazy(() => import("../wallet/FunderShare"));
+
 export default function BountyDetail() {
   const { id: idStr } = useParams();
   const id = (() => { try { return BigInt(idStr ?? ""); } catch { return undefined; } })();
@@ -149,6 +154,9 @@ export default function BountyDetail() {
             </h1>
             <StatusChip state={bounty.data.state} />
           </div>
+          <Suspense fallback={null}>
+            <FunderShare bounty={bounty.data} />
+          </Suspense>
 
           {index.data?.metaById.get(id) && (() => {
             const m = index.data.metaById.get(id)!;
@@ -196,6 +204,10 @@ export default function BountyDetail() {
               {bounty.data.initialMergedAt > 0n && ` · merged ${new Date(Number(bounty.data.initialMergedAt) * 1000).toLocaleDateString()}`}
             </Field>
           </dl>
+
+          <Suspense fallback={null}>
+            <TxActions id={id} bounty={bounty.data} />
+          </Suspense>
 
           <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
             <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">verifiers</h2>
