@@ -12,7 +12,7 @@ function FeedDot() {
     connecting: ["bg-gray", "connecting"],
   }[feed];
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-gray" title={`Chain feed: ${meta[1]}`}>
+    <span className="hidden items-center gap-1.5 text-xs text-gray sm:inline-flex" title={`Chain feed: ${meta[1]}`}>
       <span className={`size-1.5 rounded-full ${meta[0]} ${feed === "live" ? "animate-pulse" : ""}`} />
       {meta[1]}
     </span>
@@ -43,13 +43,9 @@ export function Shell({ children }: { children?: ReactNode }) {
               <NavLink to="/me" className={navLink}>Mine</NavLink>
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <FeedDot />
             <DeferredConnect />
-            <Link to="/create"
-              className="hidden rounded-md bg-deep px-3.5 py-1.5 text-sm font-medium text-paper transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep md:inline-block">
-              Fund a bounty
-            </Link>
             <button className="md:hidden rounded-md p-1.5 text-gray hover:text-ink"
               aria-label="Menu" aria-expanded={open} onClick={() => setOpen(!open)}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">

@@ -5,58 +5,15 @@ import { Logo } from "../components/Logo";
 import { ESCROW_ADDRESS, explorerAddress, explorerTx } from "../chain/config";
 
 /* ------------------------------------------------------------------ */
-/* Signature pixel band: horizontal stripes with dithered stair edges. */
-/* ------------------------------------------------------------------ */
-
-const STRIPES = ["#23663F", "#7DB069", "#F1A783", "#CE8E3D", "#DDC362"];
-
-function PixelBand() {
-  const reduce = useReducedMotion();
-  const W = 1200;
-  const stripeH = 24;
-  const ditherRows = 3;
-  const px = 8; // pixel size
-  return (
-    <svg viewBox={`0 0 ${W} ${STRIPES.length * stripeH}`}
-      preserveAspectRatio="none" aria-hidden
-      className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full md:h-36">
-      <motion.g animate={{ x: reduce ? 0 : -px * 4 }}
-        transition={reduce ? { duration: 0 } : { repeat: Infinity, repeatType: "mirror", duration: 8, ease: "linear" }}>
-        {STRIPES.map((c, i) => (
-          <g key={c}>
-            {/* dithered stair edge into the next stripe */}
-            {i > 0 && Array.from({ length: ditherRows }).map((_, r) =>
-              Array.from({ length: W / (px * 4) }).map((_, j) => {
-                const on = (j + r + i) % 2 === 0;
-                return on ? (
-                  <rect key={`${r}-${j}`}
-                    x={j * px * 4 + ((r + i) % 2) * px * 2}
-                    y={i * stripeH - (ditherRows - r) * px}
-                    width={px} height={px} fill={c} />
-                ) : null;
-              })
-            )}
-            <rect x={0} y={i * stripeH} width={W} height={stripeH} fill={c} />
-          </g>
-        ))}
-      </motion.g>
-    </svg>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Framed product view: a real bounty-detail card with fixture data.   */
 /* ------------------------------------------------------------------ */
 
 function ProductFrame() {
   return (
-    <div className="overflow-hidden rounded-xl border border-ink/15 bg-white shadow-xl shadow-ink/10">
+    <div className="overflow-hidden rounded-xl border border-ink/15 bg-white shadow-lg shadow-ink/5">
       <div className="flex items-center gap-2 border-b border-ink/10 bg-paper px-4 py-2.5">
-        <span className="size-2.5 rounded-full bg-salmon" />
-        <span className="size-2.5 rounded-full bg-mustard" />
-        <span className="size-2.5 rounded-full bg-leaf" />
-        <span className="ml-2 font-mono text-[10px] text-gray">postmark / bounty detail — example</span>
-        <span className="ml-auto rounded-full border border-mustard bg-mustard/30 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-orange">example</span>
+        <span className="size-2 rounded-full border border-ink/30" />
+        <span className="font-mono text-[10px] text-gray">Example · bounty detail</span>
       </div>
       <div className="p-5 text-left">
         <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +34,7 @@ function ProductFrame() {
             </div>
           ))}
         </div>
-        <div className="mt-4 rounded-lg bg-ink px-3 py-2.5 font-mono text-[10px] leading-relaxed text-paper/70">
+        <div className="mt-4 rounded-lg bg-leaf/30 px-3 py-2.5 font-mono text-[10px] leading-relaxed text-charcoal">
           verdictMessage → pqcVerify 0x…0a01 ×2 · Credited(payee, 0.25 QOR, gated)
         </div>
       </div>
@@ -101,13 +58,13 @@ const STEPS = [
   ["Withdraw", "The payee pulls their credit; payee credits need a live registered PQ key."],
 ];
 
-const FEATURES: [string, string, string][] = [
-  ["PQ-signed claims", "Claims carry an ML-DSA-87 signature checked by a chain precompile, not by us.", "#7DB069"],
-  ["2-of-3 quorum", "Two matching verifier seals release the escrow. No single signer can settle alone.", "#DDC362"],
-  ["Bonded disputes", "A dispute posts a bond that freezes the payout until verifiers rule again.", "#F1A783"],
-  ["GitHub merge check", "Verdict evidence binds to the merged PR — the payout can't drift from the work.", "#CE8E3D"],
-  ["Local signer", "ML-DSA-87 keys live in a local signer process, never in the browser.", "#7DB069"],
-  ["Pull payouts", "Pull payments: payee credits withdraw only while a live PQ key is registered.", "#DDC362"],
+const FEATURES: [string, string][] = [
+  ["PQ-signed claims", "Claims carry an ML-DSA-87 signature checked by a chain precompile, not by us."],
+  ["2-of-3 quorum", "Two matching verifier seals release the escrow. No single signer can settle alone."],
+  ["Bonded disputes", "A dispute posts a bond that freezes the payout until verifiers rule again."],
+  ["GitHub merge check", "Verdict evidence binds to the merged PR — the payout can't drift from the work."],
+  ["Local signer", "ML-DSA-87 keys live in a local signer process, never in the browser."],
+  ["Pull payouts", "Pull payments: payee credits withdraw only while a live PQ key is registered."],
 ];
 
 const PROOF = [
@@ -136,12 +93,12 @@ const FAQ = [
    "Payee credits need a live registered key to withdraw; funder and disputer credits are ungated. If a payee's key lapses, their credit waits in the escrow until a key is registered."],
 ];
 
-function PixelIcon({ color }: { color: string }) {
+function PixelIcon() {
   return (
-    <svg viewBox="0 0 16 16" className="size-5" aria-hidden>
-      <rect x="1" y="1" width="14" height="14" fill="none" stroke={color} strokeWidth="1.5" />
-      <rect x="4" y="4" width="3" height="3" fill={color} />
-      <rect x="9" y="9" width="3" height="3" fill={color} />
+    <svg viewBox="0 0 16 16" className="size-5 text-deep" aria-hidden>
+      <rect x="1" y="1" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="4" y="4" width="3" height="3" fill="currentColor" />
+      <rect x="9" y="9" width="3" height="3" fill="currentColor" />
     </svg>
   );
 }
@@ -163,7 +120,7 @@ export default function Landing() {
   return (
     <div className="-mx-4">
       {/* ---------- hero ---------- */}
-      <section className="relative overflow-hidden px-4 pb-48 pt-16 text-center md:pt-24">
+      <section className="relative overflow-hidden px-4 pb-12 pt-16 md:pb-20 text-center md:pt-24">
         <div className="relative z-10 mx-auto max-w-3xl">
           <FadeIn>
             <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
@@ -189,7 +146,7 @@ export default function Landing() {
             <ProductFrame />
           </FadeIn>
         </div>
-        <PixelBand />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-1/3 bg-[radial-gradient(ellipse_at_50%_72%,#d9e6d9_0%,transparent_68%)]" />
       </section>
 
       {/* ---------- built on ---------- */}
@@ -203,12 +160,12 @@ export default function Landing() {
       </section>
 
       {/* ---------- dark value prop ---------- */}
-      <section className="bg-ink px-4 py-20 text-paper">
+      <section className="border-y border-ink/10 bg-white/60 px-4 py-20">
         <FadeIn className="mx-auto max-w-3xl">
           <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
             A leaked key can't release a bounty.
           </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-paper/70">
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray">
             An ECDSA key alone can't claim a bounty, release it, or withdraw a payout. Claims and
             verdicts carry ML-DSA-87 signatures verified by chain precompiles,
             and payee withdrawals need a live registered PQ key.
@@ -233,17 +190,17 @@ export default function Landing() {
       </section>
 
       {/* ---------- dark features grid ---------- */}
-      <section className="bg-ink px-4 py-20 text-paper">
+      <section className="px-4 py-20">
         <FadeIn className="mx-auto max-w-5xl">
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
             Post-quantum by construction, not by label.
           </h2>
-          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(([t, b, c]) => (
-              <div key={t} className="bg-charcoal p-6">
-                <PixelIcon color={c} />
+          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(([t, b]) => (
+              <div key={t} className="bg-white p-6">
+                <PixelIcon />
                 <h3 className="mt-4 font-semibold tracking-tight">{t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-paper/60">{b}</p>
+                <p className="mt-2 text-sm leading-relaxed text-gray">{b}</p>
               </div>
             ))}
           </div>
@@ -251,13 +208,13 @@ export default function Landing() {
       </section>
 
       {/* ---------- deep-green disputes ---------- */}
-      <section className="bg-deep px-4 py-20 text-paper">
+      <section className="border-y border-ink/10 bg-leaf/25 px-4 py-20">
         <FadeIn className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
               A bad verdict gets challenged, not settled.
             </h2>
-            <p className="mt-5 leading-relaxed text-paper/80">
+            <p className="mt-5 leading-relaxed text-charcoal">
               During the 24-hour window anyone can post a bond and dispute.
               The bond freezes the payout, and the verifiers rule on a second
               verdict — the same 2-of-3 quorum, the same ML-DSA-87 seals. If the
@@ -266,7 +223,7 @@ export default function Landing() {
               and the reward to the funder.
             </p>
           </div>
-          <div className="rounded-xl border border-paper/20 bg-ink/20 p-6 font-mono text-xs leading-relaxed text-paper/80">
+          <div className="rounded-xl border border-ink/10 bg-white p-6 font-mono text-xs leading-relaxed text-charcoal">
             Disputed(bounty, disputer, bond)<br />
             → payout frozen<br />
             DisputeResolved(upheld=false) — PAY stands<br />
@@ -318,8 +275,7 @@ export default function Landing() {
       </section>
 
       {/* ---------- lime CTA with dithered edges ---------- */}
-      <section className="relative bg-leaf px-4 py-20 text-center text-ink">
-        <div className="pixel-dither absolute inset-x-0 top-0 h-3 -translate-y-full text-leaf" aria-hidden />
+      <section className="border-t border-ink/10 bg-leaf/30 px-4 py-20 text-center text-ink">
         <FadeIn>
           <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
             Fund your first bounty in minutes.
@@ -340,13 +296,13 @@ export default function Landing() {
               <Logo size={22} />
               <span className="font-semibold tracking-tight">Postmark</span>
             </div>
-            <p className="mt-3 font-mono text-[11px] leading-relaxed text-paper/50">
+            <p className="mt-3 font-mono text-[11px] leading-relaxed text-paper/65">
               GitHub bounties released by 2-of-3 ML-DSA-87 verifier verdicts on QoreChain.
             </p>
           </div>
           <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">App</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/70">
+            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">App</h3>
+            <ul className="mt-3 space-y-2 text-sm text-paper/80">
               <li><Link className="hover:text-paper" to="/explore">Explore bounties</Link></li>
               <li><Link className="hover:text-paper" to="/create">Fund a bounty</Link></li>
               <li><Link className="hover:text-paper" to="/me">My bounties</Link></li>
@@ -354,16 +310,16 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">Protocol</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/70">
+            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">Protocol</h3>
+            <ul className="mt-3 space-y-2 text-sm text-paper/80">
               <li><a className="hover:text-paper" href={explorerAddress(ESCROW_ADDRESS)} target="_blank" rel="noreferrer">Escrow contract</a></li>
               <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a01")} target="_blank" rel="noreferrer">pqcVerify precompile</a></li>
               <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a02")} target="_blank" rel="noreferrer">pqcKeyStatus precompile</a></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/40">Docs</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/70">
+            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">Docs</h3>
+            <ul className="mt-3 space-y-2 text-sm text-paper/80">
               <li>SPEC.md</li>
               <li>THREAT_MODEL.md</li>
               <li>docs/AUDIT.md</li>
@@ -371,10 +327,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="mx-auto mt-12 flex max-w-5xl items-center justify-between border-t border-white/10 pt-6">
-          <p className="font-mono text-[10px] text-paper/40">diana testnet · test QOR, no monetary value</p>
-          <div className="flex gap-2" aria-hidden>
-            {STRIPES.map((c) => <span key={c} className="size-3" style={{ background: c }} />)}
-          </div>
+          <p className="font-mono text-[10px] text-paper/60">diana testnet · test QOR, no monetary value</p>
         </div>
       </section>
     </div>

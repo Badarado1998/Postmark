@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
 import { useQorex } from "./qorex";
 import { useEvmWindow, usePqcStatus, useQorEvm } from "../hooks/queries";
@@ -7,7 +8,8 @@ import { shortAddr } from "../components/ui";
 
 function ConnectButtonInner() {
   const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, error, reset } = useConnect();
+  const picker = useRef<HTMLDialogElement>(null);
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -19,23 +21,50 @@ function ConnectButtonInner() {
 
   if (!isConnected) {
     return (
-      <div className="flex items-center gap-2">
-        {qorex.installed && (
-          <span className="hidden rounded-full border border-mustard px-2.5 py-1 text-xs text-orange md:inline"
-            title={qorex.qorAddress
-              ? `QoreX connected for identity: ${qorex.qorAddress}. It cannot send EVM transactions yet.`
-              : "QoreX detected — connect it in the extension to use it for identity"}>
-            QoreX{qorex.qorAddress ? ` · ${qorex.qorAddress.slice(0, 10)}…` : ""}
-          </span>
-        )}
-        {connectors.map((c) => (
-          <button key={c.uid} onClick={() => connect({ connector: c, chainId: diana.id })}
-            disabled={isPending}
-            className="rounded-lg bg-deep px-4 py-1.5 text-sm font-medium text-paper hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep disabled:opacity-50">
-            {isPending ? "Connecting…" : "Connect wallet"}
-          </button>
-        ))}
-      </div>
+      <>
+        <button type="button" aria-haspopup="dialog" disabled={isPending}
+          onClick={() => { reset(); picker.current?.showModal(); }}
+          className="rounded-md bg-deep px-4 py-1.5 text-sm font-medium text-paper hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep disabled:opacity-50">
+          {isPending ? "Connecting…" : "Connect wallet"}
+        </button>
+        <dialog ref={picker} aria-labelledby="wallet-picker-title"
+          className="fixed inset-0 m-auto max-h-[80dvh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-2xl border border-ink/10 bg-paper p-5 text-ink shadow-xl backdrop:bg-ink/35">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="wallet-picker-title" className="text-lg font-semibold tracking-tight">Choose a wallet</h2>
+            <button type="button" onClick={() => picker.current?.close()}
+              className="rounded-md border border-ink/15 px-2.5 py-1 text-sm text-gray hover:bg-ink/5">Close</button>
+          </div>
+          {connectors.length === 0 ? (
+            <p className="mt-4 text-sm text-gray">
+              No EVM wallet detected. Install or enable a browser wallet, then reopen this dialog.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {connectors.map((c) => (
+                <li key={c.uid}>
+                  <button type="button" disabled={isPending}
+                    onClick={() => connect({ connector: c, chainId: diana.id },
+                      { onSuccess: () => picker.current?.close() })}
+                    className="w-full break-words rounded-lg border border-ink/15 bg-white px-4 py-2.5 text-left text-sm font-medium hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-deep disabled:opacity-50">
+                    {c.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {qorex.installed && (
+            <p className="mt-4 text-xs text-gray">
+              QoreX is detected{qorex.qorAddress ? ` (${qorex.qorAddress.slice(0, 10)}…)` : ""} and
+              is used for identity only. It cannot send EVM transactions yet, so pick an EVM wallet above.
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-orange">
+              Couldn't connect. Check that the wallet is unlocked and try again.
+            </p>
+          )}
+        </dialog>
+      </>
     );
   }
 
