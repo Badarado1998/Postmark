@@ -290,7 +290,7 @@ export default function Landing() {
 
       {/* ---------- dark footer ---------- */}
       <section className="bg-ink px-4 py-16 text-paper">
-        <div className="mx-auto grid max-w-5xl gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-5xl gap-10 sm:grid-cols-3">
           <div>
             <div className="flex items-center gap-2">
               <Logo size={22} />
@@ -315,14 +315,6 @@ export default function Landing() {
               <li><a className="hover:text-paper" href={explorerAddress(ESCROW_ADDRESS)} target="_blank" rel="noreferrer">Escrow contract</a></li>
               <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a01")} target="_blank" rel="noreferrer">pqcVerify precompile</a></li>
               <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a02")} target="_blank" rel="noreferrer">pqcKeyStatus precompile</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">Docs</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/80">
-              <li>SPEC.md</li>
-              <li>THREAT_MODEL.md</li>
-              <li>docs/AUDIT.md</li>
             </ul>
           </div>
         </div>
