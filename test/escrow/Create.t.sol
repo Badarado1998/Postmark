@@ -201,6 +201,20 @@ contract CreateTest is EscrowFixture {
         new PostmarkEscrow("a.A_0-");
     }
 
+    function testConstructorChainIdLengthBound() public {
+        // 65 bytes exceeds MAX_CHAIN_ID_BYTES and reverts; exactly 64 deploys.
+        string memory tooLong =
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 65
+        assertEq(bytes(tooLong).length, 65);
+        vm.expectRevert(PostmarkEscrow.InvalidParameters.selector);
+        new PostmarkEscrow(tooLong);
+        string memory atMax =
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 64
+        assertEq(bytes(atMax).length, 64);
+        PostmarkEscrow ok = new PostmarkEscrow(atMax);
+        assertEq(ok.nativeChainId(), atMax);
+    }
+
     function testCreateRollbackOnFailure() public {
         vm.prank(funder);
         vm.expectRevert(PostmarkEscrow.InvalidParameters.selector);

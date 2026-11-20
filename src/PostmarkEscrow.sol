@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IQorePQC} from "./test-utils/IQorePQC.sol";
 
 /// @title PostmarkEscrow v1 — GitHub bounty escrow with PQ claims and 2-of-3
 /// ML-DSA-87 verdicts. Implements SPEC.md. Native test QOR only.
+/// @notice Holds native test QOR (diana) behind GitHub-verified claims and
+/// 2-of-3 ML-DSA-87 verifier verdicts. Testnet payouts only; test QOR has no
+/// monetary value.
+/// @dev The escrow is a native-coin contract by design: there is no ERC-20,
+/// ERC-721 or ERC-1155 interface, and none applies — no tokens are issued or
+/// transferred. Off-chain integrations read state through the views
+/// (`getBounty`, `creditOf`, `claimMessage`, `verdictMessage`, `nativeChainId`,
+/// `nextBountyId`, `totalLiabilities`) and follow lifecycle through the events
+/// (`BountyCreated`, `BountyWork`, `Claimed`, `ClaimReleased`,
+/// `VerdictSubmitted`, `Disputed`, `DisputeResolved`, `Settled`, `Credited`,
+/// `Withdrawn`).
 contract PostmarkEscrow is ReentrancyGuard {
     enum State { Open, Claimed, Pending, Disputed, Paid, Refunded }
     enum Outcome { PAY, REFUND }
@@ -52,6 +63,16 @@ contract PostmarkEscrow is ReentrancyGuard {
     uint8 internal constant ALGORITHM_ID = 1;
     address internal constant PQC_VERIFY = 0x0000000000000000000000000000000000000a01;
     address internal constant PQC_KEYS = 0x0000000000000000000000000000000000000a02;
+    // verifier set is fixed at 3; every 3-bound loop/check uses this constant
+    uint256 internal constant VERIFIER_COUNT = 3;
+    // input bounds, visible next to the loops that rely on them
+    uint256 internal constant MAX_OWNER_REPO_BYTES = 140;
+    uint256 internal constant MAX_CHAIN_ID_BYTES = 64;
+    // pqcKeyStatus return layout: 5-word head (0xa0) then pubkey data at 0xa0;
+    // its dynamic tail offset is 0x80. pqcVerify returns exactly one word.
+    uint256 internal constant KEYS_STATUS_MIN_BYTES = 0xa0;
+    uint256 internal constant KEYS_STATUS_DATA_OFFSET = 0x80;
+    uint256 internal constant VERIFY_RET_BYTES = 32;
 
     bytes32 public constant CLAIM_TYPEHASH = keccak256(
         "ClaimV1(uint256 chainId,address escrow,uint256 bountyId,address claimant,"
@@ -117,8 +138,8 @@ contract PostmarkEscrow is ReentrancyGuard {
 
     constructor(string memory nativeChainId_) {
         bytes memory id = bytes(nativeChainId_);
-        if (id.length == 0) revert InvalidParameters();
-        for (uint256 i; i < id.length; ++i) {
+        if (id.length == 0 || id.length > MAX_CHAIN_ID_BYTES) revert InvalidParameters();
+        for (uint256 i; i < id.length; ++i) { // bounded by MAX_CHAIN_ID_BYTES
             bytes1 c = id[i];
             bool ok = (c >= "a" && c <= "z") || (c >= "A" && c <= "Z")
                 || (c >= "0" && c <= "9") || c == "." || c == "_" || c == "-";
@@ -138,10 +159,11 @@ contract PostmarkEscrow is ReentrancyGuard {
             || kind > 1 || number == 0 || !_validOwnerRepo(ownerRepo)) {
             revert InvalidParameters();
         }
-        for (uint256 i; i < 3; ++i) {
+        // verifier set: exactly VERIFIER_COUNT distinct, non-zero, non-funder
+        for (uint256 i; i < VERIFIER_COUNT; ++i) {
             address v = verifiers[i];
             if (v == address(0) || v == msg.sender) revert InvalidParameters();
-            for (uint256 j = i + 1; j < 3; ++j) {
+            for (uint256 j = i + 1; j < VERIFIER_COUNT; ++j) {
                 if (v == verifiers[j]) revert InvalidParameters();
             }
         }
@@ -171,14 +193,14 @@ contract PostmarkEscrow is ReentrancyGuard {
         emit BountyWork(bountyId, workHash, ownerRepo, kind, number);
     }
 
-    /// @dev Canonical `owner/repo`: 3..140 bytes, exactly one '/', neither
-    /// first nor last, chars [a-z0-9._-/].
+    /// @dev Canonical `owner/repo`: 3..MAX_OWNER_REPO_BYTES, exactly one '/',
+    /// neither first nor last, chars [a-z0-9._-/].
     function _validOwnerRepo(string calldata s) internal pure returns (bool) {
         bytes calldata r = bytes(s);
         uint256 n = r.length;
-        if (n < 3 || n > 140 || r[0] == "/" || r[n - 1] == "/") return false;
+        if (n < 3 || n > MAX_OWNER_REPO_BYTES || r[0] == "/" || r[n - 1] == "/") return false;
         uint256 slashes;
-        for (uint256 i; i < n; ++i) {
+        for (uint256 i; i < n; ++i) { // bounded by MAX_OWNER_REPO_BYTES
             bytes1 c = r[i];
             if (c == "/") {
                 ++slashes;
@@ -192,6 +214,13 @@ contract PostmarkEscrow is ReentrancyGuard {
 
     /// @notice Claim an open bounty with an ML-DSA signature over ClaimV1
     /// for the next round. Sets the caller as payee.
+    /// @dev Front-running analysis: the signed ClaimV1 payload covers
+    /// msg.sender, block.chainid, this escrow, the bounty id, identityHash and
+    /// the next claimRound, and is verified against msg.sender's own live
+    /// registered key — a signature copied from someone else's transaction
+    /// fails verification for any other caller. First-come claiming is
+    /// intentional; squatting is bounded by claimTimeout and by verifier
+    /// identity review (THREAT_MODEL.md T-11).
     function claim(uint256 bountyId, bytes32 identityHash, bytes calldata signature)
         external nonReentrant
     {
@@ -213,6 +242,8 @@ contract PostmarkEscrow is ReentrancyGuard {
         if (_keySharedWithVerifier(b, keccak256(pk))) {
             revert ClaimantExcluded(msg.sender);
         }
+        // signature is bound to msg.sender (and the next claimRound) inside the
+        // payload, so replaying another caller's claim tx cannot succeed
         if (signature.length != SIG_BYTES
             || !_pqcVerify(pk, signature,
                 _claimMessage(bountyId, msg.sender, identityHash, b.claimRound + 1))) {
@@ -228,7 +259,18 @@ contract PostmarkEscrow is ReentrancyGuard {
     }
 
     /// @notice Release an expired claim: stored Claimed becomes Open and its
-    /// claimant fields are cleared. Anyone may call.
+    /// claimant fields are cleared.
+    /// @dev Permissionless by design, not an oversight. The function only acts
+    /// on a claim that has already expired: it moves no funds, changes no
+    /// credit, and does exactly what `claim()` itself does to an expired claim
+    /// via `_normalize` — the same transition every other entry point performs
+    /// lazily. Restricting it to the funder or the former claimant would
+    /// protect nothing, since `claim()` performs the same release, and would
+    /// only stop others (an indexer, the app, a new claimant) from publishing
+    /// the release as a `ClaimReleased` event.
+    /// Preconditions (revert order preserved): stored state must be Claimed,
+    /// else `InvalidState`; `block.timestamp >= claimExpiresAt`, else
+    /// `ClaimActive(claimExpiresAt)`. Emits `ClaimReleased` via `_normalize`.
     function reopen(uint256 bountyId) external nonReentrant {
         Bounty storage b = _bounty(bountyId);
         if (b.state != State.Claimed) revert InvalidState(b.state, State.Claimed);
@@ -352,6 +394,10 @@ contract PostmarkEscrow is ReentrancyGuard {
     }
 
     /// @notice Withdraw all of the caller's native QOR credits to the caller.
+    /// @dev Liability model: credits only relabel liability already counted in
+    /// `totalLiabilities` (escrow-held → credit-held), so withdrawing `total`
+    /// decrements it by exactly what the caller was credited. Solidity 0.8
+    /// checked arithmetic guards every credit add/remove.
     function withdraw() external nonReentrant {
         uint256 ungated = ungatedCredits[msg.sender];
         uint256 gated = gatedCredits[msg.sender];
@@ -362,6 +408,10 @@ contract PostmarkEscrow is ReentrancyGuard {
         ungatedCredits[msg.sender] = 0;
         gatedCredits[msg.sender] = 0;
         totalLiabilities -= total;
+        // Sanity guard, unreachable in a valid state: total <= totalLiabilities
+        // <= address(this).balance holds because credits are only minted from
+        // already-locked liability and forced donations can only raise balance.
+        if (total > address(this).balance) revert TransferFailed();
         emit Withdrawn(msg.sender, total);
 
         (bool ok,) = msg.sender.call{value: total}("");
@@ -466,18 +516,20 @@ contract PostmarkEscrow is ReentrancyGuard {
             || (signerIndices.length != 2 && signerIndices.length != 3)) {
             revert InvalidSigners();
         }
+        // bound: caller-supplied length, already required to be 2 or 3
         for (uint256 k = 1; k < signerIndices.length; ++k) {
             if (signerIndices[k] <= signerIndices[k - 1]) revert InvalidSigners();
         }
-        if (signerIndices[signerIndices.length - 1] >= 3) revert InvalidSigners();
+        if (signerIndices[signerIndices.length - 1] >= VERIFIER_COUNT) revert InvalidSigners();
 
-        pubs = new bytes[](3);
-        bool[3] memory reg;
-        uint8[3] memory alg;
-        bool[3] memory prov;
-        for (uint256 i; i < 3; ++i) {
+        pubs = new bytes[](VERIFIER_COUNT);
+        bool[VERIFIER_COUNT] memory reg;
+        uint8[VERIFIER_COUNT] memory alg;
+        bool[VERIFIER_COUNT] memory prov;
+        for (uint256 i; i < VERIFIER_COUNT; ++i) { // fixed set: 3 staticcalls
             (reg[i], alg[i], pubs[i], prov[i]) = _keyStatus(b.verifiers[i]);
         }
+        // bound: caller-supplied length, already required to be 2 or 3
         for (uint256 k; k < signerIndices.length; ++k) {
             uint8 idx = signerIndices[k];
             if (!(reg[idx] && alg[idx] == ALGORITHM_ID
@@ -485,9 +537,9 @@ contract PostmarkEscrow is ReentrancyGuard {
                 revert KeyIneligible(b.verifiers[idx]);
             }
         }
-        for (uint256 i; i < 3; ++i) {
+        for (uint256 i; i < VERIFIER_COUNT; ++i) { // fixed set: 3
             if (!reg[i] || pubs[i].length == 0) continue;
-            for (uint256 j = i + 1; j < 3; ++j) {
+            for (uint256 j = i + 1; j < VERIFIER_COUNT; ++j) { // 3 pair checks
                 if (reg[j] && pubs[j].length != 0
                     && keccak256(pubs[i]) == keccak256(pubs[j])) {
                     revert DuplicateVerifierKey();
@@ -502,6 +554,7 @@ contract PostmarkEscrow is ReentrancyGuard {
     {
         bytes memory message = abi.encodePacked("qorechain-msg-v1|", nativeChainId, "|",
             _payload(b, v));
+        // bound: caller-supplied length, already required to be 2 or 3
         for (uint256 k; k < signerIndices.length; ++k) {
             if (signatures[k].length != SIG_BYTES) {
                 revert BadSignature(signerIndices[k]);
@@ -512,12 +565,19 @@ contract PostmarkEscrow is ReentrancyGuard {
         }
     }
 
+    /// @dev Fail-closed: every malformed or surprising response from the
+    /// pqcKeyStatus precompile reverts `PrecompileUnavailable` rather than
+    /// being coerced into "unregistered". Checks, in order: call success flag;
+    /// minimum length KEYS_STATUS_MIN_BYTES (five-word head); each boolean word
+    /// exactly 0 or 1; algorithm word fits uint8; the pubkey tail offset equals
+    /// KEYS_STATUS_DATA_OFFSET; the pubkey length plus its 32-byte padding
+    /// stays inside the returned buffer.
     function _keyStatus(address account) internal view
         returns (bool registered, uint8 algorithmId8, bytes memory pubkey, bool proven)
     {
         (bool ok, bytes memory ret) = PQC_KEYS.staticcall(
             abi.encodeCall(IQorePQC.pqcKeyStatus, (account)));
-        if (ok && ret.length >= 0xa0) {
+        if (ok && ret.length >= KEYS_STATUS_MIN_BYTES) {
             uint256 w0; uint256 w1; uint256 off; uint256 w3; uint256 len;
             assembly {
                 let p := add(ret, 32)
@@ -527,9 +587,9 @@ contract PostmarkEscrow is ReentrancyGuard {
                 w3 := mload(add(p, 96))
                 len := mload(add(p, 128))
             }
-            if (w0 <= 1 && w1 <= 255 && off == 0x80 && w3 <= 1
+            if (w0 <= 1 && w1 <= 255 && off == KEYS_STATUS_DATA_OFFSET && w3 <= 1
                 && len <= ret.length
-                && len + ((32 - (len % 32)) % 32) <= ret.length - 0xa0) {
+                && len + ((32 - (len % 32)) % 32) <= ret.length - KEYS_STATUS_MIN_BYTES) {
                 registered = w0 == 1;
                 // forge-lint: disable-next-line(unsafe-typecast)
                 algorithmId8 = uint8(w1);
@@ -548,12 +608,15 @@ contract PostmarkEscrow is ReentrancyGuard {
         revert PrecompileUnavailable();
     }
 
+    /// @dev Fail-closed: a failed call, a return that is not exactly one word,
+    /// or a word that is not 0/1 reverts `PrecompileUnavailable` instead of
+    /// silently counting as "signature invalid" or "signature valid".
     function _pqcVerify(bytes memory pubkey, bytes calldata sig, bytes memory message)
         internal view returns (bool)
     {
         (bool ok, bytes memory ret) = PQC_VERIFY.staticcall(
             abi.encodeCall(IQorePQC.pqcVerify, (pubkey, sig, message)));
-        if (!ok || ret.length != 32) revert PrecompileUnavailable();
+        if (!ok || ret.length != VERIFY_RET_BYTES) revert PrecompileUnavailable();
         uint256 w;
         assembly { w := mload(add(ret, 32)) }
         if (w > 1) revert PrecompileUnavailable();
@@ -563,7 +626,7 @@ contract PostmarkEscrow is ReentrancyGuard {
     function _keySharedWithVerifier(Bounty storage b, bytes32 callerHash)
         internal view returns (bool)
     {
-        for (uint256 i; i < 3; ++i) {
+        for (uint256 i; i < VERIFIER_COUNT; ++i) { // fixed set: 3 staticcalls
             (bool reg,, bytes memory pk,) = _keyStatus(b.verifiers[i]);
             if (reg && pk.length != 0 && keccak256(pk) == callerHash) return true;
         }
@@ -585,14 +648,19 @@ contract PostmarkEscrow is ReentrancyGuard {
 
     function _requireDistinctEligibleKeys(address[3] calldata verifiers) internal view {
         bytes32[3] memory keyHashes;
-        for (uint256 i; i < 3; ++i) keyHashes[i] = _eligibleKeyHash(verifiers[i]);
-        for (uint256 i; i < 3; ++i) {
-            for (uint256 j = i + 1; j < 3; ++j) {
+        for (uint256 i; i < VERIFIER_COUNT; ++i) keyHashes[i] = _eligibleKeyHash(verifiers[i]); // fixed set: 3
+        for (uint256 i; i < VERIFIER_COUNT; ++i) { // fixed set: 3
+            for (uint256 j = i + 1; j < VERIFIER_COUNT; ++j) { // 3 pair checks
                 if (keyHashes[i] == keyHashes[j]) revert DuplicateVerifierKey();
             }
         }
     }
 
+    /// @dev Liability model: `_credit` relabels value already counted in
+    /// `totalLiabilities` (added when the QOR was locked at create/dispute
+    /// time); it never creates new liability and never moves coins itself.
+    /// Solidity 0.8 checked arithmetic makes the `+=` revert on overflow —
+    /// an overflow would mean accounting already exceeded every deposited wei.
     function _credit(uint256 bountyId, address account, uint256 amount, bool gated) internal {
         if (gated) gatedCredits[account] += amount;
         else ungatedCredits[account] += amount;
