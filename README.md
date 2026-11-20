@@ -99,7 +99,7 @@ signature hex for copy/paste.
 
 ## Audit
 
-QCAI run 1 (Nov 20, Ethereum EVM/Solidity setting): 65/100, 6 findings. Each finding is answered with the tests that cover it in [`docs/AUDIT.md`](docs/AUDIT.md); none needed a code change, so the deployed bytecode still matches the source. Run 2 is pending.
+Both QCAI runs (Nov 20, Ethereum EVM/Solidity) scored 65/100. Run 2 reported MEDIUM overall risk and did not meet the 70+ Top Quality threshold. The reports, source changes, and finding-by-finding responses are in [`docs/AUDIT.md`](docs/AUDIT.md).
 
 * [Library setup, API, example and limitations](src/test-utils/README.md)
 * [PostmarkEscrow specification and test plan](SPEC.md)

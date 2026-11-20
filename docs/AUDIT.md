@@ -3,7 +3,7 @@
 | Run | Date | Setting | Source | Report | Result |
 |---|---|---|---|---|---|
 | 1 | 2026-11-20 | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `241d0c7` (deployed at `0xb781E296FB35ccd2497589526114373bA0bff79b`, now superseded) | [`audit/qcai-stage1-2026-11-20.pdf`](audit/qcai-stage1-2026-11-20.pdf) | 65/100, 6 findings (2 high, 2 medium, 1 low, 1 info) |
-| 2 | pending | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `6babd14` (hardened, see below) | — | — |
+| 2 | 2026-11-20 | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `6babd14` (report label: `PostmarkEscrowV2`) | [`audit/qcai-stage2-2026-11-20.pdf`](audit/qcai-stage2-2026-11-20.pdf) | 65/100, MEDIUM overall, 6 findings (1 high, 3 medium, 2 low) |
 
 Every run 1 finding is answered below. None was an exploitable defect: each describes a risk the
 contract already handled, and the named tests prove it. After run 1 the source was hardened where
@@ -101,6 +101,19 @@ plus the new constructor branch. The hardened source is deployed to production a
 `0x13De819fE37133d19287aAFE1991a921F84b9F45` (tx `0xa01ae24d57869e0e16bbfbfec29a36a539bd65998600188d1f5439b0663ffdbc`,
 block 10429957). Its on-chain code is byte-equal to `forge inspect PostmarkEscrow deployedBytecode`. The run 1
 deployment `0xb781E296…f79b` is kept as superseded in `deployments/diana.json`.
+
+## Run 2 findings
+
+The score stayed at 65/100 (below the 70+ Top Quality threshold). Overall risk changed from HIGH to MEDIUM; quantum readiness was not scored. The report flags the following. No further contract change or redeploy was made for this run.
+
+| Finding | Severity | Source review |
+|---|---|---|
+| Privilege escalation in dispute resolution | Medium | The caller only relays. `resolveDispute` requires a fresh, valid 2-of-3 ML-DSA-87 quorum for the disputed bounty, binding the nonce, claim round and stored dispute hashes. A caller restriction would not strengthen verdict authorization and would remove the permissionless relay path. See `testResolveDisputeBindsStoredHashes` and `testDisputeSignatureNotReusableAcrossDisputes`. |
+| Credit overflow | Medium | Checked Solidity 0.8.24 arithmetic and the liability invariant still apply; see run 1 finding 2. |
+| Claim front-running | Low | Copied signatures are bound to the claimant; first-come reservation griefing remains a documented limitation, not eliminated by the timeout. See run 1 finding 3. |
+| Unchecked precompile returns | High | Both helpers check the call success flag and validate the ABI response before use; malformed responses revert. See run 1 finding 4 and its regression tests. |
+| Unbounded loop in key validation | Medium | Verifier iteration is fixed at three; signer lists are checked to contain two or three entries before iteration. The assembly copy is bounded by the validated return-data length, not by the bounty count. |
+| Missing ERC-20 interface | Low | Native test QOR only; token support is intentionally out of scope. |
 
 ## Where the contract uses QoreChain PQC
 
