@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { installTestWallet, mockGithub, nodePublic, nodeWallet, profileAddress } from "./testWallet";
+import { installTestWallet, mockGithub, nodePublic, profileAddress,
+  openBountyOrCreate, connectInjected, pairingCodeFor } from "./testWallet";
 import { readFileSync, existsSync } from "node:fs";
 import { encodeAbiParameters, keccak256 } from "viem";
 
@@ -14,61 +15,7 @@ import { postmarkEscrowAbi } from "../src/chain/abi";
 test.use({ ignoreHTTPSErrors: true });
 test.describe.configure({ retries: 0 }); // chain txs must not retry
 
-function verifierAddr(i: number) {
-  const env = readFileSync(
-    `${process.env.HOME}/.config/postmark/e2e/verifier${i}.env`, "utf8");
-  return env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m)![1] as `0x${string}`;
-}
-
-function pairingCode() {
-  return (JSON.parse(readFileSync(STATE_FILE, "utf8")) as { pairingCode: string }).pairingCode;
-}
-
-/** Reuse an existing Open bounty whose deadline still fits a 1 h claim
- * window; otherwise create a real one through the Node-side funder wallet. */
-async function openBountyOrCreate(): Promise<bigint> {
-  const w = nodeWallet("funder");
-  const pub = nodePublic();
-  const next = (await pub.readContract({
-    address: ESCROW, abi: postmarkEscrowAbi, functionName: "nextBountyId",
-  })) as bigint;
-  const now = BigInt(Math.floor(Date.now() / 1000));
-  for (let id = next - 1n; id >= 1n; id--) {
-    const b = await pub.readContract({ address: ESCROW, abi: postmarkEscrowAbi,
-      functionName: "getBounty", args: [id] }) as
-      { state: number; deadline: bigint; claimTimeout: bigint };
-    if (b.state === 0 && b.deadline > now + b.claimTimeout + 600n) {
-      console.log("[e2e] reusing open bounty", id.toString());
-      return id;
-    }
-  }
-  // No reusable Open bounty. Prefer the e2e funder; if it cannot cover gas,
-  // fall back to a dust-value bounty from the deployer profile (deployer spend
-  // is outside the e2e QOR budget; createBounty is permissionless and the claim
-  // flow does not depend on the funded amount).
-  const id = next;
-  const deadline = now + 3n * 3600n;
-  const gasPrice = await pub.getGasPrice();
-  const budget = await pub.getBalance({ address: w.account.address });
-  const useFunder = budget > 300_000_000_000_000_000n + gasPrice * 1_000_000n;
-  const wallet = useFunder ? w : nodeWallet("../deployer");
-  const [amount, reward, bond] = useFunder
-    ? [200_000_000_000_000_000n, 50_000_000_000_000_000n, 50_000_000_000_000_000n]
-    : [1_000n, 1_000n, 1_000n];
-  console.log(`[e2e] creating bounty via ${useFunder ? "funder" : "deployer (dust)"}`);
-  const hash = await wallet.writeContract({
-    address: ESCROW, abi: postmarkEscrowAbi, functionName: "createBounty",
-    args: [amount, "postmark-e2e/sandbox", 0, 1n,
-      deadline, 3600n, [verifierAddr(0), verifierAddr(1), verifierAddr(2)],
-      reward, bond],
-    value: amount + reward,
-    gas: 900_000n,
-  });
-  const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
-  if (receipt.status !== "success") throw new Error(`createBounty failed: ${hash}`);
-  console.log("[e2e] claim-spec bounty", id.toString(), "tx", hash);
-  return id;
-}
+const pairingCode = () => pairingCodeFor(47321);
 
 const identityHashOf = (login: string, claimant: string, commentId: bigint) =>
   keccak256(encodeAbiParameters(
@@ -85,15 +32,6 @@ async function findOpenBounty(): Promise<bigint | null> {
     if (b.state === 0) return id;
   }
   return null;
-}
-
-async function connectInjected(page: import("@playwright/test").Page) {
-  const connectBtn = page.getByRole("button", { name: /connect/i }).first();
-  if (await connectBtn.isVisible({ timeout: 6_000 }).catch(() => false)) {
-    await connectBtn.click();
-    const pick = page.getByText("Postmark E2E");
-    if (await pick.isVisible({ timeout: 6_000 }).catch(() => false)) await pick.click();
-  }
 }
 
 test("a tampered signature is rejected by local verification", async ({ page }) => {

@@ -152,6 +152,44 @@ function MyClaims() {
   );
 }
 
+function VerifierBounties() {
+  const { address } = useAccount();
+  const index = useIndex();
+  const ids = index.data?.bountyIds;
+  const bounties = useBounties(ids);
+  if (!address) return null;
+  if (index.isPending || bounties.isPending) return <Skeleton className="h-28" />;
+  const me = address.toLowerCase();
+  const mine = (bounties.data ?? []).filter(
+    (b) => b.bounty && b.bounty.verifiers.some((v) => v.toLowerCase() === me));
+  if (mine.length === 0) {
+    return <p className="text-sm text-ink-300">You're not a verifier on any bounty.</p>;
+  }
+  const action = (state: number) =>
+    state === 1 ? "review claim" : state === 3 ? "resolve dispute"
+    : state === 2 ? "verdict pending" : null;
+  return (
+    <ul className="space-y-3">
+      {mine.map(({ id, bounty }) => bounty && (
+        <li key={id.toString()} className="rounded-xl border border-white/10 bg-ink-900/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
+              <span className="font-mono text-vermilion group-hover:underline">#{id.toString()}</span>
+              <StatusChip state={bounty.state} />
+              {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
+            </Link>
+            <div className="flex items-center gap-4 text-sm">
+              {action(bounty.state)
+                ? <Link to={`/bounty/${id}/review`} className="text-vermilion underline underline-offset-4">{action(bounty.state)} →</Link>
+                : <span className="font-mono text-xs text-ink-400">nothing due</span>}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function MeInner() {
   const { address, isConnected } = useAccount();
   if (!isConnected || !address) {
@@ -172,6 +210,8 @@ export default function MeInner() {
       <div className="mt-3"><FundedBounties /></div>
       <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">my claims</h2>
       <div className="mt-3"><MyClaims /></div>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">verifier</h2>
+      <div className="mt-3"><VerifierBounties /></div>
     </div>
   );
 }

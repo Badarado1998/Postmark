@@ -92,9 +92,20 @@ export function makeRpc(endpoint = EVM_RPC) {
   };
 }
 
-async function chainClaimMessage(rpc, escrow, bountyId, claimant, identityHash, claimRound) {
-  const data = sel("claimMessage(uint256,address,bytes32,uint256)")
+export function claimCallData(bountyId, claimant, identityHash, claimRound) {
+  return sel("claimMessage(uint256,address,bytes32,uint256)")
     + word(bountyId) + wordAddr(claimant) + wordBytes32(identityHash) + word(claimRound);
+}
+
+export function verdictCallData(v) {
+  // a static tuple arg encodes inline — no head offset word
+  return sel("verdictMessage((uint256,uint8,uint8,address,uint64,bytes32,uint256,uint256))")
+    + word(v.bountyId) + word(v.phase) + word(v.outcome) + wordAddr(v.payee)
+    + word(v.mergedAt) + wordBytes32(v.evidenceHash) + word(v.nonce) + word(v.claimRound);
+}
+
+async function chainClaimMessage(rpc, escrow, bountyId, claimant, identityHash, claimRound) {
+  const data = claimCallData(bountyId, claimant, identityHash, claimRound);
   const out = await rpc(escrow, data);
   // returns (bytes): head offset 0x20, then len + data
   const len = Number(BigInt("0x" + out.slice(64, 128)));
@@ -102,10 +113,7 @@ async function chainClaimMessage(rpc, escrow, bountyId, claimant, identityHash, 
 }
 
 async function chainVerdictMessage(rpc, escrow, v) {
-  const head = sel("verdictMessage((uint256,uint8,uint8,address,uint64,bytes32,uint256,uint256))")
-    + word(32) // tuple offset
-    + word(v.bountyId) + word(v.phase) + word(v.outcome) + wordAddr(v.payee)
-    + word(v.mergedAt) + wordBytes32(v.evidenceHash) + word(v.nonce) + word(v.claimRound);
+  const head = verdictCallData(v);
   const out = await rpc(escrow, head);
   const len = Number(BigInt("0x" + out.slice(64, 128)));
   return Buffer.from(out.slice(128, 128 + len * 2), "hex");

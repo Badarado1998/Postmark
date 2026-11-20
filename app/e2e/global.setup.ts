@@ -37,40 +37,56 @@ function openWindow(profile: string, label: string, maxTxs: string, uqor: string
   console.log(`[e2e] reusing existing live ${label} window`);
 }
 
-/** Start the claimant's local signer (test-only --yes path), capture the
- * pairing code, and stash it + the pid for specs/teardown. */
-function startSigner(): Promise<string> {
+/** Start a local signer for a profile (test-only --yes path), capture its
+ * pairing code. Returns {code, pid}. */
+function startSigner(profile: string, port: number): Promise<{ code: string; pid: number }> {
   const child = spawn("node", [
     "../scripts/signer.mjs", "serve",
-    "--env", `${E2E}/claimant`,
+    "--env", `${E2E}/${profile}`,
     "--deployment", "e2e",
     "--origin", "http://localhost:4173",
-    "--port", "47321", "--yes",
+    "--port", String(port), "--yes",
   ], {
     cwd: ROOT, env: { ...process.env, POSTMARK_SIGNER_TEST: "1" },
     stdio: ["ignore", "pipe", "inherit"],
   });
   return new Promise((resolve, reject) => {
     let buf = "";
-    const to = setTimeout(() => reject(new Error("signer did not print a pairing code\n" + buf)), 60_000);
+    const to = setTimeout(() => reject(new Error(`${profile} signer did not print a pairing code\n` + buf)), 60_000);
     child.stdout!.on("data", (d) => {
       buf += d;
       const m = buf.match(/pairing code: ([0-9a-f]{8})/);
-      if (m) {
-        clearTimeout(to);
-        writeFileSync(STATE_FILE, JSON.stringify({ pairingCode: m[1], pid: child.pid }));
-        resolve(m[1]!);
-      }
+      if (m) { clearTimeout(to); resolve({ code: m[1]!, pid: child.pid! }); }
     });
     child.on("exit", (c) => {
-      if (!buf.match(/pairing code/)) reject(new Error(`signer exited ${c}\n${buf}`));
+      if (!buf.match(/pairing code/)) reject(new Error(`${profile} signer exited ${c}\n${buf}`));
     });
   });
 }
 
 export default async function globalSetup() {
-  openWindow("funder", "funder", "10", "1000000");
-  openWindow("claimant", "claimant", "5", "300000");
-  await startSigner();
-  console.log("[e2e] claimant signer running, pairing code captured");
+  if (process.env.E2E_NO_WINDOWS) {
+    console.log("[e2e] E2E_NO_WINDOWS — skipping window opens (read-only run)");
+  } else {
+    openWindow("funder", "funder", "10", "1000000");
+    openWindow("claimant", "claimant", "10", "1000000");
+    openWindow("disputer", "disputer", "3", "200000");
+  }
+  // claimant on the default port; verifiers on successive ports so the
+  // review specs can point the app's signer port at each one
+  const profiles: [string, number][] = [
+    ["claimant", 47321], ["verifier0", 47322], ["verifier1", 47323], ["verifier2", 47324],
+  ];
+  const signers: Record<string, { pairingCode: string; pid: number; profile: string }> = {};
+  for (const [profile, port] of profiles) {
+    const s = await startSigner(profile, port);
+    signers[String(port)] = { pairingCode: s.code, pid: s.pid, profile };
+    console.log(`[e2e] ${profile} signer on :${port}`);
+  }
+  // legacy shape: pairingCode/pid at top level for the claimant (claim.spec)
+  writeFileSync(STATE_FILE, JSON.stringify({
+    pairingCode: signers["47321"]!.pairingCode, pid: signers["47321"]!.pid,
+    signers,
+  }));
+  console.log("[e2e] signers running, pairing codes captured");
 }

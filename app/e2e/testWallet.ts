@@ -119,18 +119,119 @@ export async function installTestWallet(page: Page, profile = "funder") {
   });
 }
 
-/** Github API fixtures for postmark-e2e/sandbox#1. */
-export async function mockGithub(page: Page, opts: { comments?: unknown[] } = {}) {
+// ---- shared spec helpers ---------------------------------------------------
+import { postmarkEscrowAbi } from "../src/chain/abi";
+import { existsSync } from "node:fs";
+
+const STATE_FILE = new URL("./.signer-state.json", import.meta.url).pathname;
+
+export function signerState() {
+  if (!existsSync(STATE_FILE)) return null;
+  return JSON.parse(readFileSync(STATE_FILE, "utf8")) as {
+    pairingCode: string; pid: number;
+    signers?: Record<string, { pairingCode: string; pid: number; profile: string }>;
+  };
+}
+
+/** pairing code for the signer on `port` (default: the claimant's). */
+export function pairingCodeFor(port = 47321): string {
+  const s = signerState();
+  const code = s?.signers?.[String(port)]?.pairingCode ?? s?.pairingCode;
+  if (!code) throw new Error("no signer pairing code — global setup did not start signers");
+  return code;
+}
+
+export function verifierAddr(i: number) {
+  const env = readFileSync(`${PROFILES_DIR}/verifier${i}.env`, "utf8");
+  return env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m)![1] as `0x${string}`;
+}
+
+/** Reuse an existing Open bounty whose deadline still fits a 1 h claim
+ * window; otherwise create one — via the e2e funder when it can afford gas,
+ * else a dust-value bounty from the deployer (outside the e2e QOR budget;
+ * createBounty is permissionless). */
+export async function openBountyOrCreate(): Promise<bigint> {
+  const w = nodeWallet("funder");
+  const pub = nodePublic();
+  const next = (await pub.readContract({
+    address: E2E_ESCROW, abi: postmarkEscrowAbi, functionName: "nextBountyId",
+  })) as bigint;
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  for (let id = next - 1n; id >= 1n; id--) {
+    const b = await pub.readContract({ address: E2E_ESCROW, abi: postmarkEscrowAbi,
+      functionName: "getBounty", args: [id] }) as
+      { state: number; deadline: bigint; claimTimeout: bigint };
+    if (b.state === 0 && b.deadline > now + b.claimTimeout + 600n) {
+      console.log("[e2e] reusing open bounty", id.toString());
+      return id;
+    }
+  }
+  const id = next;
+  const deadline = now + 3n * 3600n;
+  const gasPrice = await pub.getGasPrice();
+  const budget = await pub.getBalance({ address: w.account.address });
+  const useFunder = budget > 300_000_000_000_000_000n + gasPrice * 1_000_000n;
+  const wallet = useFunder ? w : nodeWallet("../deployer");
+  const [amount, reward, bond] = useFunder
+    ? [200_000_000_000_000_000n, 50_000_000_000_000_000n, 50_000_000_000_000_000n]
+    : [1_000n, 1_000n, 1_000n];
+  console.log(`[e2e] creating bounty via ${useFunder ? "funder" : "deployer (dust)"}`);
+  const hash = await wallet.writeContract({
+    address: E2E_ESCROW, abi: postmarkEscrowAbi, functionName: "createBounty",
+    args: [amount, "postmark-e2e/sandbox", 0, 1n,
+      deadline, 3600n, [verifierAddr(0), verifierAddr(1), verifierAddr(2)],
+      reward, bond],
+    value: amount + reward,
+    gas: 900_000n,
+  });
+  const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
+  if (receipt.status !== "success") throw new Error(`createBounty failed: ${hash}`);
+  console.log("[e2e] spec bounty", id.toString(), "tx", hash);
+  return id;
+}
+
+export async function connectInjected(page: Page) {
+  const connectBtn = page.getByRole("button", { name: /connect/i }).first();
+  if (await connectBtn.isVisible({ timeout: 6_000 }).catch(() => false)) {
+    await connectBtn.click();
+    const pick = page.getByText("Postmark E2E");
+    if (await pick.isVisible({ timeout: 6_000 }).catch(() => false)) await pick.click();
+  }
+}
+
+/** Github API fixtures for postmark-e2e/sandbox#1 (+ pull/2 + timeline). */
+export async function mockGithub(page: Page, opts: {
+  comments?: unknown[]; pull?: unknown; timeline?: unknown[];
+} = {}) {
   const issue = {
     number: 1, title: "Postmark sandbox: wire the funder flow",
     state: "open", html_url: "https://github.com/postmark-e2e/sandbox/issues/1",
     user: { login: "octocat" }, labels: [{ name: "bounty" }], comments: 0,
   };
+  const pull = opts.pull ?? {
+    number: 2, title: "wire the funder flow", state: "closed", merged: true,
+    merged_at: new Date().toISOString(), merge_commit_sha: "f".repeat(40),
+    user: { login: "e2e-claimant" },
+    html_url: "https://github.com/postmark-e2e/sandbox/pull/2",
+  };
+  const timeline = opts.timeline ?? [{
+    event: "cross-referenced",
+    source: { issue: { number: 2, pull_request: {
+      html_url: "https://github.com/postmark-e2e/sandbox/pull/2" } } },
+  }];
   await page.route("https://api.github.com/**", (route) => {
     const u = route.request().url();
     if (u.includes("/issues/1/comments")) {
       return route.fulfill({ status: 200, contentType: "application/json",
         body: JSON.stringify(opts.comments ?? []) });
+    }
+    if (u.includes("/issues/1/timeline")) {
+      return route.fulfill({ status: 200, contentType: "application/json",
+        body: JSON.stringify(timeline) });
+    }
+    if (u.includes("/pulls/2")) {
+      return route.fulfill({ status: 200, contentType: "application/json",
+        body: JSON.stringify(pull) });
     }
     if (u.includes("/issues/1")) {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(issue) });

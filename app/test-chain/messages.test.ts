@@ -45,6 +45,28 @@ describe("deployed PostmarkEscrow", () => {
     expect(verdictMessage(v, 9800, escrow)).toBe(onchain);
   });
 
+  it("DISPUTE-phase verdictMessage matches the contract (live Disputed bounty)", async () => {
+    const id = 14n; // a real Disputed bounty on the e2e escrow
+    const b = (await client.readContract({
+      address: escrow, abi, functionName: "getBounty", args: [id],
+    })) as { state: number; payee: `0x${string}`; nonce: bigint; claimRound: bigint;
+      initialMergedAt: bigint; pendingVerdictHash: `0x${string}`;
+      disputeEvidenceHash: `0x${string}` };
+    if (b.state !== 3) return; // fixture gone — INITIAL case above still covers the builder
+    const v = {
+      bountyId: id, phase: 1, outcome: 0,
+      payee: b.payee, mergedAt: b.initialMergedAt,
+      evidenceHash: ("0x" + "44".repeat(32)) as `0x${string}`,
+      nonce: b.nonce, claimRound: b.claimRound,
+      disputedVerdictHash: b.pendingVerdictHash,
+      disputeEvidenceHash: b.disputeEvidenceHash,
+    };
+    const onchain = await client.readContract({
+      address: escrow, abi, functionName: "verdictMessage", args: [v],
+    });
+    expect(verdictMessage(v, 9800, escrow)).toBe(onchain);
+  });
+
   it("typehash constants match the contract", async () => {
     const [claim, verdict, chain] = await Promise.all([
       client.readContract({ address: escrow, abi, functionName: "CLAIM_TYPEHASH" }),

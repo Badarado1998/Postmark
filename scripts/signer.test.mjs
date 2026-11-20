@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createHandler, processSignRequest, SignRefusal, SignerConfigError,
-  loadProfile, buildClaimMessage, assertKeyLive, yesAllowed,
+  loadProfile, buildClaimMessage, assertKeyLive, yesAllowed, claimCallData, verdictCallData,
 } from "./signer.mjs";
 import { generatePqcKeypair } from "@qorechain/sdk";
 
@@ -171,4 +171,24 @@ test("prefix guarantee holds for locally built claims", () => {
   const m = buildClaimMessage({ bountyId: 1, claimant: EVM,
     identityHash: IH, claimRound: 1, escrow: ESCROW });
   assert.equal(m.subarray(0, 33).toString("utf8"), "qorechain-msg-v1|qorechain-diana|");
+});
+
+// regression: the eth_call calldata must be canonical ABI (the tuple-offset
+// bug sent a head offset for a static tuple, which reverts on chain)
+test("call data matches viem encodeFunctionData", async () => {
+  const { encodeFunctionData, parseAbiItem } = await import("viem");
+  const claim = encodeFunctionData({
+    abi: [parseAbiItem("function claimMessage(uint256,address,bytes32,uint256) view returns (bytes)")],
+    functionName: "claimMessage", args: [7n, EVM, IH, 2n],
+  });
+  assert.equal("0x" + claimCallData(7, EVM, IH, 2), claim);
+
+  const v = { bountyId: 13n, phase: 1, outcome: 0, payee: EVM,
+    mergedAt: 1700000000n, evidenceHash: IH, nonce: 4n, claimRound: 2n };
+  const expected = encodeFunctionData({
+    abi: [parseAbiItem("function verdictMessage((uint256,uint8,uint8,address,uint64,bytes32,uint256,uint256)) view returns (bytes)")],
+    functionName: "verdictMessage",
+    args: [[v.bountyId, v.phase, v.outcome, v.payee, v.mergedAt, v.evidenceHash, v.nonce, v.claimRound]],
+  });
+  assert.equal("0x" + verdictCallData(v), expected);
 });

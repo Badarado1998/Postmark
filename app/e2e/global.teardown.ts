@@ -18,11 +18,17 @@ function closeWindow(profile: string) {
 export default async function globalTeardown() {
   if (existsSync(STATE_FILE)) {
     try {
-      const { pid } = JSON.parse(readFileSync(STATE_FILE, "utf8")) as { pid: number };
-      process.kill(pid, "SIGTERM");
-    } catch { /* signer already gone */ }
+      const state = JSON.parse(readFileSync(STATE_FILE, "utf8")) as
+        { pid: number; signers?: Record<string, { pid: number }> };
+      const pids = state.signers
+        ? Object.values(state.signers).map((s) => s.pid) : [state.pid];
+      for (const pid of pids) { try { process.kill(pid, "SIGTERM"); } catch { /* gone */ } }
+    } catch { /* state file unreadable */ }
     unlinkSync(STATE_FILE);
   }
-  closeWindow("funder");
-  closeWindow("claimant");
+  if (!process.env.E2E_NO_WINDOWS) {
+    closeWindow("funder");
+    closeWindow("claimant");
+    closeWindow("disputer");
+  }
 }

@@ -2,7 +2,21 @@
 // The pairing code is pasted once per tab and kept in sessionStorage.
 
 const PAIR_KEY = "pm-signer-pair";
-export const SIGNER_URL = "http://127.0.0.1:47321";
+const PORT_KEY = "pm-signer-port";
+const DEFAULT_PORT = 47321;
+
+export function signerPort(): number {
+  const p = Number(sessionStorage.getItem(PORT_KEY));
+  return Number.isInteger(p) && p > 0 && p < 65536 ? p : DEFAULT_PORT;
+}
+export function setSignerPort(port: number | null) {
+  if (port && Number.isInteger(port) && port > 0 && port < 65536) {
+    sessionStorage.setItem(PORT_KEY, String(port));
+  } else {
+    sessionStorage.removeItem(PORT_KEY);
+  }
+}
+export const signerUrl = () => `http://127.0.0.1:${signerPort()}`;
 
 export function pairingCode(): string | null {
   return sessionStorage.getItem(PAIR_KEY);
@@ -26,7 +40,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const code = pairingCode();
   let res: Response;
   try {
-    res = await fetch(`${SIGNER_URL}${path}`, {
+    res = await fetch(`${signerUrl()}${path}`, {
       ...init,
       headers: {
         ...(init?.headers ?? {}),
@@ -60,6 +74,25 @@ export function signClaim(input: {
         bountyId: input.bountyId.toString(),
         identityHash: input.identityHash,
         claimRound: input.claimRound.toString(),
+      }),
+    });
+}
+
+export function signVerdict(verdict: {
+  bountyId: bigint; phase: number; outcome: number; payee: `0x${string}`;
+  mergedAt: bigint; evidenceHash: `0x${string}`; nonce: bigint; claimRound: bigint;
+}) {
+  return req<{ signature: `0x${string}`; signer: `0x${string}`; pubkeySha256: string }>(
+    "/sign", {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "verdict",
+        verdict: {
+          bountyId: verdict.bountyId.toString(), phase: verdict.phase,
+          outcome: verdict.outcome, payee: verdict.payee,
+          mergedAt: verdict.mergedAt.toString(), evidenceHash: verdict.evidenceHash,
+          nonce: verdict.nonce.toString(), claimRound: verdict.claimRound.toString(),
+        },
       }),
     });
 }

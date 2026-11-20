@@ -32,6 +32,9 @@ body::after {
 
 ::selection { background: rgba(225, 72, 47, 0.4); }
 
+/* the sticky shell header must not cover controls scrolled to the viewport top */
+main :is(button, input, select, textarea, a, [role="button"]) { scroll-margin-top: 5rem; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

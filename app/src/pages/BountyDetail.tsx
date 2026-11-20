@@ -10,6 +10,7 @@ import { getIssue, getPull, getLinkedPrs, GithubRateLimitError, type GhIssue, ty
 const TxActions = lazy(() => import("../wallet/TxActions"));
 const ClaimPanel = lazy(() => import("../wallet/ClaimPanel"));
 const ClaimedNote = lazy(() => import("../wallet/ClaimedNote"));
+const DisputePanel = lazy(() => import("../wallet/DisputePanel"));
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -217,6 +218,91 @@ export default function BountyDetail() {
               <ClaimPanel id={id} bounty={bounty.data} meta={index.data.metaById.get(id)!} />
             </Suspense>
           )}
+
+          {/* review link — Claimed, Pending or Disputed */}
+          {[1, 2, 3].includes(bounty.data.state) && (
+            <Link to={`/bounty/${id}/review`}
+              className="block rounded-xl border border-vermilion/30 bg-vermilion/5 p-4 text-sm text-vermilion hover:bg-vermilion/10">
+              {bounty.data.state === 3
+                ? "This verdict is disputed — open the review tool to build a resolution →"
+                : "Open the verifier review tool → check the claim, sign a verdict, merge the quorum →"}
+            </Link>
+          )}
+
+          {/* Pending: frozen verdict + challenge countdown + dispute */}
+          {bounty.data.state === 2 && (
+            <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">verdict pending</h2>
+              <p className="mt-2 text-sm text-ink-200">
+                Initial verdict: <span className="text-paper-100">{bounty.data.initialOutcome === 0 ? "PAY" : "REFUND"}</span>
+                {bounty.data.payee !== "0x0000000000000000000000000000000000000000" && (
+                  <> to <a className="font-mono hover:text-vermilion" href={explorerAddress(bounty.data.payee)} target="_blank" rel="noreferrer">{shortAddr(bounty.data.payee)}</a>
+                  {" "}· <Qor wei={bounty.data.amount} /></>)}
+                {" "}— the payout is frozen until the challenge window closes.
+              </p>
+              <p className="mt-1 font-mono text-xs text-ink-300">
+                challenge window <Countdown to={bounty.data.challengeEndsAt} />
+              </p>
+              <Suspense fallback={null}>
+                {index.data?.metaById.get(id) && (
+                  <div className="mt-4">
+                    <DisputePanel id={id} bounty={bounty.data} meta={index.data.metaById.get(id)!} />
+                  </div>
+                )}
+              </Suspense>
+            </div>
+          )}
+
+          {/* Disputed: payout frozen, link to resolution */}
+          {bounty.data.state === 3 && (
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-5">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber-300">payout frozen — disputed</h2>
+              <p className="mt-2 text-sm text-ink-200">
+                <a className="font-mono hover:text-vermilion" href={explorerAddress(bounty.data.disputer)} target="_blank" rel="noreferrer">{shortAddr(bounty.data.disputer)}</a>
+                {" "}bonded <Qor wei={bounty.data.bondAmount} /> against the
+                {" "}{bounty.data.initialOutcome === 0 ? "PAY" : "REFUND"} verdict. The winner also
+                takes the <Qor wei={bounty.data.challengeReward} /> challenge reward.
+              </p>
+              <p className="mt-1 break-all font-mono text-xs text-ink-400">
+                dispute evidence {bounty.data.disputeEvidenceHash.slice(0, 26)}…
+              </p>
+            </div>
+          )}
+
+          {/* ruling: a resolved dispute or a settled verdict */}
+          {(bounty.data.state === 4 || bounty.data.state === 5) && (() => {
+            const evs = (index.data?.events ?? [])
+              .filter((e) => (e.args as { bountyId?: bigint }).bountyId === id);
+            const resolved = evs.find((e) => e.eventName === "DisputeResolved");
+            const credits = evs.filter((e) => e.eventName === "Credited");
+            const wasDisputed = !!resolved;
+            const upheld = (resolved?.args as { upheld?: boolean } | undefined)?.upheld;
+            return (
+              <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">ruling</h2>
+                <p className="mt-2 text-sm text-ink-200">
+                  {bounty.data.state === 4 ? "Paid" : "Refunded"}
+                  {wasDisputed && (
+                    <> — the dispute was {upheld ? <span className="text-amber-300">upheld</span> : <span className="text-emerald-300">rejected</span>}.</>)}
+                  {!wasDisputed && " — unchallenged verdict finalized."}
+                </p>
+                {credits.length > 0 && (
+                  <ul className="mt-2 space-y-1 font-mono text-xs text-ink-300">
+                    {credits.map((e, i) => {
+                      const a = e.args as { account?: string; amount?: bigint; payeeGated?: boolean };
+                      return (
+                        <li key={i}>
+                          <a className="hover:text-vermilion" href={explorerAddress(a.account ?? "")} target="_blank" rel="noreferrer">{shortAddr(a.account)}</a>
+                          {" "}credited {a.amount !== undefined ? <Qor wei={a.amount} /> : "?"}
+                          {a.payeeGated ? " (payee-gated)" : ""}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
 
           <Suspense fallback={null}>
             <TxActions id={id} bounty={bounty.data} />
