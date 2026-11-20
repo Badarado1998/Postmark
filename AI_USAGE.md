@@ -9,7 +9,9 @@ what people decided, and how the AI output was checked.
   the docs and chain state, made the design calls recorded in SPEC.md ("Implementation decisions"),
   wrote the briefs, reviewed every diff and made the commits.
 - **Devin's sidekick agent**, a second agent that did the hands-on work: Solidity, Foundry tests, Node
-  scripts, the web app and its tests, and the testnet transactions, all from the lead's written briefs.
+  scripts, the local ML-DSA-87 signer (`scripts/signer.mjs`), the web app (funder, claimant, verifier
+  review, dispute/resolution and dashboard flows) and its tests, and the testnet transactions, all from
+  the lead's written briefs.
 - The QoreChain **QCAI Contract Auditor** for the two-stage contract audit (see docs/AUDIT.md).
 
 ## What people decided
@@ -27,7 +29,13 @@ before hosting. Recruiting verifiers, the Discord question and running the QCAI 
 - **Tests that don't trust the code under test.** The Foundry suite uses real ML-DSA-87 signatures from
   independently seeded keys (no always-true stubs), and the message tests rebuild the signed bytes from the
   spec strings instead of calling the contract's own helpers. Hash formats in the app are checked against
-  vectors produced separately with `cast`.
+  vectors produced separately with `cast`. The app's own message builders and verdict-bundle merge are
+  verified against Viem `encodeFunctionData` and live-RPC `claimMessage`/`verdictMessage` reads —
+  the suite that caught the signer's static-tuple offset bug — and the signer's Node tests refuse on
+  message mismatch, wrong claimant, wrong origin or wrong pairing code.
+- **End-to-end on the real chain.** The Playwright e2e runs the full lifecycle — create, claim,
+  2-of-3 INITIAL verdict, bonded dispute, DISPUTE-phase resolution, withdrawal — against the dedicated
+  e2e escrow on diana (bounty #17 paid out), with GitHub as the only stubbed dependency.
 - **Chain facts verified on chain.** Every deployment was checked by comparing the on-chain code with the
   compiled bytecode and reading the constants back with `cast call`. Key registrations were checked with
   `pqcKeyStatus` and the REST key record.

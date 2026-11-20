@@ -27,9 +27,9 @@ The threat-model review runs in parallel rather than blocking all implementation
 | T7 | Nov 21–26 (parallel) | Threat model + SPEC review: independence, same-set dispute limits, indefinite lock, claim griefing, leaked-ECDSA analysis | THREAT_MODEL.md reviewed against SPEC.md; trust/liveness limitations explicit (drafted Nov 19; waiting on owner review) |
 | T8 | Nov 27 | Deploy on diana (chain 9800) through a scoped EVM window; QCAI audit run 1; workshop 4 clinic at 16:30 UTC | Contract addresses + txs in README; audit run 1 saved (deployed Nov 19, addresses in README; audit run 1 pending) |
 | T9 | Nov 28 | Fix findings, audit run 2, write docs/AUDIT.md | Regression tests for fixes; run 2 clean or every finding answered in docs/AUDIT.md |
-| T10 | Nov 29 | Simple QoreX UI: list, fund, claim, show verdict, challenge timer, dispute, withdraw | One bounty claimed and paid end to end on diana from the UI |
+| T10 | Nov 29 | Simple QoreX UI: list, fund, claim, show verdict, challenge timer, dispute, withdraw | One bounty claimed and paid end to end on diana from the UI (**done Nov 20**: React/Vite app — W1 base `bea2279`, funder flow `fba4612`, claim flow + local PQ signer `0bab8b9`, verifier review + disputes `648e9a7`; full lifecycle claimed→verdict→dispute→resolved→withdrawn on the e2e instance, e2e bounty #17) |
 | T11 | Nov 29 (only if T1–T10 are done) | Stretch: acceptance-check jobs with planted fakes, QoreSeal deliverables, `signArbitrary` identity, MCP tool | Each stretch item has its own tests; skip any that isn't ready |
-| T12 | Nov 30–Dec 1 | Submission pack: README (prior-work line, testnet wording, kit credits), AI_USAGE.md, featured image, video under 3 min | Project page reads "verified", not just "declared" |
+| T12 | Nov 30–Dec 1 | Submission pack: README (prior-work line, testnet wording, kit credits), AI_USAGE.md, featured image, video under 3 min | Project page reads "verified", not just "declared" (README + AI_USAGE refreshed Nov 20; image and video open) |
 | T13 | Dec 2 by 12:00 UTC | Submit, tick AI-native box, post with #BuildBeforeQDay | Submission confirmation received |
 | T14 | Dec 6–15 | Stay reachable for judging; answer finalist change requests within 48h | No request older than 24h without an answer |
 
