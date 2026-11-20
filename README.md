@@ -99,7 +99,7 @@ signature hex for copy/paste.
 
 ## Audit
 
-QCAI Contract Auditor **run 1 is pending**; findings and regression fixes will land in `docs/AUDIT.md` (see PLAN.md T8/T9).
+QCAI run 1 (Nov 20, Ethereum EVM/Solidity setting): 65/100, 6 findings. Each finding is answered with the tests that cover it in [`docs/AUDIT.md`](docs/AUDIT.md); none needed a code change, so the deployed bytecode still matches the source. Run 2 is pending.
 
 * [Library setup, API, example and limitations](src/test-utils/README.md)
 * [PostmarkEscrow specification and test plan](SPEC.md)
