@@ -20,7 +20,7 @@ vi.mock("wagmi", () => ({
 vi.mock("react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router")>()), useNavigate: () => m.navigate,
 }));
-vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/wallet/WalletRoot", async () => (await import("../mocks")).walletRootModule);
 vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: m.txState, run: m.run, busy: m.busy }),
 }));

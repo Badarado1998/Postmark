@@ -1,8 +1,13 @@
 import type { Page } from "@playwright/test";
+import type { TransactionSerializableLegacy } from "viem";
 import { e2eLog } from "../util.ts";
 import { nodePublic, nodeWallet } from "./accounts.ts";
 
-type Rpc = { method: string; params?: unknown[] };
+export type Rpc = { method: string; params?: unknown[] };
+
+declare global {
+  interface Window { __postmarkE2eRequest: (req: Rpc) => Promise<unknown> }
+}
 type Client = ReturnType<typeof nodeWallet>;
 
 const optionalBig = (v: unknown) => (v === undefined ? undefined : BigInt(v as string));
@@ -11,16 +16,17 @@ const optionalBig = (v: unknown) => (v === undefined ? undefined : BigInt(v as s
 async function sendTransaction(client: Client, tx: Record<string, unknown>) {
   const pub = nodePublic();
   const address = client.account.address;
-  const prepared = {
-    to: tx.to, data: tx.data, from: undefined, account: client.account,
+  const gas = optionalBig(tx.gas);
+  const prepared: TransactionSerializableLegacy = {
+    to: tx.to as `0x${string}`, data: tx.data as `0x${string}`,
     nonce: tx.nonce !== undefined ? Number(BigInt(tx.nonce as string))
       : await pub.getTransactionCount({ address }),
-    gas: optionalBig(tx.gas),
+    ...(gas !== undefined ? { gas } : {}),
     gasPrice: optionalBig(tx.gasPrice) ?? await pub.getGasPrice(),
     value: optionalBig(tx.value) ?? 0n,
     chainId: 9800, type: "legacy",
   };
-  const signed = await client.account.signTransaction(prepared as never);
+  const signed = await client.account.signTransaction(prepared);
   const hash = await pub.request({ method: "eth_sendRawTransaction", params: [signed] });
   e2eLog("testWallet", "sent", hash, "gas", tx.gas);
   return hash;
@@ -40,7 +46,7 @@ async function handleRequest(client: Client, { method, params }: Rpc) {
       return sendTransaction(client, (params as Record<string, unknown>[])[0]!);
     default:
       try {
-        return await client.request({ method, params } as never);
+        return await client.transport.request({ method, params });
       } catch (e) {
         e2eLog("testWallet", `${method} failed:`, e instanceof Error ? e.message.slice(0, 500) : e);
         throw e;
@@ -53,8 +59,7 @@ function announceProvider() {
   const info = { uuid: "b5c1f6d0-0000-4e2e-8e2e-p0stmark-e2e", name: "Postmark E2E", icon: "data:image/svg+xml,", rdns: "dev.postmark.e2e" };
   type Listener = (...a: unknown[]) => void;
   const listeners = new Map<string, Set<Listener>>();
-  const forward = (args: Rpc) =>
-    (window as never as { __postmarkE2eRequest: (r: unknown) => Promise<unknown> }).__postmarkE2eRequest(args);
+  const forward = (args: Rpc) => window.__postmarkE2eRequest(args);
   const provider = {
     isPostmarkE2E: true,
     request: forward,
@@ -73,10 +78,14 @@ function announceProvider() {
 
 /** Inject an EIP-6963 EIP-1193 provider; all requests are proxied into Node
  * via an exposed binding, so the private key never enters page JS. */
+export async function installProvider(page: Page, handler: (req: Rpc) => Promise<unknown> | unknown) {
+  await page.exposeBinding("__postmarkE2eRequest", (_source, req: Rpc) => handler(req));
+  await page.addInitScript(announceProvider);
+}
+
 export async function installTestWallet(page: Page, profile = "funder") {
   const client = nodeWallet(profile);
-  await page.exposeBinding("__postmarkE2eRequest", (_source, req: Rpc) => handleRequest(client, req));
-  await page.addInitScript(announceProvider);
+  await installProvider(page, (req) => handleRequest(client, req));
 }
 
 export async function connectInjected(page: Page) {

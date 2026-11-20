@@ -37,6 +37,34 @@ const FALLBACK_GAS: Record<string, bigint> = {
   withdraw: 250_000n, submitVerdict: 2_500_000n, resolveDispute: 2_500_000n,
 };
 
+interface TxRequest {
+  functionName: string;
+  args: readonly unknown[];
+  value?: bigint;
+  gas?: bigint;
+  onConfirmed?: (hash: `0x${string}`) => void;
+  invalidates?: readonly (readonly unknown[])[];
+}
+
+const contractCall = (req: TxRequest, account: `0x${string}`) => ({
+  address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
+  functionName: req.functionName,
+  args: req.args as ContractFunctionArgs,
+  account, value: req.value,
+});
+
+/** Padded eth_estimateGas, or a per-function fallback when the estimate fails. */
+async function pickGasLimit(req: TxRequest, account: `0x${string}`) {
+  try {
+    const est = await httpClient.estimateContractGas(contractCall(req, account));
+    return { gasLimit: req.gas ?? (est * 125n) / 100n + 1n, estimateFailed: false };
+  } catch {
+    return { gasLimit: req.gas ?? FALLBACK_GAS[req.functionName] ?? 800_000n, estimateFailed: true };
+  }
+}
+
+const WALLET_REJECTION = /user rejected|denied|rejected the request/i;
+
 const BUSY_PHASES: readonly TxPhase[] = [
   "checking", "simulating", "wallet", "submitted", "confirming",
 ];
@@ -53,14 +81,7 @@ export function useTxAction() {
 
   const reset = useCallback(() => setState({ phase: "idle" }), []);
 
-  const run = useCallback(async (req: {
-    functionName: string;
-    args: readonly unknown[];
-    value?: bigint;
-    gas?: bigint;
-    onConfirmed?: (hash: `0x${string}`) => void;
-    invalidates?: readonly (readonly unknown[])[];
-  }) => {
+  const run = useCallback(async (req: TxRequest) => {
     if (running.current) return;
     running.current = true;
     try {
@@ -77,20 +98,7 @@ export function useTxAction() {
       // usually a revert — but the window preflight comes before simulation so a
       // window-less wallet still gets the QoreX guide instead of an RPC error.
       setState({ phase: "simulating" });
-      let gasLimit: bigint;
-      let estimateFailed = false;
-      try {
-        const est = await httpClient.estimateContractGas({
-          address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
-          functionName: req.functionName,
-          args: req.args as ContractFunctionArgs,
-          account: address, value: req.value,
-        });
-        gasLimit = req.gas ?? (est * 125n) / 100n + 1n;
-      } catch {
-        estimateFailed = true;
-        gasLimit = req.gas ?? FALLBACK_GAS[req.functionName] ?? 800_000n;
-      }
+      const { gasLimit, estimateFailed } = await pickGasLimit(req, address);
       const maxFeeWei = gasLimit * FEE_CAP_WEI;
       // fresh reads at submit time — never trust possibly-stale query state
       const [pqcData, winData] = await Promise.all([
@@ -113,12 +121,7 @@ export function useTxAction() {
       if (estimateFailed) {
         // decode the real revert now that the window is known-good
         try {
-          await httpClient.simulateContract({
-            address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
-            functionName: req.functionName,
-            args: req.args as ContractFunctionArgs,
-            account: address, value: req.value,
-          });
+          await httpClient.simulateContract(contractCall(req, address));
         } catch (e2) {
           setState({ phase: "failed", error: explainError(e2) });
           return;
@@ -135,7 +138,7 @@ export function useTxAction() {
           gas: gasLimit,
         });
       } catch (e) {
-        if (/user rejected|denied|rejected the request/i.test(errorMessage(e))) {
+        if (WALLET_REJECTION.test(errorMessage(e))) {
           setState({ phase: "ready", error: "Rejected in the wallet — nothing was sent." });
           return;
         }

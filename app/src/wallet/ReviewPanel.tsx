@@ -14,9 +14,9 @@ import { usePrCheck } from "./review/usePrCheck";
 import { useVerdictBuilder } from "./review/useVerdictBuilder";
 import { useVerdictBundle } from "./review/useVerdictBundle";
 import { useVerdictSigning } from "./review/useVerdictSigning";
-import {
-  BundleCard, ClaimUnderReview, DecisionCard, IdentityCard, PrCheckCard, SignCard,
-} from "./review/ReviewSections";
+import { ClaimUnderReview, IdentityCard, PrCheckCard } from "./review/ClaimChecks";
+import { DecisionCard, SignCard } from "./review/VerdictCards";
+import { BundleCard } from "./review/BundleCard";
 import type { Bounty } from "../chain/client";
 import type { BountyMeta } from "../chain/indexer";
 

@@ -4,6 +4,7 @@
 // address, pqcKeyStatus eth_call on 0x..0a02, cross-checked against the REST API.
 import { pathToFileURL } from "node:url";
 import { sha256hex } from "./lib/common.mjs";
+import { qorToEvm } from "./lib/bech32.mjs";
 
 const REST = process.env.QORE_REST || "https://api-testnet.qore.host";
 const RPC = process.env.QORE_EVM_RPC || "https://evm-testnet.qore.host";
@@ -15,58 +16,14 @@ const ML_DSA_87_PUBKEY_BYTES = 2592;
 export class KeyStatusError extends Error {}
 const fail = (msg) => { throw new KeyStatusError(msg); };
 
-// --- bech32 (BIP173) ---
-const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-const GENERATORS = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
-
-function polymod(values) {
-  let chk = 1;
-  for (const v of values) {
-    const top = chk >> 25;
-    chk = ((chk & 0x1ffffff) << 5) ^ v;
-    for (let i = 0; i < 5; i++) if ((top >> i) & 1) chk ^= GENERATORS[i];
-  }
-  return chk;
-}
-
-export function decodeBech32(addr) {
-  if (addr !== addr.toLowerCase() && addr !== addr.toUpperCase()) fail("mixed-case bech32 string");
-  addr = addr.toLowerCase();
-  const pos = addr.lastIndexOf("1");
-  if (pos < 1 || pos + 7 > addr.length || addr.length > 90) fail("invalid bech32 string");
-  const hrp = addr.slice(0, pos);
-  const data = [];
-  for (const c of addr.slice(pos + 1)) {
-    const v = CHARSET.indexOf(c);
-    if (v === -1) fail(`invalid bech32 character "${c}"`);
-    data.push(v);
-  }
-  const expanded = [...hrp].map((c) => c.charCodeAt(0) >> 5)
-    .concat([0], [...hrp].map((c) => c.charCodeAt(0) & 31), data);
-  if (polymod(expanded) !== 1) fail("bech32 checksum mismatch");
-  return { hrp, words: data.slice(0, -6) };
-}
-
-function convertBits(data, from, to, pad) {
-  let acc = 0, bits = 0;
-  const out = [], maxv = (1 << to) - 1;
-  for (const v of data) {
-    if (v < 0 || v >> from) fail("invalid data range");
-    acc = (acc << from) | v;
-    bits += from;
-    while (bits >= to) { bits -= to; out.push((acc >> bits) & maxv); }
-  }
-  if (pad) { if (bits) out.push((acc << (to - bits)) & maxv); }
-  else if (bits >= from || ((acc << (to - bits)) & maxv)) fail("invalid padding");
-  return out;
-}
-
+// --- bech32 (shared with the app) ---
 export function bech32ToEvm(addr) {
-  const { hrp, words } = decodeBech32(addr);
-  if (hrp !== "qor") fail(`expected "qor" prefix, got "${hrp}"`);
-  const bytes = convertBits(words, 5, 8, false);
-  if (bytes.length !== 20) fail(`expected 20-byte payload, got ${bytes.length}`);
-  return "0x" + Buffer.from(bytes).toString("hex");
+  if (addr !== addr.toLowerCase() && addr !== addr.toUpperCase()) fail("mixed-case bech32 string");
+  try {
+    return qorToEvm(addr.toLowerCase());
+  } catch (e) {
+    throw new KeyStatusError(e.message);
+  }
 }
 
 // --- JSON-RPC ---

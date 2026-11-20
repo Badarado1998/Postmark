@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bech32ToEvm, decodeBech32, decodeKeyStatus, isLive, KeyStatusError } from "./key-status.mjs";
+import { bech32ToEvm, decodeKeyStatus, isLive, KeyStatusError } from "./key-status.mjs";
 
 const DEPLOYER_QOR = "qor1n47s7ymy6mehz9w36klpezfkyk2jsucnhgk58p";
 const DEPLOYER_EVM = "0x9d7d0f1364d6f37115d1d5be1c89362595287313";
@@ -20,9 +20,9 @@ test("bech32ToEvm maps a qor1 address to its 20-byte EVM address", () => {
 
 test("bech32 decoding rejects bad checksums, mixed case and foreign prefixes", () => {
   const badChecksum = DEPLOYER_QOR.slice(0, -1) + (DEPLOYER_QOR.endsWith("p") ? "q" : "p");
-  assert.throws(() => decodeBech32(badChecksum), KeyStatusError);
-  assert.throws(() => decodeBech32("Qor1" + DEPLOYER_QOR.slice(4)), /mixed-case/);
-  assert.throws(() => decodeBech32("noseparator"), /invalid bech32/);
+  assert.throws(() => bech32ToEvm(badChecksum), KeyStatusError);
+  assert.throws(() => bech32ToEvm("Qor1" + DEPLOYER_QOR.slice(4)), /mixed-case/);
+  assert.throws(() => bech32ToEvm("noseparator"), /separator/);
   assert.throws(() => bech32ToEvm("cosmos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6tdq6z"), KeyStatusError);
 });
 

@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 
-vi.mock("../../src/wallet/WalletRoot", () => ({
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock("../../src/wallet/WalletRoot", async () => (await import("../mocks")).walletRootModule);
 vi.mock("wagmi", () => ({
   useAccount: () => ({ isConnected: true, address: "0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6" }),
 }));

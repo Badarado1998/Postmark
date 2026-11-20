@@ -3,13 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { renderApp } from "../fixtures";
 
-vi.mock("../../src/chain/IndexerProvider", () => ({
-  useFeedStatus: () => "live",
-  IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock("../../src/chain/IndexerProvider", async () => (await import("../mocks")).indexerModule("live"));
 vi.mock("../../src/wallet/ConnectWallet", () => ({ default: () => <button>Connect wallet</button> }));
 vi.mock("../../src/wallet/MeInner", () => ({ default: () => <p>me inner</p> }));
-vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/wallet/WalletRoot", async () => (await import("../mocks")).walletRootModule);
 vi.mock("../../src/wallet/CreateInner", () => ({ default: () => <p>create inner</p> }));
 vi.mock("../../src/pages/Explore", () => ({ default: () => <p>explore page</p> }));
 

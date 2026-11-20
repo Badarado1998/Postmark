@@ -6,9 +6,9 @@ const github = vi.hoisted(() => ({ item: {} as Record<string, unknown> }));
 vi.mock("../../src/hooks/queries", () => ({ useGithubItem: () => github.item }));
 
 import { ItemPreview, VerifierInput } from "../../src/wallet/createParts";
-import {
-  BundleCard, ClaimUnderReview, DecisionCard, IdentityCard, PrCheckCard, SignCard,
-} from "../../src/wallet/review/ReviewSections";
+import { ClaimUnderReview, IdentityCard, PrCheckCard } from "../../src/wallet/review/ClaimChecks";
+import { DecisionCard, SignCard } from "../../src/wallet/review/VerdictCards";
+import { BundleCard } from "../../src/wallet/review/BundleCard";
 
 const noop = () => {};
 const asyncNoop = async () => {};

@@ -1,26 +1,13 @@
 import { useState } from "react";
-import { hexToBytes } from "viem";
-import { mldsa87 } from "@qorechain/pqc";
 import { useToast } from "../../components/Toasts";
 import { parseBundle, mergeBundles, BUNDLE_FORMAT, type VerdictBundle } from "../../formats/verdictBundle";
-import { pqcKeyStatus } from "../../chain/pqc";
 import { ESCROW_ADDRESS, NATIVE_CHAIN_ID } from "../../chain/config";
 import { errorMessage } from "../../chain/errors";
 import type { Bounty } from "../../chain/client";
 import type { BuiltVerdict } from "../../chain/verdict";
+import { bigintToString, sameVerdict, signatureStatuses, type SigStatus } from "./bundleVerify";
 
-export type SigStatus = "valid" | "invalid" | "key not live" | "pending";
-
-const bigintToString = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
-
-function sameVerdict(a: BuiltVerdict["verdict"], b: BuiltVerdict["verdict"]) {
-  return a.bountyId === b.bountyId && a.phase === b.phase && a.outcome === b.outcome
-    && a.payee.toLowerCase() === b.payee.toLowerCase() && a.mergedAt === b.mergedAt
-    && a.evidenceHash === b.evidenceHash && a.nonce === b.nonce
-    && a.claimRound === b.claimRound
-    && a.disputedVerdictHash === b.disputedVerdictHash
-    && a.disputeEvidenceHash === b.disputeEvidenceHash;
-}
+export type { SigStatus };
 
 /** The working verdict bundle: persisted locally, signatures verified against live keys, mergeable. */
 export function useVerdictBundle(id: bigint, bounty: Bounty, phase: number, built: BuiltVerdict | null) {
@@ -43,17 +30,8 @@ export function useVerdictBundle(id: bigint, bounty: Bounty, phase: number, buil
   };
 
   const refreshSigStatus = async (b: VerdictBundle | null) => {
-    const next: Record<number, SigStatus> = {};
-    for (const [i, s] of Object.entries(b?.signatures ?? {})) {
-      const idx = Number(i); next[idx] = "pending";
-      try {
-        const key = await pqcKeyStatus(bounty.verifiers[idx]!);
-        next[idx] = !key.live ? "key not live"
-          : (await mldsa87.verify(hexToBytes(key.pubkey), hexToBytes(b!.message), hexToBytes(s)))
-            ? "valid" : "invalid";
-      } catch { next[idx] = "invalid"; }
-    }
-    setSigStatus(next);
+    setSigStatus(Object.fromEntries(Object.keys(b?.signatures ?? {}).map((i) => [i, "pending" as const])));
+    setSigStatus(await signatureStatuses(bounty, b));
   };
 
   /** Add one signature to the working bundle for the current verdict. */

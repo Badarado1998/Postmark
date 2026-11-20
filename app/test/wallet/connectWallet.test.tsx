@@ -20,9 +20,7 @@ vi.mock("wagmi", () => ({
   useChainId: () => wagmi.chainId,
   useSwitchChain: () => ({ switchChain: wagmi.switchChain }),
 }));
-vi.mock("../../src/wallet/WalletRoot", () => ({
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock("../../src/wallet/WalletRoot", async () => (await import("../mocks")).walletRootModule);
 vi.mock("../../src/wallet/qorex", () => ({ useQorex: () => wagmi.qorex }));
 vi.mock("../../src/hooks/queries", () => ({
   useEvmWindow: () => ({ data: wagmi.windowData }),

@@ -3,6 +3,6 @@
 export {
   E2E_ESCROW, loadAccount, profileAddress, verifierAddr, nodePublic, nodeWallet, windowCtl,
 } from "./support/accounts.ts";
-export { installTestWallet, connectInjected } from "./support/injectedWallet.ts";
+export { installTestWallet, installProvider, connectInjected } from "./support/injectedWallet.ts";
 export { mockGithub, synthComments } from "./support/githubStub.ts";
 export { signerState, pairingCodeFor, openBountyOrCreate } from "./support/bounties.ts";

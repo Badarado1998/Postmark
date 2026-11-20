@@ -3,10 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Routes, Route } from "react-router";
 import { renderApp } from "../fixtures";
 
-vi.mock("../../src/chain/IndexerProvider", () => ({
-  useFeedStatus: () => "live",
-  IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock("../../src/chain/IndexerProvider", async () => (await import("../mocks")).indexerModule("live"));
 vi.mock("../../src/wallet/ConnectWallet", () => ({
   default: () => <button>Connect wallet</button>,
 }));

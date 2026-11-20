@@ -9,10 +9,7 @@ vi.mock("../../src/hooks/queries", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../src/hooks/queries")>();
   return { ...mod, useIndex: vi.fn(), useBounties: vi.fn() };
 });
-vi.mock("../../src/chain/IndexerProvider", () => ({
-  useFeedStatus: () => "polling",
-  IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
+vi.mock("../../src/chain/IndexerProvider", async () => (await import("../mocks")).indexerModule("polling"));
 
 const wrap = (ui: React.ReactElement) => render(
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

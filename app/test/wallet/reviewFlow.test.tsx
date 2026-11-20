@@ -16,7 +16,7 @@ const m = vi.hoisted(() => ({
 }));
 
 vi.mock("wagmi", () => ({ useAccount: () => ({ address: m.address, isConnected: !!m.address }) }));
-vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/wallet/WalletRoot", async () => (await import("../mocks")).walletRootModule);
 vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: { phase: "idle" }, run: m.run, busy: false }),
 }));

@@ -39,6 +39,11 @@ const FEE = { amount: [{ denom: DENOM, amount: "60000" }], gas: "600000" };
 
 const die = makeDie("window");
 
+class CliError extends Error {
+  constructor(message, code = 2) { super(message); this.code = code; }
+}
+const fail = (message, code = 2) => { throw new CliError(message, code); };
+
 // Profile selected by --env (default: the deployer pair); set by initProfile().
 let profileBase = `${CONFIG_DIR}/deployer`;
 let ENV_FILE = `${profileBase}.env`;
@@ -49,7 +54,7 @@ function initProfile() {
   const i = process.argv.indexOf("--env");
   if (i !== -1) {
     const p = process.argv[i + 1];
-    if (!p) die("--env needs a path");
+    if (!p) fail("--env needs a path");
     profileBase = p.endsWith(".env") ? p.slice(0, -4) : p;
     process.argv.splice(i, 2);
   }
@@ -66,9 +71,9 @@ const envVar = (name, legacy) => process.env[name] || (legacy && process.env[leg
 
 function keyBytes() {
   const k = envVar("KEY", "DEPLOYER_KEY");
-  if (!k) die(`KEY not set (env or ${ENV_FILE})`);
+  if (!k) fail(`KEY not set (env or ${ENV_FILE})`);
   const b = toBytes(k);
-  if (b.length !== 32) die("KEY is not 32 bytes");
+  if (b.length !== 32) fail("KEY is not 32 bytes");
   return b;
 }
 
@@ -81,7 +86,7 @@ function classicalAccount() {
   const addrs = qoreAddresses({ hex: hex(addr20) });
   const want = (envVar("ADDRESS", "DEPLOYER_ADDRESS") || "").toLowerCase();
   if (addrs.evm.toLowerCase() !== want) {
-    die(`signer mismatch: KEY derives ${addrs.evm}, expected ${want}`);
+    fail(`signer mismatch: KEY derives ${addrs.evm}, expected ${want}`);
   }
   return { seed, pub, cosmos: addrs.cosmos, evm: addrs.evm };
 }
@@ -89,12 +94,12 @@ function classicalAccount() {
 // Unified account incl. PQC key from the recovery code.
 function unified() {
   const code = envVar("PQC_RECOVERY_CODE", "DEPLOYER_PQC_RECOVERY_CODE");
-  if (!code) die(`PQC_RECOVERY_CODE not set (env or ${PQC_FILE})`);
+  if (!code) fail(`PQC_RECOVERY_CODE not set (env or ${PQC_FILE})`);
   const { seed } = classicalAccount();
   const account = unifiedAccountFromSeed(seed, { recoveryCode: code });
   const expected = qoreAddresses({ evm: envVar("ADDRESS", "DEPLOYER_ADDRESS") });
   if (account.cosmos !== expected.cosmos) {
-    die(`signer mismatch: account derives ${account.cosmos}, expected ${expected.cosmos}`);
+    fail(`signer mismatch: account derives ${account.cosmos}, expected ${expected.cosmos}`);
   }
   return account;
 }
@@ -128,14 +133,14 @@ async function accountSeq(cosmos) {
     if (!a.base_account) break;
     a = a.base_account;
   }
-  if (!a || a.account_number === undefined) die(`cannot read account ${cosmos}`);
+  if (!a || a.account_number === undefined) fail(`cannot read account ${cosmos}`);
   return { accountNumber: BigInt(a.account_number), sequence: BigInt(a.sequence) };
 }
 
 function checkBroadcast(res) {
   if (res.code !== 0) {
     const reason = classifyEvmWindowRejection(new Error(res.rawLog || ""));
-    die(`tx failed code=${res.code} reason=${reason} log=${res.rawLog}`, 1);
+    fail(`tx failed code=${res.code} reason=${reason} log=${res.rawLog}`, 1);
   }
   return res;
 }
@@ -154,11 +159,11 @@ const txSummary = (res) => ({
 
 const commands = {
   "new-account"([name]) {
-    if (!/^[a-z0-9_-]+$/i.test(name || "")) die("usage: new-account <name> ([a-z0-9_-])");
+    if (!/^[a-z0-9_-]+$/i.test(name || "")) fail("usage: new-account <name> ([a-z0-9_-])");
     const envF = `${E2E_DIR}/${name}.env`;
     const pqcF = `${E2E_DIR}/${name}-pqc.env`;
     if (existsSync(envF) || existsSync(pqcF)) {
-      die(`${envF} or ${pqcF} already exists; refusing to overwrite`);
+      fail(`${envF} or ${pqcF} already exists; refusing to overwrite`);
     }
     mkdirSync(E2E_DIR, { recursive: true, mode: 0o700 });
     const seed = secp256k1.utils.randomSecretKey();
@@ -176,7 +181,7 @@ const commands = {
   },
 
   "recovery-code"() {
-    if (existsSync(PQC_FILE)) die(`${PQC_FILE} already exists; refusing to overwrite`);
+    if (existsSync(PQC_FILE)) fail(`${PQC_FILE} already exists; refusing to overwrite`);
     const { cosmos } = classicalAccount();
     const code = generatePqcRecoveryCode();
     const key = pqcKeyFromRecoveryCode(code, cosmos);
@@ -205,7 +210,7 @@ const commands = {
     const status = await fetchPqcStatus({ rest: REST, address: account.cosmos });
     if (status.registered) {
       const match = isRegisteredPqcKey(status, account.pqc.publicKey);
-      if (match === false) die("account already has a DIFFERENT PQC key registered", 1);
+      if (match === false) fail("account already has a DIFFERENT PQC key registered", 1);
       console.log(json({ alreadyRegistered: true, keyVerified: match !== false }));
       return;
     }
@@ -219,11 +224,11 @@ const commands = {
 
   async send([to, uqor]) {
     if (!to || !uqor || !/^[0-9]+$/.test(uqor)) {
-      die("usage: send <to-qor1-or-0x> <uqor>");
+      fail("usage: send <to-qor1-or-0x> <uqor>");
     }
     const account = unified();
     const status = await fetchPqcStatus({ rest: REST, address: account.cosmos });
-    if (!status.registered) die("sender has no registered PQC key; run register first", 1);
+    if (!status.registered) fail("sender has no registered PQC key; run register first", 1);
     const toQor = to.startsWith("0x") ? qoreAddresses({ evm: to }).cosmos : to;
     const signer = new EthNativeSigner(account, { rest: REST });
     const seq = await accountSeq(account.cosmos);
@@ -235,7 +240,7 @@ const commands = {
   },
 
   async open([blocks, maxTxs, maxValue, ...targets]) {
-    if (!blocks || !maxTxs || !maxValue) die("usage: open <blocks> <maxTxs> <maxValueUqor> [target,...]");
+    if (!blocks || !maxTxs || !maxValue) fail("usage: open <blocks> <maxTxs> <maxValueUqor> [target,...]");
     const account = unified();
     const message = openEvmWindowMsg({
       sender: account.cosmos,
@@ -259,10 +264,17 @@ async function main() {
   initProfile();
   const [cmd, ...args] = process.argv.slice(2);
   if (!Object.hasOwn(commands, cmd ?? "")) {
-    die("usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close");
+    fail("usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close");
   }
   await commands[cmd](args);
-  process.exit(0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await main();
+  } catch (e) {
+    if (e instanceof CliError) die(e.message, e.code);
+    throw e;
+  }
+  process.exit(0);
+}

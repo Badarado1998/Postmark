@@ -1,15 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { installTestWallet, mockGithub } from "./testWallet";
+import { installTestWallet, installProvider, mockGithub, verifierAddr } from "./testWallet";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-
-// verifier profiles live under ~/.config/postmark/e2e/<name>.env with ADDRESS=
-function verifierAddr(i: number) {
-  const env = readFileSync(`${homedir()}/.config/postmark/e2e/verifier${i}.env`, "utf8");
-  const m = env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m);
-  if (!m?.[1]) throw new Error(`verifier${i}.env missing ADDRESS`);
-  return m[1];
-}
 
 const ISSUE_URL = "https://github.com/postmark-e2e/sandbox/issues/1";
 
@@ -100,22 +92,12 @@ test("an account with no window sees the QoreX guide (no tx sent)", async ({ pag
   // must stop at the QoreX guide without ever reaching the wallet
   const env = readFileSync(`${homedir()}/.config/postmark/e2e/disputer.env`, "utf8");
   const disputer = env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m)![1]!;
-  await page.exposeBinding("__postmarkE2eRequest", async (_s, req: { method: string }) => {
-    if (req.method === "eth_accounts" || req.method === "eth_requestAccounts")
-      return [disputer];
+  await installProvider(page, (req) => {
+    if (req.method === "eth_accounts" || req.method === "eth_requestAccounts") return [disputer];
     if (req.method === "eth_chainId") return "0x2648";
     if (req.method === "eth_sendTransaction")
       throw new Error("a transaction was sent — preflight failed");
     throw new Error("unexpected " + req.method);
-  });
-  await page.addInitScript(() => {
-    const info = { uuid: "u-nowin", name: "Postmark E2E", icon: "", rdns: "dev.postmark.e2e" };
-    const provider = {
-      request: (a: unknown) => (window as never as { __postmarkE2eRequest: (r: unknown) => Promise<unknown> }).__postmarkE2eRequest(a),
-      on: () => provider, removeListener: () => provider,
-    };
-    const an = () => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: { info, provider } }));
-    window.addEventListener("eip6963:requestProvider", an); an();
   });
   await page.goto("/create");
   const connectBtn = page.getByRole("button", { name: /connect/i }).first();
