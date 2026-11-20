@@ -48,59 +48,62 @@ async function cleanup() {
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 
+const appUrl = (path = "") => `http://localhost:${PORT}${path}`;
+const ONE_WINDOW = ["open", "1200", "10", "600000", E2E_ESCROW];
+
 // ---- build + serve (e2e deployment only) ----
-log("building app (VITE_DEPLOYMENT=e2e)…");
-execFileSync("npm", ["run", "build:e2e"], { stdio: "inherit" });
-try { // fail fast if something else owns the port
-  await fetch(`http://localhost:${PORT}`);
-  console.error(`[demo] port ${PORT} is already in use — stop the other server first`);
-  process.exit(1);
-} catch { /* free */ }
-server = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"],
-  { stdio: ["ignore", "pipe", "inherit"] });
-server.on("exit", (c) => { if (c !== null && c !== 0) { console.error(`[demo] preview exited ${c}`); process.exit(1); } });
-await new Promise((res, rej) => {
-  const to = setTimeout(() => rej(new Error("preview did not come up")), 30_000);
-  const poll = setInterval(async () => {
-    try { await fetch(`http://localhost:${PORT}`); clearInterval(poll); clearTimeout(to); res(); }
-    catch { /* not yet */ }
-  }, 400);
-});
-log(`preview on http://localhost:${PORT}`);
+async function portInUse() {
+  try { await fetch(appUrl()); return true; } catch { return false; }
+}
+
+async function buildAndServe() {
+  log("building app (VITE_DEPLOYMENT=e2e)…");
+  execFileSync("npm", ["run", "build:e2e"], { stdio: "inherit" });
+  if (await portInUse()) { // fail fast if something else owns the port
+    console.error(`[demo] port ${PORT} is already in use — stop the other server first`);
+    process.exit(1);
+  }
+  server = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"],
+    { stdio: ["ignore", "pipe", "inherit"] });
+  server.on("exit", (c) => { if (c !== null && c !== 0) { console.error(`[demo] preview exited ${c}`); process.exit(1); } });
+  await new Promise((res, rej) => {
+    const to = setTimeout(() => rej(new Error("preview did not come up")), 30_000);
+    const poll = setInterval(async () => {
+      if (await portInUse()) { clearInterval(poll); clearTimeout(to); res(); }
+    }, 400);
+  });
+  log(`preview on ${appUrl()}`);
+}
 
 // ---- chain facts for the stub fixtures ----
-// One fixed merged_at for the whole run so every verifier builds the same PAY
-// evidence hash; synthesized claim/dispute comments for every bounty id.
-const pub = nodePublic();
-const nextId = await pub.readContract({ address: E2E_ESCROW,
-  abi: postmarkEscrowAbi, functionName: "nextBountyId" });
-const MERGED_AT = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
-let openId = null; // first still-claimable Open bounty, for the smoke
-for (let i = nextId - 1n; i >= 1n; i--) {
-  const b = await pub.readContract({ address: E2E_ESCROW, abi: postmarkEscrowAbi,
-    functionName: "getBounty", args: [i] });
-  if (b.state === 0 && b.deadline > BigInt(Math.floor(Date.now() / 1000)) + b.claimTimeout) {
-    openId = i; break;
+const unixNow = () => BigInt(Math.floor(Date.now() / 1000));
+
+/** First still-claimable Open bounty (newest first), for the smoke check. */
+async function findOpenBounty(pub, nextId) {
+  for (let i = nextId - 1n; i >= 1n; i--) {
+    const b = await pub.readContract({ address: E2E_ESCROW, abi: postmarkEscrowAbi,
+      functionName: "getBounty", args: [i] });
+    if (b.state === 0 && b.deadline > unixNow() + b.claimTimeout) return i;
   }
+  return null;
 }
-log(`nextBountyId ${nextId}; fixed merged_at ${MERGED_AT}; open bounty ${openId ?? "none"}`);
 
 // ---- scoped windows per role ----
-if (!noWindows) {
+function openRoleWindows() {
+  if (noWindows) { log("--no-windows: read-only run, no scoped windows opened"); return; }
   for (const role of ROLES) {
     try {
-      windowCtl(["open", "1200", "10", "600000", E2E_ESCROW], role);
+      windowCtl(ONE_WINDOW, role);
       openedWindows.push(role);
       log(`window opened: ${role} (1200 blocks, 10 txs, 600k uqor cap, target=escrow)`);
-    } catch (e) {
+    } catch {
       log(`window open failed for ${role} — continuing read-only for it`);
     }
   }
-} else log("--no-windows: read-only run, no scoped windows opened");
+}
 
-// ---- headed windows, one per role ----
-browser = await chromium.launch({ headless });
-for (const role of ROLES) {
+// ---- one browser window per role ----
+async function launchRole(role, { mergedAt, nextId }) {
   const ctx = await browser.newContext({ viewport: { width: 1120, height: 800 } });
   const page = await ctx.newPage();
   await installTestWallet(page, role);
@@ -116,86 +119,112 @@ for (const role of ROLES) {
     });
   }, { role, addr: profileAddress(role) });
   if (github === "stub") {
-    await mockGithub(page, { mergedAt: MERGED_AT,
+    await mockGithub(page, { mergedAt,
       synthesize: { claimant: profileAddress("claimant"), upToId: nextId + 50n } });
   }
-  await page.goto(`http://localhost:${PORT}/explore`);
+  await page.goto(appUrl("/explore"));
   await connectInjected(page);
   ctxs.push(ctx);
   pages[role] = page;
   if (smoke) {
-    const badge = page.getByText(new RegExp(`^${role.toUpperCase()}  0x`, "i"));
-    await badge.waitFor({ timeout: 10_000 });
-    const walletBtn = page.getByRole("button",
-      { name: new RegExp(profileAddress(role).slice(0, 6), "i") });
-    await walletBtn.first().waitFor({ timeout: 15_000 });
+    await page.getByText(new RegExp(`^${role.toUpperCase()}  0x`, "i")).waitFor({ timeout: 10_000 });
+    await page.getByRole("button", { name: new RegExp(profileAddress(role).slice(0, 6), "i") })
+      .first().waitFor({ timeout: 15_000 });
     log(`smoke: ${role} badge + wallet connected`);
   }
   log(`${role} window ready (${profileAddress(role)})`);
 }
-if (smoke) {
-  log("roles connected — running read-only walkthrough checks");
-  // (a) two verifier windows on the live Pending bounty: same identity match,
-  //     same PR checks, identical PAY evidence hash
-  const hashes = [];
-  for (const role of ["verifier0", "verifier1"]) {
-    const pg = pages[role];
-    await pg.goto(`http://localhost:${PORT}/bounty/18/review`);
-    await pg.getByRole("button", { name: /scan comments/i }).click();
-    await pg.getByText(/identity matches/i).waitFor({ timeout: 60_000 });
-    await pg.getByRole("button", { name: /find linked prs/i }).click();
-    await pg.getByRole("button", { name: "#2", exact: true }).click();
-    await pg.getByText(/merge_commit_sha present/i).waitFor({ timeout: 60_000 });
-    await pg.getByRole("button", { name: "PAY", exact: true }).click();
-    await pg.getByText(/message matches escrow\.verdictMessage/i).waitFor({ timeout: 60_000 });
-    const ev = await pg.getByText(/^evidenceHash 0x/).textContent();
-    hashes.push(ev.trim());
-    log(`smoke: ${role} review ok — ${ev.trim().slice(0, 30)}…`);
-  }
-  if (hashes[0] !== hashes[1]) throw new Error(`evidence hashes differ: ${hashes}`);
-  log("smoke: identical PAY evidenceHash in both verifier windows");
 
-  // (b) claimant's ClaimPanel finds a synthesized claim line
-  const cpg = pages.claimant;
-  if (openId !== null) {
-    await cpg.goto(`http://localhost:${PORT}/bounty/${openId}`);
-    await cpg.getByRole("button", { name: /posted it — find my comment/i }).click();
-    await cpg.getByText(/found the claim line by @e2e-claimant/i).waitFor({ timeout: 60_000 });
-    log(`smoke: claimant ClaimPanel found claim line on open bounty ${openId}`);
-  } else {
-    const hit = await cpg.evaluate(async (next) => {
-      const r = await fetch(
-        `https://api.github.com/repos/postmark-e2e/sandbox/issues/1/comments?per_page=100&page=1`);
-      const list = await r.json();
-      return list.some((c) => c.body.includes(`bounty=${next}`));
-    }, Number(nextId));
-    if (!hit) throw new Error("comments endpoint missing claim line for next id");
-    log(`smoke: no Open bounty — comments endpoint returns the claim line for #${nextId}`);
-  }
-  log("smoke OK — all roles connected, badges visible"); await cleanup();
+// ---- read-only smoke walkthrough ----
+/** Review bounty #18 as `role` up to the built PAY verdict; returns its evidence line. */
+async function reviewAsVerifier(role) {
+  const pg = pages[role];
+  await pg.goto(appUrl("/bounty/18/review"));
+  await pg.getByRole("button", { name: /scan comments/i }).click();
+  await pg.getByText(/identity matches/i).waitFor({ timeout: 60_000 });
+  await pg.getByRole("button", { name: /find linked prs/i }).click();
+  await pg.getByRole("button", { name: "#2", exact: true }).click();
+  await pg.getByText(/merge_commit_sha present/i).waitFor({ timeout: 60_000 });
+  await pg.getByRole("button", { name: "PAY", exact: true }).click();
+  await pg.getByText(/message matches escrow\.verdictMessage/i).waitFor({ timeout: 60_000 });
+  const ev = (await pg.getByText(/^evidenceHash 0x/).textContent()).trim();
+  log(`smoke: ${role} review ok — ${ev.slice(0, 30)}…`);
+  return ev;
 }
 
-// ---- signer instructions ----
-console.log(`
+async function claimantFindsClaimLine({ openId, nextId }) {
+  const page = pages.claimant;
+  if (openId !== null) {
+    await page.goto(appUrl(`/bounty/${openId}`));
+    await page.getByRole("button", { name: /posted it — find my comment/i }).click();
+    await page.getByText(/found the claim line by @e2e-claimant/i).waitFor({ timeout: 60_000 });
+    log(`smoke: claimant ClaimPanel found claim line on open bounty ${openId}`);
+    return;
+  }
+  const hit = await page.evaluate(async (next) => {
+    const r = await fetch(
+      "https://api.github.com/repos/postmark-e2e/sandbox/issues/1/comments?per_page=100&page=1");
+    const list = await r.json();
+    return list.some((c) => c.body.includes(`bounty=${next}`));
+  }, Number(nextId));
+  if (!hit) throw new Error("comments endpoint missing claim line for next id");
+  log(`smoke: no Open bounty — comments endpoint returns the claim line for #${nextId}`);
+}
+
+async function runSmoke(facts) {
+  log("roles connected — running read-only walkthrough checks");
+  // two verifier windows on the live Pending bounty: same identity match,
+  // same PR checks, identical PAY evidence hash
+  const [first, second] = [await reviewAsVerifier("verifier0"), await reviewAsVerifier("verifier1")];
+  if (first !== second) throw new Error(`evidence hashes differ: ${[first, second]}`);
+  log("smoke: identical PAY evidenceHash in both verifier windows");
+  await claimantFindsClaimLine(facts);
+  log("smoke OK — all roles connected, badges visible");
+  await cleanup();
+}
+
+function printInstructions() {
+  console.log(`
 [demo] Signing roles need the local PQ signer, one terminal tab each
        (interactive TTY confirm — no --yes):
 `);
-for (const [role, port] of Object.entries(SIGNER_PORTS)) {
+  for (const [role, port] of Object.entries(SIGNER_PORTS)) {
+    console.log(
+      `  # ${role} (port ${port})\n` +
+      `  node scripts/signer.mjs serve --env ${PROFILES}/${role} ` +
+      `--deployment e2e --origin ${appUrl()} --port ${port}\n`);
+  }
   console.log(
-    `  # ${role} (port ${port})\n` +
-    `  node scripts/signer.mjs serve --env ${PROFILES}/${role} ` +
-    `--deployment e2e --origin http://localhost:${PORT} --port ${port}\n`);
+    `[demo] Each signer prints an 8-char pairing code — paste it into the app's\n` +
+    `       signer card (set the matching port) the first time that role signs.\n`);
+  if (github === "stub") {
+    console.log(
+      `[demo] Stub-mode inputs:\n` +
+      `       · issue URL for /create:  https://github.com/postmark-e2e/sandbox/issues/1\n` +
+      `       · GitHub logins:          e2e-claimant (claim + identity) · e2e-disputer (dispute)\n` +
+      `       · keep amount/reward/bond tiny — the funder has ~0.45 QOR (e.g. 0.01 / 0.005 / 0.005)\n`);
+  }
 }
-console.log(
-  `[demo] Each signer prints an 8-char pairing code — paste it into the app's\n` +
-  `       signer card (set the matching port) the first time that role signs.\n`);
-if (github === "stub") {
-  console.log(
-    `[demo] Stub-mode inputs:\n` +
-    `       · issue URL for /create:  https://github.com/postmark-e2e/sandbox/issues/1\n` +
-    `       · GitHub logins:          e2e-claimant (claim + identity) · e2e-disputer (dispute)\n` +
-    `       · keep amount/reward/bond tiny — the funder has ~0.45 QOR (e.g. 0.01 / 0.005 / 0.005)\n`);
-}
-log(`github mode: ${github} · Ctrl-C closes every window and stops the preview`);
 
-await new Promise(() => {}); // stay up until Ctrl-C
+async function main() {
+  await buildAndServe();
+  const pub = nodePublic();
+  const nextId = await pub.readContract({ address: E2E_ESCROW,
+    abi: postmarkEscrowAbi, functionName: "nextBountyId" });
+  // One fixed merged_at for the whole run so every verifier builds the same PAY
+  // evidence hash; synthesized claim/dispute comments cover every bounty id.
+  const mergedAt = new Date(Number(unixNow()) * 1000).toISOString();
+  const openId = await findOpenBounty(pub, nextId);
+  log(`nextBountyId ${nextId}; fixed merged_at ${mergedAt}; open bounty ${openId ?? "none"}`);
+
+  openRoleWindows();
+  browser = await chromium.launch({ headless });
+  for (const role of ROLES) await launchRole(role, { mergedAt, nextId });
+  if (smoke) await runSmoke({ openId, nextId });
+
+  printInstructions();
+  log(`github mode: ${github} · Ctrl-C closes every window and stops the preview`);
+  await new Promise(() => {}); // stay up until Ctrl-C
+}
+
+await main();

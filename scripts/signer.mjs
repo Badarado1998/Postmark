@@ -17,13 +17,14 @@
 // --deployment e2e.
 import http from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import {
   pqcKeyFromRecoveryCode, derivePqcCanonical, deriveUnifiedAccount,
   qoreAddresses, keccak256, pqcSign,
 } from "@qorechain/sdk";
+import { hex, toBytes, utf8, sha256hex, parseEnv, makeDie } from "./lib/common.mjs";
 
 const EVM_RPC = process.env.QORE_EVM || "https://evm-testnet.qore.host";
 const REST = process.env.QORE_REST || "https://api-testnet.qore.host";
@@ -33,11 +34,8 @@ const MSG_PREFIX = `qorechain-msg-v1|${NATIVE_CHAIN_ID}|`;
 const PQC_KEY_STATUS = "0x0000000000000000000000000000000000000a02";
 const CONFIG_DIR = `${process.env.HOME}/.config/postmark`;
 
-const die = (msg, code = 2) => { console.error(`signer: ${msg}`); process.exit(code); };
-const hex = (b) => Buffer.from(b).toString("hex");
-const utf8 = (s) => Uint8Array.from(Buffer.from(s, "utf8"));
-const toBytes = (h) => Uint8Array.from(Buffer.from(String(h).replace(/^0x/, ""), "hex"));
-const sha256hex = (b) => createHash("sha256").update(b).digest("hex");
+const die = makeDie("signer");
+const sameAddress = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
 // ---------- ABI helpers (static encoding only; no dynamic fields here) ----------
 const word = (n) => BigInt(n).toString(16).padStart(64, "0");
@@ -104,20 +102,22 @@ export function verdictCallData(v) {
     + word(v.mergedAt) + wordBytes32(v.evidenceHash) + word(v.nonce) + word(v.claimRound);
 }
 
-async function chainClaimMessage(rpc, escrow, bountyId, claimant, identityHash, claimRound) {
-  const data = claimCallData(bountyId, claimant, identityHash, claimRound);
-  const out = await rpc(escrow, data);
-  // returns (bytes): head offset 0x20, then len + data
+/** Decode an ABI `(bytes)` return: head offset 0x20, then length word and data. */
+function decodeBytesReturn(out) {
   const len = Number(BigInt("0x" + out.slice(64, 128)));
   return Buffer.from(out.slice(128, 128 + len * 2), "hex");
 }
 
-async function chainVerdictMessage(rpc, escrow, v) {
-  const head = verdictCallData(v);
-  const out = await rpc(escrow, head);
-  const len = Number(BigInt("0x" + out.slice(64, 128)));
-  return Buffer.from(out.slice(128, 128 + len * 2), "hex");
+async function chainClaimMessage(rpc, escrow, bountyId, claimant, identityHash, claimRound) {
+  return decodeBytesReturn(await rpc(escrow, claimCallData(bountyId, claimant, identityHash, claimRound)));
 }
+
+async function chainVerdictMessage(rpc, escrow, v) {
+  return decodeBytesReturn(await rpc(escrow, verdictCallData(v)));
+}
+
+const workLabel = (meta) =>
+  meta ? `${meta.ownerRepo}${meta.kind === 1 ? "/pull/" : "#"}${meta.number}` : "?";
 
 const BOUNTY_WORDS = 23;
 async function chainBounty(rpc, escrow, bountyId) {
@@ -184,11 +184,7 @@ export function loadProfile(base) {
   }
   const vars = {};
   for (const f of [envFile, pqcFile]) {
-    if (!existsSync(f)) continue;
-    for (const line of readFileSync(f, "utf8").split("\n")) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (m) vars[m[1]] = m[2];
-    }
+    if (existsSync(f)) Object.assign(vars, parseEnv(readFileSync(f, "utf8")));
   }
   return vars;
 }
@@ -266,14 +262,13 @@ export async function processSignRequest(body, deps) {
     if (!local.equals(expected)) throw new SignRefusal("locally built message != chain message");
     message = local;
     const bounty = await chainBounty(rpc, escrow, BigInt(bountyId));
-    if (bounty.funder.toLowerCase() === evm.toLowerCase()
-        || bounty.verifiers.some((v) => v.toLowerCase() === evm.toLowerCase())) {
+    if (sameAddress(bounty.funder, evm) || bounty.verifiers.some((v) => sameAddress(v, evm))) {
       throw new SignRefusal("funders and verifiers cannot claim their own bounty (ClaimantExcluded)");
     }
     const meta = await chainWorkMeta(rpc, escrow, BigInt(bountyId)).catch(() => null);
     summary = {
       kind: "CLAIM", bounty: `#${bountyId}`,
-      work: meta ? `${meta.ownerRepo}${meta.kind === 1 ? "/pull/" : "#"}${meta.number}` : "?",
+      work: workLabel(meta),
       amount: `${bounty.amount} wei`, claimant: evm,
       identityHash, claimRound: Number(claimRound),
     };
@@ -296,7 +291,7 @@ export async function processSignRequest(body, deps) {
     summary = {
       kind: vv.phase === 1 ? "DISPUTE VERDICT" : "VERDICT",
       bounty: `#${vv.bountyId}`,
-      work: meta ? `${meta.ownerRepo}${meta.kind === 1 ? "/pull/" : "#"}${meta.number}` : "?",
+      work: workLabel(meta),
       outcome: vv.outcome === 0 ? "PAY" : "REFUND", payee: vv.payee,
       mergedAt: Number(vv.mergedAt), nonce: Number(vv.nonce), claimRound: Number(vv.claimRound),
       evidenceHash: vv.evidenceHash,
@@ -371,6 +366,21 @@ export function createHandler({ origin, code, statusPayload, sign }) {
 }
 
 // ---------- CLI ----------
+function deploymentAddress(deployment) {
+  const file = new URL(
+    `../deployments/${deployment === "e2e" ? "diana-e2e" : "diana"}.json`, import.meta.url);
+  return JSON.parse(readFileSync(file, "utf8")).address;
+}
+
+async function fetchRestPublicKey(cosmos) {
+  try {
+    const r = await fetch(`${REST}/qorechain/pqc/v1/account/${cosmos}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.public_key ?? j.publicKey ?? null;
+  } catch { return null; }
+}
+
 function argValue(flag) {
   const i = process.argv.indexOf(flag);
   if (i === -1) return undefined;
@@ -388,10 +398,7 @@ async function main() {
   if (yes && !yesAllowed(process.env.POSTMARK_SIGNER_TEST, deployment)) {
     die("--yes is refused outside POSTMARK_SIGNER_TEST=1 with --deployment e2e");
   }
-  const depFile = new URL(
-    `../deployments/${deployment === "e2e" ? "diana-e2e" : "diana"}.json`, import.meta.url);
-  const deployment_ = JSON.parse(readFileSync(depFile, "utf8"));
-  const escrow = deployment_.address;
+  const escrow = deploymentAddress(deployment);
 
   const vars = loadProfile(envBase.endsWith(".env") ? envBase.slice(0, -4) : envBase);
   const { keypair, evm, cosmos } = await deriveKey(vars);
@@ -400,17 +407,11 @@ async function main() {
   const st = await assertKeyLive(rpc, evm, keypair);
   const pkHex = hex(keypair.publicKey);
   const pkSha = sha256hex(keypair.publicKey);
-  // REST cross-check
-  try {
-    const r = await fetch(`${REST}/qorechain/pqc/v1/account/${cosmos}`);
-    if (r.ok) {
-      const j = await r.json();
-      const restPk = j.public_key ?? j.publicKey;
-      if (restPk && hex(toBytes(restPk)) !== pkHex) {
-        die("REST registered key differs from the derived key");
-      }
-    }
-  } catch (e) { if (!String(e).startsWith("Error: signer")) { /* REST optional */ } else throw e; }
+  // REST cross-check (the REST API is optional; a key it reports must match)
+  const restPk = await fetchRestPublicKey(cosmos);
+  if (restPk && hex(toBytes(restPk)) !== pkHex) {
+    die("REST registered key differs from the derived key");
+  }
 
   const statusPayload = () => ({
     address: evm, qor1: cosmos, pubkeySha256: pkSha, live: st.live,

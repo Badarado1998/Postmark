@@ -8,7 +8,8 @@
     "key-status": "node scripts/key-status.mjs",
     "window": "node scripts/window.mjs",
     "signer": "node scripts/signer.mjs",
-    "test:signer": "node --test scripts/signer.test.mjs"
+    "test:signer": "node --test scripts/signer.test.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.7.0",
