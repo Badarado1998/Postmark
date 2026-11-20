@@ -27,30 +27,30 @@ function Credits() {
   if (credits.isPending) return <Skeleton className="h-28" />;
   const [ungated, gated] = credits.data ?? [0n, 0n];
   if (ungated === 0n && gated === 0n) {
-    return <p className="text-sm text-ink-300">No credits yet.</p>;
+    return <p className="text-sm text-gray">No credits yet.</p>;
   }
   return (
-    <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
+    <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-8">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">ungated</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">ungated</div>
             <Qor wei={ungated} />
           </div>
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">payee-gated</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">payee-gated</div>
             <Qor wei={gated} />
           </div>
         </div>
         <button disabled={busy || (ungated === 0n && gated === 0n)}
           onClick={() => void tx.run({ functionName: "withdraw", args: [],
             onConfirmed: () => toast({ kind: "info", text: "Withdrawn." }) })}
-          className="rounded-lg bg-vermilion px-5 py-2 text-sm font-medium text-ink-950 hover:brightness-110 disabled:opacity-40">
+          className="rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
           Withdraw
         </button>
       </div>
       {gated > 0n && (
-        <p className="mt-3 text-xs text-ink-400">
+        <p className="mt-3 text-xs text-gray">
           Payee-gated credit withdraws only while your ML-DSA-87 key is live.
           {pqc.data && !pqc.data.live && " Yours is not registered — withdrawals will revert."}
         </p>
@@ -71,8 +71,8 @@ function WorkRef({ ownerRepo, kind, number }:
   });
   return (
     <div className="min-w-0">
-      <span className="font-mono text-xs text-ink-300">{ownerRepo}{kind === 1 ? "/pull/" : "#"}{n}</span>
-      {q.data?.title && <p className="truncate text-sm text-paper-200">{q.data.title}</p>}
+      <span className="font-mono text-xs text-gray">{ownerRepo}{kind === 1 ? "/pull/" : "#"}{n}</span>
+      {q.data?.title && <p className="truncate text-sm text-ink">{q.data.title}</p>}
     </div>
   );
 }
@@ -87,19 +87,19 @@ function FundedBounties() {
   const mine = (bounties.data ?? []).filter(
     (b) => b.bounty && b.bounty.funder.toLowerCase() === address.toLowerCase());
   if (mine.length === 0) {
-    return <p className="text-sm text-ink-300">You haven't funded a bounty yet. <Link className="text-vermilion underline" to="/create">Fund one.</Link></p>;
+    return <p className="text-sm text-gray">You haven't funded a bounty yet. <Link className="text-deep underline" to="/create">Fund one.</Link></p>;
   }
   return (
     <ul className="space-y-3">
       {mine.map(({ id, bounty }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-white/10 bg-ink-900/60 p-4">
+        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-vermilion group-hover:underline">#{id.toString()}</span>
+              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
               <StatusChip state={bounty.state} />
               {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
             </Link>
-            <div className="flex items-center gap-4 text-sm text-ink-300">
+            <div className="flex items-center gap-4 text-sm text-gray">
               <Qor wei={bounty.amount} />
               <span className="font-mono text-xs">deadline <Countdown to={bounty.deadline} /></span>
             </div>
@@ -129,21 +129,21 @@ function MyClaims() {
       active: b.bounty!.state === 1 && b.bounty!.claimExpiresAt > BigInt(Math.floor(Date.now() / 1000)),
     }));
   if (mine.length === 0) {
-    return <p className="text-sm text-ink-300">No claims yet — claim a bounty from its page.</p>;
+    return <p className="text-sm text-gray">No claims yet — claim a bounty from its page.</p>;
   }
   return (
     <ul className="space-y-3">
       {mine.map(({ id, bounty, active }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-white/10 bg-ink-900/60 p-4">
+        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-vermilion group-hover:underline">#{id.toString()}</span>
+              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
               <StatusChip state={bounty.state} />
               {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
             </Link>
-            <div className="text-right font-mono text-xs text-ink-300">
+            <div className="text-right font-mono text-xs text-gray">
               <div>{active ? "expires" : "claim"} <Countdown to={bounty.claimExpiresAt} /></div>
-              <div className="text-ink-400">round {bounty.claimRound.toString()}</div>
+              <div className="text-gray">round {bounty.claimRound.toString()}</div>
             </div>
           </div>
         </li>
@@ -163,7 +163,7 @@ function VerifierBounties() {
   const mine = (bounties.data ?? []).filter(
     (b) => b.bounty && b.bounty.verifiers.some((v) => v.toLowerCase() === me));
   if (mine.length === 0) {
-    return <p className="text-sm text-ink-300">You're not a verifier on any bounty.</p>;
+    return <p className="text-sm text-gray">You're not a verifier on any bounty.</p>;
   }
   const action = (state: number) =>
     state === 1 ? "review claim" : state === 3 ? "resolve dispute"
@@ -171,17 +171,17 @@ function VerifierBounties() {
   return (
     <ul className="space-y-3">
       {mine.map(({ id, bounty }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-white/10 bg-ink-900/60 p-4">
+        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-vermilion group-hover:underline">#{id.toString()}</span>
+              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
               <StatusChip state={bounty.state} />
               {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
             </Link>
             <div className="flex items-center gap-4 text-sm">
               {action(bounty.state)
-                ? <Link to={`/bounty/${id}/review`} className="text-vermilion underline underline-offset-4">{action(bounty.state)} →</Link>
-                : <span className="font-mono text-xs text-ink-400">nothing due</span>}
+                ? <Link to={`/bounty/${id}/review`} className="text-deep underline underline-offset-4">{action(bounty.state)} →</Link>
+                : <span className="font-mono text-xs text-gray">nothing due</span>}
             </div>
           </div>
         </li>
@@ -195,22 +195,22 @@ export default function MeInner() {
   if (!isConnected || !address) {
     return (
       <div className="py-16 text-center">
-        <h1 className="font-serif text-4xl font-semibold text-paper-100">My bounties</h1>
-        <p className="mt-4 text-ink-300">Connect an EVM wallet to see your funded bounties and credits.</p>
+        <h1 className="font-sans text-4xl font-semibold text-ink">My bounties</h1>
+        <p className="mt-4 text-gray">Connect an EVM wallet to see your funded bounties and credits.</p>
       </div>
     );
   }
   return (
     <div className="mx-auto max-w-3xl py-10">
-      <h1 className="font-serif text-4xl font-semibold text-paper-100">My bounties</h1>
-      <p className="mt-1 font-mono text-sm text-ink-400">{shortAddr(address)}</p>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">credits</h2>
+      <h1 className="font-sans text-4xl font-semibold text-ink">My bounties</h1>
+      <p className="mt-1 font-mono text-sm text-gray">{shortAddr(address)}</p>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">credits</h2>
       <div className="mt-3"><Credits /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">funded</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">funded</h2>
       <div className="mt-3"><FundedBounties /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">my claims</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">my claims</h2>
       <div className="mt-3"><MyClaims /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">verifier</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">verifier</h2>
       <div className="mt-3"><VerifierBounties /></div>
     </div>
   );

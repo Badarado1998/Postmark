@@ -206,7 +206,9 @@ export function synthComments(escrow: string, claimant: string, upToId: bigint) 
   const out: { id: number; user: { login: string }; body: string; created_at: string }[] = [];
   const t0 = Math.floor(Date.now() / 1000) - 3600;
   for (let id = 1n; id <= upToId; id++) {
-    out.push({ id: 900_000_000 + Number(id) * 2, user: { login: "e2e-claimant" },
+    // claim lines must reuse the fixture comment id the live claims were made
+    // with: payeeIdentityHash commits to (login, claimant, commentId)
+    out.push({ id: 987654321, user: { login: "e2e-claimant" },
       body: `postmark-claim v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${id} claimant=${claimant.toLowerCase()}`,
       created_at: new Date((t0 + Number(id)) * 1000).toISOString() });
     out.push({ id: 900_000_001 + Number(id) * 2, user: { login: "e2e-disputer" },

@@ -14,14 +14,14 @@ export default function Review() {
   const index = useIndex();
 
   if (id === undefined) {
-    return <EmptyState title="Bad bounty id."><Link className="text-vermilion underline" to="/explore">Back to explore</Link></EmptyState>;
+    return <EmptyState title="Bad bounty id."><Link className="text-deep underline" to="/explore">Back to explore</Link></EmptyState>;
   }
   const notFound = next.data !== undefined && id >= next.data;
   const meta = index.data?.metaById.get(id);
 
   return (
     <div className="mx-auto max-w-4xl py-10">
-      <Link to={`/bounty/${id}`} className="text-sm text-ink-300 hover:text-paper-100">← bounty</Link>
+      <Link to={`/bounty/${id}`} className="text-sm text-gray hover:text-ink">← bounty</Link>
       {(bounty.isPending || index.isPending || next.isPending) && <Skeleton className="mt-6 h-64" />}
       {bounty.error && <div className="mt-6"><ErrorState message={explainError(bounty.error)} onRetry={() => void bounty.refetch()} /></div>}
       {notFound && !bounty.isPending && (
@@ -29,11 +29,11 @@ export default function Review() {
       {bounty.data && meta && !notFound && (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <h1 className="font-serif text-3xl font-semibold text-paper-100">
-              Review <span className="font-mono text-vermilion">#{id.toString()}</span>
+            <h1 className="font-sans text-3xl font-semibold text-ink">
+              Review <span className="font-mono text-deep">#{id.toString()}</span>
             </h1>
             <StatusChip state={bounty.data.state} />
-            <span className="font-mono text-xs text-ink-400">
+            <span className="font-mono text-xs text-gray">
               {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}
             </span>
           </div>

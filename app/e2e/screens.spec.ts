@@ -9,7 +9,7 @@ test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
 test("landing + explore screenshots", async ({ page }, testInfo) => {
   const size = testInfo.project.name;
   await page.goto("/");
-  await page.waitForSelector("text=bounties on diana", { timeout: 30_000 });
+  await page.waitForSelector("text=Bounties that pay", { timeout: 30_000 });
   await page.waitForTimeout(1800);
   await page.screenshot({ path: `${OUT}/landing-top-${size}.png` });
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.35));
@@ -28,7 +28,7 @@ test("landing reduced-motion", async ({ page }, testInfo) => {
   const size = testInfo.project.name;
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.waitForSelector("text=bounties on diana", { timeout: 30_000 });
+  await page.waitForSelector("text=Bounties that pay", { timeout: 30_000 });
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${OUT}/landing-reduced-${size}.png` });
 });

@@ -32,20 +32,20 @@ export default function Explore() {
     <div className="py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl font-semibold text-paper-100">Bounties</h1>
-          <p className="mt-2 text-sm text-ink-300">
+          <h1 className="font-sans text-4xl font-semibold text-ink">Bounties</h1>
+          <p className="mt-2 text-sm text-gray">
             GitHub issues funded in test QOR on diana.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)}
             placeholder="owner/repo or #"
-            className="rounded-lg border border-white/10 bg-ink-900 px-3 py-1.5 font-mono text-sm text-paper-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-vermilion" />
+            className="rounded-lg border border-ink/10 bg-white px-3 py-1.5 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep" />
           {FILTERS.map((f) => (
             <button key={f} onClick={() => setStatus(f)}
               className={`rounded-full border px-3 py-1 text-xs capitalize transition ${
-                status === f ? "border-vermilion bg-vermilion/15 text-vermilion"
-                  : "border-white/10 text-ink-300 hover:text-paper-200"}`}>
+                status === f ? "border-salmon bg-salmon/15 text-deep"
+                  : "border-ink/10 text-gray hover:text-ink"}`}>
               {f}
             </button>
           ))}
@@ -57,38 +57,38 @@ export default function Explore() {
         {error && <ErrorState message={explainError(error)} onRetry={() => { void index.refetch(); void bounties.refetch(); }} />}
         {!loading && !error && rows.length === 0 && (
           <EmptyState title={ids && ids.length > 0 ? "Nothing matches those filters." : "No bounties yet."}>
-            <p>The first stamp hasn't landed. <Link to="/create" className="text-vermilion underline underline-offset-4">Fund a GitHub issue</Link> — payouts are test QOR, no monetary value.</p>
+            <p>The first stamp hasn't landed. <Link to="/create" className="text-deep underline underline-offset-4">Fund a GitHub issue</Link> — payouts are test QOR, no monetary value.</p>
           </EmptyState>
         )}
         {rows.map(({ id, bounty }) => {
           const meta = index.data?.metaById.get(id);
           return (
             <Link key={id.toString()} to={`/bounty/${id}`}
-              className="block rounded-xl border border-white/8 bg-ink-900/60 p-5 transition hover:border-vermilion/40 hover:bg-ink-900 focus-visible:outline-2 focus-visible:outline-vermilion">
+              className="block rounded-xl border border-ink/10 bg-white/70 p-5 transition hover:border-salmon/40 hover:bg-white focus-visible:outline-2 focus-visible:outline-deep">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-ink-400">#{id.toString()}</span>
+                  <span className="font-mono text-xs text-gray">#{id.toString()}</span>
                   <StatusChip state={bounty!.state} />
                   {meta?.workHashMismatch && (
-                    <span className="text-xs text-vermilion" title="On-chain workHash does not match the emitted metadata">⚠ hash mismatch</span>
+                    <span className="text-xs text-deep" title="On-chain workHash does not match the emitted metadata">⚠ hash mismatch</span>
                   )}
                 </div>
-                <Qor wei={bounty!.amount + bounty!.challengeReward} className="font-mono text-sm text-paper-100" />
+                <Qor wei={bounty!.amount + bounty!.challengeReward} className="font-mono text-sm text-ink" />
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                 {meta ? (
-                  <a className="font-mono text-paper-200 hover:text-vermilion"
+                  <a className="font-mono text-ink hover:text-deep"
                     href={`https://github.com/${meta.ownerRepo}/${meta.kind === 1 ? "pull" : "issues"}/${meta.number}`}
                     target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                     {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}
                   </a>
-                ) : <span className="text-ink-400">work reference unavailable</span>}
-                <span className="text-ink-300">
-                  deadline <Countdown to={bounty!.deadline} className="text-paper-200" />
+                ) : <span className="text-gray">work reference unavailable</span>}
+                <span className="text-gray">
+                  deadline <Countdown to={bounty!.deadline} className="text-ink" />
                 </span>
                 {bounty!.state === 1 && bounty!.claimExpiresAt > 0n && (
-                  <span className="text-ink-300">
-                    claim expires <Countdown to={bounty!.claimExpiresAt} className="text-paper-200" />
+                  <span className="text-gray">
+                    claim expires <Countdown to={bounty!.claimExpiresAt} className="text-ink" />
                   </span>
                 )}
               </div>

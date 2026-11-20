@@ -20,8 +20,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div key={t.id}
             className={`rounded-lg border p-3 text-sm shadow-lg backdrop-blur ${
               t.kind === "error"
-                ? "border-vermilion/50 bg-ink-900/95 text-paper-100"
-                : "border-paper-300/20 bg-ink-900/95 text-paper-200"}`}>
+                ? "border-salmon/50 bg-white/95 text-ink"
+                : "border-ink/15 bg-white/95 text-ink"}`}>
             {t.text}
           </div>
         ))}

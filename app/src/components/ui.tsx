@@ -5,18 +5,18 @@ export const STATE_NAMES = ["Open", "Claimed", "Pending", "Disputed", "Paid", "R
 export type BountyStateName = (typeof STATE_NAMES)[number];
 
 const CHIP_STYLES: Record<BountyStateName, string> = {
-  Open: "border-emerald-400/40 text-emerald-300",
-  Claimed: "border-sky-400/40 text-sky-300",
-  Pending: "border-amber-400/40 text-amber-300",
-  Disputed: "border-vermilion text-vermilion",
-  Paid: "border-emerald-500/50 text-emerald-400",
-  Refunded: "border-zinc-500/50 text-zinc-400",
+  Open: "border-leaf bg-leaf/15 text-deep",
+  Claimed: "border-mustard bg-mustard/30 text-orange",
+  Pending: "border-orange bg-orange/15 text-orange",
+  Disputed: "border-salmon bg-salmon/25 text-ink",
+  Paid: "border-deep bg-deep text-paper",
+  Refunded: "border-gray/60 bg-ink/5 text-gray",
 };
 
 export function StatusChip({ state }: { state: number }) {
   const name = STATE_NAMES[state] ?? `#${state}`;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-wide ${CHIP_STYLES[name as BountyStateName] ?? "border-zinc-600 text-zinc-300"}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-wide ${CHIP_STYLES[name as BountyStateName] ?? "border-gray text-gray"}`}>
       <span className="size-1.5 rounded-full bg-current" aria-hidden />
       {name}
     </span>
@@ -47,13 +47,13 @@ export function Countdown({ to, className }: { to: number | bigint; className?: 
 export function Qor({ wei, className }: { wei: bigint; className?: string }) {
   return (
     <span className={className} title={`${wei.toString()} wei`}>
-      {formatUnits(wei, 18)} <span className="text-ink-400">QOR</span>
+      {formatUnits(wei, 18)} <span className="text-gray">QOR</span>
     </span>
   );
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-white/5 ${className}`} />;
+  return <div className={`animate-pulse rounded bg-ink/5 ${className}`} />;
 }
 
 export function shortAddr(a: string | undefined | null) {
@@ -62,11 +62,11 @@ export function shortAddr(a: string | undefined | null) {
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="rounded-xl border border-vermilion/40 bg-vermilion/5 p-6 text-center">
-      <p className="font-mono text-sm text-paper-200">{message}</p>
+    <div role="alert" className="rounded-xl border border-salmon/40 bg-salmon/5 p-6 text-center">
+      <p className="font-mono text-sm text-ink">{message}</p>
       {onRetry && (
         <button onClick={onRetry}
-          className="mt-4 rounded-lg border border-paper-300/30 px-4 py-1.5 text-sm text-paper-100 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-vermilion">
+          className="mt-4 rounded-lg border border-ink/25 px-4 py-1.5 text-sm text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-deep">
           Retry
         </button>
       )}
@@ -76,9 +76,9 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-paper-300/20 p-12 text-center">
-      <p className="font-serif text-xl text-paper-200">{title}</p>
-      {children && <div className="mt-3 text-sm text-ink-300">{children}</div>}
+    <div className="rounded-xl border border-dashed border-ink/15 p-12 text-center">
+      <p className="font-sans text-xl text-ink">{title}</p>
+      {children && <div className="mt-3 text-sm text-gray">{children}</div>}
     </div>
   );
 }

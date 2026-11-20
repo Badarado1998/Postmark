@@ -21,7 +21,7 @@ function ConnectButtonInner() {
     return (
       <div className="flex items-center gap-2">
         {qorex.installed && (
-          <span className="hidden rounded-full border border-sky-400/30 px-2.5 py-1 text-xs text-sky-300 md:inline"
+          <span className="hidden rounded-full border border-mustard px-2.5 py-1 text-xs text-orange md:inline"
             title={qorex.qorAddress
               ? `QoreX connected for identity: ${qorex.qorAddress}. It cannot send EVM transactions yet.`
               : "QoreX detected — connect it in the extension to use it for identity"}>
@@ -31,7 +31,7 @@ function ConnectButtonInner() {
         {connectors.map((c) => (
           <button key={c.uid} onClick={() => connect({ connector: c, chainId: diana.id })}
             disabled={isPending}
-            className="rounded-lg bg-vermilion px-4 py-1.5 text-sm font-medium text-ink-950 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vermilion disabled:opacity-50">
+            className="rounded-lg bg-deep px-4 py-1.5 text-sm font-medium text-paper hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep disabled:opacity-50">
             {isPending ? "Connecting…" : "Connect wallet"}
           </button>
         ))}
@@ -44,25 +44,25 @@ function ConnectButtonInner() {
     <div className="flex items-center gap-2">
       {wrongChain && (
         <button onClick={() => switchChain({ chainId: diana.id })}
-          className="rounded-lg border border-vermilion px-3 py-1 text-xs font-medium text-vermilion hover:bg-vermilion/10">
+          className="rounded-lg border border-salmon px-3 py-1 text-xs font-medium text-deep hover:bg-salmon/10">
           Switch to diana (9800)
         </button>
       )}
       {!wrongChain && win.data && !win.data.live && (
-        <span className="hidden rounded-full border border-amber-400/30 px-2.5 py-1 text-xs text-amber-300 md:inline"
+        <span className="hidden rounded-full border border-orange/40 px-2.5 py-1 text-xs text-orange md:inline"
           title="No open EVM authorisation window. To send transactions, open one in QoreX scoped to the escrow address.">
           No EVM window
         </span>
       )}
       {pqc.data && (
         <span className={`hidden rounded-full border px-2.5 py-1 text-xs md:inline ${
-          pqc.data.live ? "border-emerald-400/30 text-emerald-300" : "border-zinc-500/40 text-zinc-400"}`}
+          pqc.data.live ? "border-leaf/50 text-deep" : "border-gray/50 text-gray"}`}
           title={pqc.data.live ? "Live ML-DSA-87 key registered" : "No live ML-DSA-87 key"}>
           {pqc.data.live ? "PQ key" : "no PQ key"}
         </span>
       )}
       <button onClick={() => disconnect()}
-        className="rounded-lg border border-paper-300/25 px-3 py-1.5 font-mono text-xs text-paper-200 hover:bg-white/5"
+        className="rounded-lg border border-ink/25 px-3 py-1.5 font-mono text-xs text-ink hover:bg-ink/5"
         title={address}>
         {shortAddr(address)}
       </button>

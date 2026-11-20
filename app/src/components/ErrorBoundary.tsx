@@ -10,9 +10,9 @@ export class ErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="mx-auto max-w-lg py-24 text-center">
-          <p className="font-serif text-2xl text-paper-100">This page hit an error.</p>
-          <p className="mt-3 font-mono text-xs text-ink-300">{this.state.error.message}</p>
-          <Link to="/" className="mt-6 inline-block text-vermilion underline underline-offset-4">
+          <p className="font-sans text-2xl text-ink">This page hit an error.</p>
+          <p className="mt-3 font-mono text-xs text-gray">{this.state.error.message}</p>
+          <Link to="/" className="mt-6 inline-block text-deep underline underline-offset-4">
             Back home
           </Link>
         </div>

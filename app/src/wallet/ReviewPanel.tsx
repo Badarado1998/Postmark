@@ -318,21 +318,21 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
   return (
     <div className="space-y-6">
       {/* claim under review */}
-      <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
+      <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">
           {disputed ? "disputed claim" : "claim under review"}
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4 font-mono text-sm">
-          <div><div className="text-[10px] uppercase text-ink-400">claimant</div>
-            <a className="text-paper-200 hover:text-vermilion" href={explorerAddress(bounty.payee)} target="_blank" rel="noreferrer">{shortAddr(bounty.payee)}</a></div>
-          <div><div className="text-[10px] uppercase text-ink-400">round</div><span className="text-paper-200">{bounty.claimRound.toString()}</span></div>
-          <div><div className="text-[10px] uppercase text-ink-400">{disputed ? "challenge ends" : "claim expires"}</div>
+          <div><div className="text-[10px] uppercase text-gray">claimant</div>
+            <a className="text-ink hover:text-deep" href={explorerAddress(bounty.payee)} target="_blank" rel="noreferrer">{shortAddr(bounty.payee)}</a></div>
+          <div><div className="text-[10px] uppercase text-gray">round</div><span className="text-ink">{bounty.claimRound.toString()}</span></div>
+          <div><div className="text-[10px] uppercase text-gray">{disputed ? "challenge ends" : "claim expires"}</div>
             <Countdown to={disputed ? bounty.challengeEndsAt : bounty.claimExpiresAt} /></div>
-          <div><div className="text-[10px] uppercase text-ink-400">identity hash</div>
-            <span className="text-paper-200">{bounty.payeeIdentityHash.slice(0, 18)}…</span></div>
+          <div><div className="text-[10px] uppercase text-gray">identity hash</div>
+            <span className="text-ink">{bounty.payeeIdentityHash.slice(0, 18)}…</span></div>
         </div>
         {disputed && (
-          <p className="mt-3 text-xs text-ink-300">
+          <p className="mt-3 text-xs text-gray">
             The initial verdict ({bounty.initialOutcome === 0 ? "PAY" : "REFUND"}) is frozen.
             A DISPUTE verdict that changes the outcome <em>upholds</em> the dispute — the disputer
             gets bond + challenge reward. One that repeats it <em>rejects</em> the dispute — the bond
@@ -342,168 +342,168 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
       </div>
 
       {/* identity check */}
-      <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">identity check</h2>
-        <p className="mt-2 text-sm text-ink-300">
-          Scan <a className="text-vermilion underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
+      <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">identity check</h2>
+        <p className="mt-2 text-sm text-gray">
+          Scan <a className="text-deep underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
             {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}</a> comments for
-          the claimant's <code className="text-paper-200">postmark-claim v1</code> line
+          the claimant's <code className="text-ink">postmark-claim v1</code> line
           {disputed && " and the disputer's postmark-dispute line"}.
         </p>
         <button type="button" onClick={() => void scanIdentity()} disabled={idScan === "scanning"}
-          className="mt-3 rounded-lg border border-vermilion/50 px-4 py-2 text-sm text-vermilion hover:bg-vermilion/10 disabled:opacity-40">
+          className="mt-3 rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40">
           {idScan === "scanning" ? "Scanning…" : "Scan comments"}
         </button>
-        {idErr && <p role="alert" className="mt-2 text-sm text-amber-300">{idErr}</p>}
+        {idErr && <p role="alert" className="mt-2 text-sm text-orange">{idErr}</p>}
         {identity && (
           <p className="mt-2 text-sm">
             {identity.matches
-              ? <span className="text-emerald-300">identity matches — @{identity.login}, comment {identity.commentId.toString()}</span>
-              : <span className="text-vermilion">identity mismatch — recomputed hash ≠ stored payeeIdentityHash (@{identity.login})</span>}
-            {" "}<a className="underline decoration-dotted hover:text-vermilion" href={identity.url} target="_blank" rel="noreferrer">comment</a>
+              ? <span className="text-deep">identity matches — @{identity.login}, comment {identity.commentId.toString()}</span>
+              : <span className="text-deep">identity mismatch — recomputed hash ≠ stored payeeIdentityHash (@{identity.login})</span>}
+            {" "}<a className="underline decoration-dotted hover:text-deep" href={identity.url} target="_blank" rel="noreferrer">comment</a>
           </p>
         )}
         {disputed && idScan === "done" && (
           disputeComment
-            ? <p className="mt-2 text-sm text-ink-200">dispute comment by @{disputeComment.login} ·{" "}
-                <a className="underline decoration-dotted hover:text-vermilion" href={disputeComment.url} target="_blank" rel="noreferrer">comment {disputeComment.commentId.toString()}</a></p>
-            : <p className="mt-2 text-sm text-amber-300">No comment re-hashes to the stored disputeEvidenceHash — resolution evidence can't be built.</p>
+            ? <p className="mt-2 text-sm text-gray">dispute comment by @{disputeComment.login} ·{" "}
+                <a className="underline decoration-dotted hover:text-deep" href={disputeComment.url} target="_blank" rel="noreferrer">comment {disputeComment.commentId.toString()}</a></p>
+            : <p className="mt-2 text-sm text-orange">No comment re-hashes to the stored disputeEvidenceHash — resolution evidence can't be built.</p>
         )}
       </div>
 
       {/* PR check */}
-      <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">pull request check</h2>
+      <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">pull request check</h2>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => void loadCandidates()} disabled={prBusy}
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm text-ink-200 hover:bg-white/5 disabled:opacity-40">
+            className="rounded-lg border border-ink/15 px-3 py-2 text-sm text-gray hover:bg-ink/5 disabled:opacity-40">
             {meta.kind === 1 ? "Check this PR" : "Find linked PRs"}
           </button>
           {meta.kind === 0 && (
-            <span className="flex flex-wrap items-center gap-2 text-sm text-ink-300">
+            <span className="flex flex-wrap items-center gap-2 text-sm text-gray">
               or
               <input value={prUrl} onChange={(e) => setPrUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo/pull/9"
-                className="min-w-0 w-full sm:w-72 rounded-lg border border-white/10 bg-ink-950 px-3 py-2 font-mono text-xs text-paper-100" />
+                className="min-w-0 w-full sm:w-72 rounded-lg border border-ink/10 bg-paper px-3 py-2 font-mono text-xs text-ink" />
               <button type="button" onClick={parsePr} disabled={prBusy}
-                className="rounded-lg border border-white/15 px-3 py-2 text-sm text-ink-200 hover:bg-white/5 disabled:opacity-40">check</button>
+                className="rounded-lg border border-ink/15 px-3 py-2 text-sm text-gray hover:bg-ink/5 disabled:opacity-40">check</button>
             </span>
           )}
         </div>
         {candidates && meta.kind === 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {candidates.length === 0 && <p className="text-sm text-ink-300">No cross-referenced PRs — paste one.</p>}
+            {candidates.length === 0 && <p className="text-sm text-gray">No cross-referenced PRs — paste one.</p>}
             {candidates.map((n) => (
               <button key={n} type="button" onClick={() => void runPrCheck(meta.ownerRepo, n)}
-                className="rounded-full border border-white/15 px-3 py-1 font-mono text-xs text-paper-200 hover:border-vermilion/50">
+                className="rounded-full border border-ink/15 px-3 py-1 font-mono text-xs text-ink hover:border-salmon/50">
                 #{n}
               </button>
             ))}
           </div>
         )}
-        {prErr && <p role="alert" className="mt-2 text-sm text-amber-300">{prErr}</p>}
+        {prErr && <p role="alert" className="mt-2 text-sm text-orange">{prErr}</p>}
         {prCheck && (
           <ul className="mt-3 space-y-1 text-sm">
             {prCheck.checks.map((c) => (
-              <li key={c.label} className={c.ok ? "text-emerald-300" : "text-amber-300"}>
+              <li key={c.label} className={c.ok ? "text-deep" : "text-orange"}>
                 {c.ok ? "✓" : "✗"} {c.label}
               </li>
             ))}
-            <li className="text-ink-300 font-mono text-xs pt-1">
+            <li className="text-gray font-mono text-xs pt-1">
               {prCheck.repo}#{prCheck.number} · by @{prCheck.pr.user.login}
               {prCheck.pr.merged_at && ` · merged ${new Date(prCheck.pr.merged_at).toLocaleString()}`}
             </li>
           </ul>
         )}
         {warningCount > 0 && (
-          <p className="mt-2 text-xs text-amber-300">{warningCount} check{warningCount > 1 ? "s" : ""} failed — warnings only; the verdict is your judgment.</p>
+          <p className="mt-2 text-xs text-orange">{warningCount} check{warningCount > 1 ? "s" : ""} failed — warnings only; the verdict is your judgment.</p>
         )}
       </div>
 
       {/* decision */}
-      <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
+      <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">
           {disputed ? "resolution verdict" : "verdict"}
         </h2>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => void buildDecision("pay")}
             disabled={!prCheck || (disputed && !disputeComment)}
-            className="rounded-lg bg-vermilion px-4 py-2 text-sm font-medium text-ink-950 hover:brightness-110 disabled:opacity-40">
+            className="rounded-lg bg-deep px-4 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
             {disputed ? "Resolve PAY" : "PAY"}
           </button>
           <span className="flex flex-wrap items-center gap-2 text-sm">
             <select value={refundReason} onChange={(e) => setRefundReason(e.target.value)}
-              className="rounded-lg border border-white/10 bg-ink-950 px-2 py-2 font-mono text-xs text-paper-100">
+              className="rounded-lg border border-ink/10 bg-paper px-2 py-2 font-mono text-xs text-ink">
               {REFUND_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
             <input value={refundUrl} onChange={(e) => setRefundUrl(e.target.value)} placeholder="details URL (optional)"
-              className="min-w-0 w-full sm:w-56 rounded-lg border border-white/10 bg-ink-950 px-3 py-2 font-mono text-xs text-paper-100" />
+              className="min-w-0 w-full sm:w-56 rounded-lg border border-ink/10 bg-paper px-3 py-2 font-mono text-xs text-ink" />
             <button type="button" onClick={() => void buildDecision("refund")}
               disabled={disputed && !disputeComment}
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-ink-200 hover:bg-white/5 disabled:opacity-40">
+              className="rounded-lg border border-ink/15 px-4 py-2 text-sm text-gray hover:bg-ink/5 disabled:opacity-40">
               {disputed ? "Resolve REFUND" : "REFUND"}
             </button>
           </span>
         </div>
         {disputed && !disputeComment && idScan !== "done" && (
-          <p className="mt-2 text-xs text-ink-400">Scan comments first — the dispute comment id feeds the resolution evidence.</p>
+          <p className="mt-2 text-xs text-gray">Scan comments first — the dispute comment id feeds the resolution evidence.</p>
         )}
-        {buildErr && <p role="alert" className="mt-2 text-sm text-vermilion">{buildErr}</p>}
+        {buildErr && <p role="alert" className="mt-2 text-sm text-deep">{buildErr}</p>}
         {built && (
-          <div className="mt-3 rounded-lg border border-white/10 bg-ink-950 p-3 font-mono text-xs text-ink-300 break-all">
+          <div className="mt-3 rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-gray break-all">
             <div>phase {disputed ? "DISPUTE" : "INITIAL"} · outcome {decision === "pay" ? "PAY" : "REFUND"}</div>
             <div>payee {built.verdict.payee} · mergedAt {built.verdict.mergedAt.toString()}</div>
             <div className="break-all">evidenceHash {built.verdict.evidenceHash}</div>
             <div>nonce {built.verdict.nonce.toString()} · claimRound {built.verdict.claimRound.toString()}</div>
             {disputed && <div className="break-all">binds dispute {built.verdict.disputedVerdictHash.slice(0, 18)}… + {built.verdict.disputeEvidenceHash.slice(0, 18)}…</div>}
-            <div className="text-emerald-300">message matches escrow.verdictMessage</div>
+            <div className="text-deep">message matches escrow.verdictMessage</div>
           </div>
         )}
       </div>
 
       {/* sign */}
       {built && (
-        <div className="rounded-xl border border-vermilion/30 bg-ink-900/60 p-5">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-vermilion">sign the verdict</h2>
+        <div className="rounded-xl border border-salmon/30 bg-white/70 p-5">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-deep">sign the verdict</h2>
           {myVerifierIndex >= 0 && (
-            <p className="mt-2 text-xs text-ink-300">You are verifier #{myVerifierIndex}.</p>
+            <p className="mt-2 text-xs text-gray">You are verifier #{myVerifierIndex}.</p>
           )}
           {!(qorex.canSignArbitrary && qorex.qorAddress) && (
-            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-ink-300">
+            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-gray">
               <label>Pairing code
                 <input value={pair} onChange={(e) => { setPair(e.target.value); setPairingCode(e.target.value); }}
                   placeholder="8-char code"
-                  className="ml-2 w-32 rounded border border-white/10 bg-ink-950 px-2 py-1 text-paper-100" /></label>
+                  className="ml-2 w-32 rounded border border-ink/10 bg-paper px-2 py-1 text-ink" /></label>
               <label>port
                 <input value={port} onChange={(e) => { setPort(e.target.value); setSignerPort(Number(e.target.value)); }}
-                  className="ml-2 w-20 rounded border border-white/10 bg-ink-950 px-2 py-1 text-paper-100" /></label>
-              <span className="text-ink-400">the signer's address must be one of this bounty's verifiers</span>
+                  className="ml-2 w-20 rounded border border-ink/10 bg-paper px-2 py-1 text-ink" /></label>
+              <span className="text-gray">the signer's address must be one of this bounty's verifiers</span>
             </div>
           )}
           <button type="button" onClick={() => void sign()} disabled={signing}
-            className="mt-3 rounded-lg border border-vermilion/50 px-4 py-2 text-sm text-vermilion hover:bg-vermilion/10 disabled:opacity-40">
+            className="mt-3 rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40">
             {signing ? "Signing…" : "Sign with the local signer"}
           </button>
-          {sigErr && <p role="alert" className="mt-2 text-sm text-vermilion">{sigErr}</p>}
+          {sigErr && <p role="alert" className="mt-2 text-sm text-deep">{sigErr}</p>}
           {sig && sigIndex !== null && (
-            <p className="mt-2 text-sm text-emerald-300">Signature #{sigIndex} verified locally against the live key.</p>
+            <p className="mt-2 text-sm text-deep">Signature #{sigIndex} verified locally against the live key.</p>
           )}
         </div>
       )}
 
       {/* bundle */}
       {built && (
-        <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">verdict bundle</h2>
+        <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">verdict bundle</h2>
           <div className="mt-2 space-y-1 font-mono text-xs">
             {[0, 1, 2].map((i) => (
               <div key={i} className="flex items-center gap-2">
-                <a className="text-paper-200 hover:text-vermilion" href={explorerAddress(bounty.verifiers[i]!)} target="_blank" rel="noreferrer">
+                <a className="text-ink hover:text-deep" href={explorerAddress(bounty.verifiers[i]!)} target="_blank" rel="noreferrer">
                   verifier {i} · {shortAddr(bounty.verifiers[i])}</a>
                 <span className={
-                  sigStatus[i] === "valid" ? "text-emerald-300"
-                  : sigStatus[i] === "invalid" || sigStatus[i] === "key not live" ? "text-vermilion"
-                  : bundle?.signatures[i] ? "text-ink-400" : "text-ink-500"}>
+                  sigStatus[i] === "valid" ? "text-deep"
+                  : sigStatus[i] === "invalid" || sigStatus[i] === "key not live" ? "text-deep"
+                  : bundle?.signatures[i] ? "text-gray" : "text-gray"}>
                   {bundle?.signatures[i] ? (sigStatus[i] ?? "pending") : "—"}
                 </span>
               </div>
@@ -511,29 +511,29 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
           </div>
           {bundle && (
             <>
-              <pre className="mt-3 max-h-48 overflow-auto rounded-lg border border-white/10 bg-ink-950 p-3 font-mono text-[10px] text-ink-300">{bundleJson}</pre>
+              <pre className="mt-3 max-h-48 overflow-auto rounded-lg border border-ink/10 bg-paper p-3 font-mono text-[10px] text-gray">{bundleJson}</pre>
               <div className="mt-2 flex gap-2">
                 <button type="button" onClick={() => { void navigator.clipboard.writeText(bundleJson); toast({ kind: "info", text: "Bundle copied." }); }}
-                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-ink-200 hover:bg-white/5">Copy JSON</button>
+                  className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-gray hover:bg-ink/5">Copy JSON</button>
                 <button type="button" onClick={download}
-                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-ink-200 hover:bg-white/5">Download .json</button>
+                  className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-gray hover:bg-ink/5">Download .json</button>
               </div>
             </>
           )}
           <div className="mt-4">
             <textarea value={importText} onChange={(e) => setImportText(e.target.value)}
               placeholder="paste another verifier's bundle JSON to merge"
-              className="h-24 w-full rounded-lg border border-white/10 bg-ink-950 p-3 font-mono text-xs text-paper-100" />
+              className="h-24 w-full rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink" />
             <button type="button" onClick={() => void importBundle()}
-              className="mt-2 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-ink-200 hover:bg-white/5">Import & merge</button>
-            {importErr && <p role="alert" className="mt-2 text-sm text-vermilion">{importErr}</p>}
+              className="mt-2 rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-gray hover:bg-ink/5">Import & merge</button>
+            {importErr && <p role="alert" className="mt-2 text-sm text-deep">{importErr}</p>}
           </div>
           <button type="button" onClick={submit} disabled={validCount < 2}
-            className="mt-4 rounded-lg bg-vermilion px-5 py-2 text-sm font-medium text-ink-950 hover:brightness-110 disabled:opacity-40">
+            className="mt-4 rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
             {disputed ? `Submit resolution (${validCount}/3 valid)` : `Submit verdict (${validCount}/3 valid)`}
           </button>
           {validCount >= 2 && (
-            <p className="mt-1 text-xs text-ink-400">Anyone can relay this — signatures prove themselves.</p>
+            <p className="mt-1 text-xs text-gray">Anyone can relay this — signatures prove themselves.</p>
           )}
           <TxStatusPanel state={tx.state} />
         </div>

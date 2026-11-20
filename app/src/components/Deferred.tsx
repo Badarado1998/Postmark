@@ -7,10 +7,10 @@ export function DeferredConnect() {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   if (!ready) {
-    return <div className="h-8 w-32 rounded-lg bg-white/5" aria-hidden />;
+    return <div className="h-8 w-32 rounded-lg bg-ink/5" aria-hidden />;
   }
   return (
-    <Suspense fallback={<div className="h-8 w-32 rounded-lg bg-white/5" aria-hidden />}>
+    <Suspense fallback={<div className="h-8 w-32 rounded-lg bg-ink/5" aria-hidden />}>
       <ConnectWallet />
     </Suspense>
   );

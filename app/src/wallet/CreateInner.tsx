@@ -93,15 +93,15 @@ function VerifierInput({ i, value, onChange, live, checking, error }:
           aria-invalid={show && !!error}
           aria-label={`Verifier ${i + 1}`}
           placeholder={`Verifier ${i + 1} — 0x… or qor1…`}
-          className={`w-full rounded-lg border bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-vermilion ${
-            show && error ? "border-vermilion/60" : "border-white/10"}`} />
-        {checking && <span className="shrink-0 text-xs text-ink-400">checking…</span>}
-        {live === true && <span className="shrink-0 rounded-full border border-emerald-400/40 px-2 py-0.5 text-[10px] text-emerald-300">PQ live</span>}
-        {live === false && <span className="shrink-0 rounded-full border border-vermilion/50 px-2 py-0.5 text-[10px] text-vermilion">no key</span>}
+          className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep ${
+            show && error ? "border-salmon/60" : "border-ink/10"}`} />
+        {checking && <span className="shrink-0 text-xs text-gray">checking…</span>}
+        {live === true && <span className="shrink-0 rounded-full border border-leaf/60 px-2 py-0.5 text-[10px] text-deep">PQ live</span>}
+        {live === false && <span className="shrink-0 rounded-full border border-salmon px-2 py-0.5 text-[10px] text-orange">no key</span>}
       </div>
-      {show && error && <p role="alert" className="mt-1 text-xs text-vermilion">{error}</p>}
+      {show && error && <p role="alert" className="mt-1 text-xs text-deep">{error}</p>}
       {show && !error && live === false && (
-        <p role="alert" className="mt-1 text-xs text-vermilion">No live ML-DSA-87 key registered — ineligible as a verifier.</p>
+        <p role="alert" className="mt-1 text-xs text-deep">No live ML-DSA-87 key registered — ineligible as a verifier.</p>
       )}
     </div>
   );
@@ -114,9 +114,9 @@ function ItemPreview({ gref }: { gref: GithubRef }) {
       gref.kind === 1 ? getPull(gref.ownerRepo, gref.number) : getIssue(gref.ownerRepo, gref.number),
     staleTime: 60_000, retry: false,
   });
-  if (q.isPending) return <div className="mt-3 animate-pulse rounded-lg bg-white/5 p-4 text-sm text-ink-400">Fetching from GitHub…</div>;
+  if (q.isPending) return <div className="mt-3 animate-pulse rounded-lg bg-ink/5 p-4 text-sm text-gray">Fetching from GitHub…</div>;
   if (q.error) {
-    return <div role="alert" className="mt-3 rounded-lg border border-vermilion/40 bg-vermilion/5 p-4 text-sm text-paper-200">
+    return <div role="alert" className="mt-3 rounded-lg border border-salmon/40 bg-salmon/5 p-4 text-sm text-ink">
       {q.error instanceof GithubRateLimitError ? q.error.message : "Couldn't fetch that item — check the URL."}
     </div>;
   }
@@ -127,14 +127,14 @@ function ItemPreview({ gref }: { gref: GithubRef }) {
       ? "This PR is already merged — a verdict may be signed immediately."
       : gref.kind === 1 && d.state !== "open" ? "This PR is closed without merging." : null;
   return (
-    <div className="mt-3 rounded-lg border border-white/10 bg-ink-900/60 p-4">
+    <div className="mt-3 rounded-lg border border-ink/10 bg-white/70 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-paper-100">{d.title}</span>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${d.state === "open" ? "border-emerald-400/40 text-emerald-300" : "border-zinc-500/40 text-zinc-400"}`}>{d.state}</span>
-        {gref.kind === 1 && (d as GhPull).merged && <span className="rounded-full border border-sky-400/40 px-2 py-0.5 text-[10px] text-sky-300">merged</span>}
+        <span className="font-medium text-ink">{d.title}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${d.state === "open" ? "border-leaf/60 text-deep" : "border-gray/50 text-gray"}`}>{d.state}</span>
+        {gref.kind === 1 && (d as GhPull).merged && <span className="rounded-full border border-mustard px-2 py-0.5 text-[10px] text-orange">merged</span>}
       </div>
-      <p className="mt-1 font-mono text-xs text-ink-300">{gref.ownerRepo}{gref.kind ? "/pull/" : "#"}{gref.number} · {d.user?.login}</p>
-      {warn && <p role="alert" className="mt-2 text-sm text-amber-300">{warn}</p>}
+      <p className="mt-1 font-mono text-xs text-gray">{gref.ownerRepo}{gref.kind ? "/pull/" : "#"}{gref.number} · {d.user?.login}</p>
+      {warn && <p role="alert" className="mt-2 text-sm text-orange">{warn}</p>}
     </div>
   );
 }
@@ -213,19 +213,19 @@ function CreateForm() {
 
   return (
     <div className="mx-auto max-w-2xl py-10">
-      <h1 className="font-serif text-4xl font-semibold text-paper-100">Fund an issue</h1>
-      <p className="mt-2 text-sm text-ink-300">
+      <h1 className="font-sans text-4xl font-semibold text-ink">Fund an issue</h1>
+      <p className="mt-2 text-sm text-gray">
         Escrow test QOR against a real GitHub item on diana. No monetary value.
       </p>
 
       <label className="mt-8 block text-sm">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">GitHub issue or PR URL</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">GitHub issue or PR URL</span>
         <input value={url} onChange={(e) => setUrl(e.target.value)}
           placeholder="https://github.com/owner/repo/issues/42"
-          className="mt-1 w-full rounded-lg border border-white/10 bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-vermilion" />
+          className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep" />
       </label>
       {urlTouched && !gref && (
-        <p role="alert" className="mt-2 text-sm text-vermilion">
+        <p role="alert" className="mt-2 text-sm text-deep">
           Not a github.com issue or PR URL.
         </p>
       )}
@@ -238,51 +238,51 @@ function CreateForm() {
           ["Dispute bond", bond, setBond],
         ].map(([label, val, set]) => (
           <label key={label as string} className="block text-sm">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">{label as string} (QOR)</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">{label as string} (QOR)</span>
             <input value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}
               inputMode="decimal"
-              className="mt-1 w-full rounded-lg border border-white/10 bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 focus:outline-none focus:ring-1 focus:ring-vermilion" />
+              className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink focus:outline-none focus:ring-1 focus:ring-deep" />
           </label>
         ))}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">Deadline ({tz})</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">Deadline ({tz})</span>
           <input type="datetime-local" value={deadlineLocal}
             onChange={(e) => setDeadlineLocal(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-white/10 bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 focus:outline-none focus:ring-1 focus:ring-vermilion" />
-          <span className="mt-1 block font-mono text-[10px] text-ink-400">
+            className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink focus:outline-none focus:ring-1 focus:ring-deep" />
+          <span className="mt-1 block font-mono text-[10px] text-gray">
             {Number.isFinite(new Date(deadlineLocal).getTime())
               ? new Date(deadlineLocal).toISOString().replace("T", " ").slice(0, 16) + " UTC" : ""}
           </span>
         </label>
         <div className="text-sm">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">Claim timeout</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">Claim timeout</span>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {CLAIM_PRESETS.map((p) => (
               <button key={p.sec} type="button"
                 onClick={() => setPreset(p.sec)}
-                className={`rounded-full border px-3 py-1 text-xs ${preset === p.sec ? "border-vermilion bg-vermilion/15 text-vermilion" : "border-white/10 text-ink-300"}`}>
+                className={`rounded-full border px-3 py-1 text-xs ${preset === p.sec ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
                 {p.label}
               </button>
             ))}
             <button type="button" onClick={() => setPreset("custom")}
-              className={`rounded-full border px-3 py-1 text-xs ${preset === "custom" ? "border-vermilion bg-vermilion/15 text-vermilion" : "border-white/10 text-ink-300"}`}>
+              className={`rounded-full border px-3 py-1 text-xs ${preset === "custom" ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
               custom
             </button>
           </div>
           {preset === "custom" && (
-            <label className="mt-2 flex items-center gap-2 font-mono text-xs text-ink-300">
+            <label className="mt-2 flex items-center gap-2 font-mono text-xs text-gray">
               <input value={customTimeout} onChange={(e) => setCustomTimeout(e.target.value)}
-                className="w-20 rounded border border-white/10 bg-ink-900 px-2 py-1 text-paper-100" /> hours (1–168)
+                className="w-20 rounded border border-ink/10 bg-white px-2 py-1 text-ink" /> hours (1–168)
             </label>
           )}
         </div>
       </div>
 
       <fieldset className="mt-6">
-        <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">
+        <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">
           Verifiers (need live ML-DSA-87 keys; any 2 settle)
         </legend>
         <div className="mt-2 space-y-2">
@@ -300,15 +300,15 @@ function CreateForm() {
       </fieldset>
 
       {!form.ok && (
-        <p role="alert" className="mt-4 text-sm text-vermilion">{form.error}</p>
+        <p role="alert" className="mt-4 text-sm text-deep">{form.error}</p>
       )}
 
-      <div className="mt-6 rounded-xl border border-white/10 bg-ink-900/60 p-5">
+      <div className="mt-6 rounded-xl border border-ink/10 bg-white/70 p-5">
         <div className="flex justify-between text-sm">
-          <span className="text-ink-300">You send now</span>
-          <span className="font-mono text-paper-100">{total} QOR <span className="text-[10px] uppercase text-vermilion">testnet</span></span>
+          <span className="text-gray">You send now</span>
+          <span className="font-mono text-ink">{total} QOR <span className="text-[10px] uppercase text-deep">testnet</span></span>
         </div>
-        <p className="mt-2 text-xs text-ink-400">
+        <p className="mt-2 text-xs text-gray">
           amount + challenge reward. The bond is only required to dispute a verdict.
           If no valid claim is merged, you can refund after the deadline.
         </p>
@@ -317,12 +317,12 @@ function CreateForm() {
       <TxStatusPanel state={tx.state} />
 
       {!isConnected ? (
-        <p className="mt-6 text-sm text-ink-300">Connect an EVM wallet to continue.</p>
+        <p className="mt-6 text-sm text-gray">Connect an EVM wallet to continue.</p>
       ) : (
         <button onClick={() => void submit()}
           disabled={!form.ok || !gref || tx.state.phase === "checking" || tx.state.phase === "simulating"
             || tx.state.phase === "wallet" || tx.state.phase === "submitted" || tx.state.phase === "confirming"}
-          className="mt-6 w-full rounded-lg bg-vermilion px-6 py-3 font-medium text-ink-950 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
+          className="mt-6 w-full rounded-lg bg-deep px-6 py-3 font-medium text-paper hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
           {tx.state.phase === "wallet" ? "Confirm in wallet…"
             : tx.state.phase === "submitted" || tx.state.phase === "confirming" ? "Confirming…"
             : `Create bounty (${total} QOR)`}

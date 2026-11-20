@@ -10,7 +10,7 @@ function ActionButton({ label, run, busy }:
   { label: string; run: () => void; busy: boolean }) {
   return (
     <button onClick={run} disabled={busy}
-      className="rounded-lg border border-vermilion/50 px-4 py-2 text-sm font-medium text-vermilion transition hover:bg-vermilion/10 disabled:cursor-not-allowed disabled:opacity-40">
+      className="rounded-lg border border-salmon/50 px-4 py-2 text-sm font-medium text-deep transition hover:bg-salmon/10 disabled:cursor-not-allowed disabled:opacity-40">
       {label}
     </button>
   );
@@ -34,8 +34,8 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
 
   if (!refund && !finalize && !reopen) return null;
   return (
-    <div className="rounded-xl border border-white/10 bg-ink-900/60 p-5">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">actions</h2>
+    <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">actions</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {refund && <ActionButton busy={busy} label="Refund expired bounty"
           run={() => void tx.run({ functionName: "refundExpired", args: [id], onConfirmed: done })} />}
