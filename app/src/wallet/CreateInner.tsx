@@ -11,12 +11,73 @@ import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
 import { Card } from "../components/ui";
+import { MS_PER_MINUTE, SECONDS_PER_DAY, SECONDS_PER_HOUR } from "../chain/time";
 
 const CLAIM_PRESETS = [
-  { label: "1 h", sec: 3600 }, { label: "6 h", sec: 21600 },
-  { label: "24 h", sec: 86400 }, { label: "3 d", sec: 259200 },
-  { label: "7 d", sec: 604800 },
+  { label: "1 h", sec: SECONDS_PER_HOUR }, { label: "6 h", sec: 6 * SECONDS_PER_HOUR },
+  { label: "24 h", sec: SECONDS_PER_DAY }, { label: "3 d", sec: 3 * SECONDS_PER_DAY },
+  { label: "7 d", sec: 7 * SECONDS_PER_DAY },
 ];
+const DEFAULT_DEADLINE_DAYS = 3;
+
+/** Live-key lookups for the three verifier slots, plus shared-key detection. */
+function useVerifierKeyCheck() {
+  const [keyStates, setKeyStates] = useState<(boolean | undefined)[]>([undefined, undefined, undefined]);
+  const [checkingKeys, setCheckingKeys] = useState(false);
+
+  const clearKeyState = (i: number) =>
+    setKeyStates((ks) => ks.map((k, j) => (j === i ? undefined : k)));
+
+  const checkKeys = async (verifiers: `0x${string}`[]) => {
+    setCheckingKeys(true);
+    const states: boolean[] = [];
+    const seen = new Set<string>();
+    let shared = false;
+    for (const v of verifiers) {
+      const pk = await livePqcKey(v).catch(() => null);
+      states.push(pk !== null);
+      if (pk) {
+        if (seen.has(pk.toLowerCase())) shared = true;
+        seen.add(pk.toLowerCase());
+      }
+    }
+    setKeyStates(states);
+    setCheckingKeys(false);
+    return { shared, missing: states.includes(false) };
+  };
+
+  return { keyStates, clearKeyState, checkingKeys, checkKeys };
+}
+
+function ClaimTimeoutPicker({ preset, onPreset, custom, onCustom }: {
+  preset: number | "custom"; onPreset: (p: number | "custom") => void;
+  custom: string; onCustom: (v: string) => void;
+}) {
+  return (
+    <div className="text-sm">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">Claim timeout</span>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {CLAIM_PRESETS.map((p) => (
+          <button key={p.sec} type="button"
+            onClick={() => onPreset(p.sec)}
+            className={`rounded-full border px-3 py-1 text-xs ${preset === p.sec ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
+            {p.label}
+          </button>
+        ))}
+        <button type="button" onClick={() => onPreset("custom")}
+          className={`rounded-full border px-3 py-1 text-xs ${preset === "custom" ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
+          custom
+        </button>
+      </div>
+      {preset === "custom" && (
+        <label className="mt-2 flex items-center gap-2 font-mono text-xs text-gray">
+          <input value={custom} onChange={(e) => onCustom(e.target.value)}
+            className="w-20 rounded border border-ink/10 bg-white px-2 py-1 text-ink" /> hours (1–168)
+        </label>
+      )}
+    </div>
+  );
+}
 
 function CreateForm() {
   const { address, isConnected } = useAccount();
@@ -29,38 +90,20 @@ function CreateForm() {
   const [amount, setAmount] = useState("0.5");
   const [reward, setReward] = useState("0.1");
   const [bond, setBond] = useState("0.2");
-  const [preset, setPreset] = useState<number | "custom">(86400);
+  const [preset, setPreset] = useState<number | "custom">(SECONDS_PER_DAY);
   const [customTimeout, setCustomTimeout] = useState("24");
-  const claimTimeoutSec = preset === "custom" ? Math.floor(Number(customTimeout) * 3600) : preset;
+  const claimTimeoutSec = preset === "custom" ? Math.floor(Number(customTimeout) * SECONDS_PER_HOUR) : preset;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const local = new Date(Date.now() + 3 * 86400_000);
+  const local = new Date(Date.now() + DEFAULT_DEADLINE_DAYS * SECONDS_PER_DAY * 1000);
   const [deadlineLocal, setDeadlineLocal] = useState(
-    new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    new Date(local.getTime() - local.getTimezoneOffset() * MS_PER_MINUTE).toISOString().slice(0, 16));
   const [verifiers, setVerifiers] = useState(["", "", ""]);
-  const [keyStates, setKeyStates] = useState<(boolean | undefined)[]>([undefined, undefined, undefined]);
-  const [checkingKeys, setCheckingKeys] = useState(false);
+  const { keyStates, clearKeyState, checkingKeys, checkKeys } = useVerifierKeyCheck();
 
   const form = validateForm({
     amount, reward, bond, deadlineLocal, claimTimeoutSec,
     verifiers, ...(address ? { funder: address } : {}),
   });
-
-  const checkKeys = async (vs: `0x${string}`[]) => {
-    setCheckingKeys(true);
-    const out: (boolean | undefined)[] = [];
-    const seen = new Set<string>();
-    let shared = false;
-    for (const v of vs) {
-      const pk = await livePqcKey(v).catch(() => null);
-      if (!pk) { out.push(false); continue; }
-      if (seen.has(pk.toLowerCase())) shared = true;
-      seen.add(pk.toLowerCase());
-      out.push(true);
-    }
-    setKeyStates(out);
-    setCheckingKeys(false);
-    return { shared, missing: out.includes(false) };
-  };
 
   const submit = async () => {
     if (!form.ok || !gref) return;
@@ -136,28 +179,8 @@ function CreateForm() {
               ? new Date(deadlineLocal).toISOString().replace("T", " ").slice(0, 16) + " UTC" : ""}
           </span>
         </label>
-        <div className="text-sm">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">Claim timeout</span>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {CLAIM_PRESETS.map((p) => (
-              <button key={p.sec} type="button"
-                onClick={() => setPreset(p.sec)}
-                className={`rounded-full border px-3 py-1 text-xs ${preset === p.sec ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
-                {p.label}
-              </button>
-            ))}
-            <button type="button" onClick={() => setPreset("custom")}
-              className={`rounded-full border px-3 py-1 text-xs ${preset === "custom" ? "border-salmon bg-salmon/15 text-deep" : "border-ink/10 text-gray"}`}>
-              custom
-            </button>
-          </div>
-          {preset === "custom" && (
-            <label className="mt-2 flex items-center gap-2 font-mono text-xs text-gray">
-              <input value={customTimeout} onChange={(e) => setCustomTimeout(e.target.value)}
-                className="w-20 rounded border border-ink/10 bg-white px-2 py-1 text-ink" /> hours (1–168)
-            </label>
-          )}
-        </div>
+        <ClaimTimeoutPicker preset={preset} onPreset={setPreset}
+          custom={customTimeout} onCustom={setCustomTimeout} />
       </div>
 
       <fieldset className="mt-6">
@@ -172,7 +195,7 @@ function CreateForm() {
               error={verifierFieldError(v, i, verifiers, address)}
               onChange={(nv) => {
                 const next = [...verifiers]; next[i] = nv; setVerifiers(next);
-                const ks = [...keyStates]; ks[i] = undefined; setKeyStates(ks);
+                clearKeyState(i);
               }} />
           ))}
         </div>

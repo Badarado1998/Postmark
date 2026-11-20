@@ -15,9 +15,9 @@ vi.mock("@qorechain/qorex-types", () => ({
 import {
   signerStatus, signClaim, signVerdict, signerPort, setSignerPort, signerUrl,
   pairingCode, setPairingCode, SignerError,
-} from "../src/chain/localSigner";
-import { localSigner, pickSigner, qorexSigner } from "../src/wallet/pqSigner";
-import { useQorex, type QorexState } from "../src/wallet/qorex";
+} from "../../src/chain/localSigner";
+import { localSigner, pickSigner, qorexSigner } from "../../src/wallet/pqSigner";
+import { useQorex, type QorexState } from "../../src/wallet/qorex";
 
 const SIG = `0x${"ab".repeat(8)}` as const;
 const jsonResponse = (status: number, body: unknown) =>

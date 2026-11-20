@@ -1,38 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import { CLAIMANT, FUNDER, META, makeBounty, renderApp } from "./fixtures";
+import { CLAIMANT, FUNDER, META, makeBounty, renderApp } from "../fixtures";
 
 const route = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 const github = vi.hoisted(() => ({ item: {} as Record<string, unknown> }));
 
-vi.mock("../src/hooks/useBountyRoute", () => ({ useBountyRoute: () => route.current }));
-vi.mock("../src/hooks/queries", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/hooks/queries")>()),
+vi.mock("../../src/hooks/useBountyRoute", () => ({ useBountyRoute: () => route.current }));
+vi.mock("../../src/hooks/queries", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/hooks/queries")>()),
   usePqcStatus: () => ({ data: { live: true }, isPending: false, error: null }),
   useGithubItem: () => github.item,
 }));
-vi.mock("../src/github/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/github/client")>()),
+vi.mock("../../src/github/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/github/client")>()),
   getLinkedPrs: vi.fn().mockResolvedValue([2]),
   getPull: vi.fn().mockResolvedValue({
     number: 2, html_url: "https://github.com/postmark-e2e/sandbox/pull/2",
     merged: true, merged_at: "2026-11-18T10:00:00Z", user: { login: "e2e-claimant" } }),
 }));
-vi.mock("../src/wallet/TxActions", () => ({ default: () => <p>tx actions</p> }));
-vi.mock("../src/wallet/ClaimPanel", () => ({ default: () => <p>claim panel</p> }));
-vi.mock("../src/wallet/ClaimedNote", () => ({ default: () => <p>claimed note</p> }));
-vi.mock("../src/wallet/FunderShare", () => ({ default: () => <p>funder share</p> }));
-vi.mock("../src/wallet/DisputePanel", () => ({ default: () => <p>dispute panel</p> }));
-vi.mock("../src/wallet/ReviewPanel", () => ({ default: () => <p>review panel</p> }));
+vi.mock("../../src/wallet/TxActions", () => ({ default: () => <p>tx actions</p> }));
+vi.mock("../../src/wallet/ClaimPanel", () => ({ default: () => <p>claim panel</p> }));
+vi.mock("../../src/wallet/ClaimedNote", () => ({ default: () => <p>claimed note</p> }));
+vi.mock("../../src/wallet/FunderShare", () => ({ default: () => <p>funder share</p> }));
+vi.mock("../../src/wallet/DisputePanel", () => ({ default: () => <p>dispute panel</p> }));
+vi.mock("../../src/wallet/ReviewPanel", () => ({ default: () => <p>review panel</p> }));
 
-import BountyDetail from "../src/pages/BountyDetail";
-import Review from "../src/pages/Review";
-import { BountyFacts } from "../src/pages/bounty/BountyFacts";
-import { GithubCard } from "../src/pages/bounty/GithubCard";
-import { Ruling, eventsFor } from "../src/pages/bounty/Ruling";
-import { Timeline } from "../src/pages/bounty/Timeline";
-import { DisputedBanner, PendingVerdict } from "../src/pages/bounty/VerdictBanners";
-import type { EscrowLog } from "../src/chain/indexer";
+import BountyDetail from "../../src/pages/BountyDetail";
+import Review from "../../src/pages/Review";
+import { BountyFacts } from "../../src/pages/bounty/BountyFacts";
+import { GithubCard } from "../../src/pages/bounty/GithubCard";
+import { Ruling, eventsFor } from "../../src/pages/bounty/Ruling";
+import { Timeline } from "../../src/pages/bounty/Timeline";
+import { DisputedBanner, PendingVerdict } from "../../src/pages/bounty/VerdictBanners";
+import type { EscrowLog } from "../../src/chain/indexer";
 
 const query = (data: unknown, extra: Record<string, unknown> = {}) =>
   ({ data, isPending: false, error: null, refetch: vi.fn(), ...extra });

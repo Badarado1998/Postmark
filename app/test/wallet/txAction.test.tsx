@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { newQueryClient, CLAIMANT } from "./fixtures";
+import { newQueryClient, CLAIMANT } from "../fixtures";
 
 const m = vi.hoisted(() => ({
   account: { address: undefined as string | undefined, isConnected: false },
@@ -19,15 +19,15 @@ vi.mock("wagmi", () => ({
   useWriteContract: () => ({ writeContractAsync: m.writeContractAsync }),
   usePublicClient: () => ({ waitForTransactionReceipt: m.receipt }),
 }));
-vi.mock("../src/chain/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/chain/client")>()),
+vi.mock("../../src/chain/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/chain/client")>()),
   httpClient: { estimateContractGas: m.estimate, simulateContract: m.simulate, waitForTransactionReceipt: m.receipt },
 }));
-vi.mock("../src/chain/pqc", () => ({ pqcKeyStatus: async () => ({ live: m.pqcLive }) }));
-vi.mock("../src/chain/window", () => ({ fetchEvmWindow: async () => m.window }));
-vi.mock("../src/chain/preflight", () => ({ preflightTx: (...a: unknown[]) => m.preflight(...a) }));
+vi.mock("../../src/chain/pqc", () => ({ pqcKeyStatus: async () => ({ live: m.pqcLive }) }));
+vi.mock("../../src/chain/window", () => ({ fetchEvmWindow: async () => m.window }));
+vi.mock("../../src/chain/preflight", () => ({ preflightTx: (...a: unknown[]) => m.preflight(...a) }));
 
-import { useTxAction } from "../src/hooks/useTxAction";
+import { useTxAction } from "../../src/hooks/useTxAction";
 
 const wrapper = ({ children }: { children: ReactNode }) =>
   <QueryClientProvider client={newQueryClient()}>{children}</QueryClientProvider>;

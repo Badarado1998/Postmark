@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   workHashOf, identityHashOf, payEvidenceHashOf, refundEvidenceHashOf,
   disputeEvidenceHashOf, resolutionEvidenceHashOf,
-} from "../src/formats/hashes";
-import { claimMessage, verdictMessage, CLAIM_TYPEHASH, VERDICT_TYPEHASH } from "../src/formats/messages";
+} from "../../src/formats/hashes";
+import { claimMessage, verdictMessage, CLAIM_TYPEHASH, VERDICT_TYPEHASH } from "../../src/formats/messages";
 import { keccak256, stringToBytes, stringToHex, concatHex, encodeAbiParameters } from "viem";
 
 // Vectors produced by `cast abi-encode … | xargs cast keccak`:

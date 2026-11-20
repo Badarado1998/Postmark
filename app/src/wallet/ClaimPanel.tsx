@@ -26,7 +26,7 @@ import type { BountyMeta } from "../chain/indexer";
 
 type Step = "identity" | "scan" | "signature" | "send";
 
-function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
+function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const { address } = useAccount();
   const qorex = useQorex();
   const myKey = usePqcStatus(address);
@@ -225,6 +225,6 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
 }
 
 export default function ClaimPanel(props: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
-  return <WalletRoot><Panel {...props} /></WalletRoot>;
+  return <WalletRoot><ClaimPanelBody {...props} /></WalletRoot>;
 }
 

@@ -1,23 +1,23 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { renderApp } from "./fixtures";
+import { renderApp } from "../fixtures";
 
-vi.mock("../src/chain/IndexerProvider", () => ({
+vi.mock("../../src/chain/IndexerProvider", () => ({
   useFeedStatus: () => "live",
   IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("../src/wallet/ConnectWallet", () => ({ default: () => <button>Connect wallet</button> }));
-vi.mock("../src/wallet/MeInner", () => ({ default: () => <p>me inner</p> }));
-vi.mock("../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/wallet/CreateInner", () => ({ default: () => <p>create inner</p> }));
-vi.mock("../src/pages/Explore", () => ({ default: () => <p>explore page</p> }));
+vi.mock("../../src/wallet/ConnectWallet", () => ({ default: () => <button>Connect wallet</button> }));
+vi.mock("../../src/wallet/MeInner", () => ({ default: () => <p>me inner</p> }));
+vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/wallet/CreateInner", () => ({ default: () => <p>create inner</p> }));
+vi.mock("../../src/pages/Explore", () => ({ default: () => <p>explore page</p> }));
 
-import App from "../src/App";
-import Landing from "../src/pages/Landing";
-import Me from "../src/pages/Me";
-import Create from "../src/pages/Create";
-import { ESCROW_ADDRESS } from "../src/chain/config";
+import App from "../../src/App";
+import Landing from "../../src/pages/Landing";
+import Me from "../../src/pages/Me";
+import Create from "../../src/pages/Create";
+import { ESCROW_ADDRESS } from "../../src/chain/config";
 
 describe("Landing", () => {
   it("states the pitch and links to the app", () => {

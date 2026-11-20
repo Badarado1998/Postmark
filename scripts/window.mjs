@@ -9,6 +9,7 @@
 //   recovery-code        write the -pqc.env file for the selected profile
 //   status | register | send <to> <uqor> | open <b> <n> <v> [targets] | close
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import {
   unifiedAccountFromSeed,
@@ -38,9 +39,13 @@ const FEE = { amount: [{ denom: DENOM, amount: '60000' }], gas: '600000' };
 
 const die = makeDie('window');
 
-// Parse --env <base> then load the profile files into process.env (real env wins).
+// Profile selected by --env (default: the deployer pair); set by initProfile().
 let profileBase = `${CONFIG_DIR}/deployer`;
-{
+let ENV_FILE = `${profileBase}.env`;
+let PQC_FILE = `${profileBase}-pqc.env`;
+
+/** Parse --env <base> out of argv, then load the profile files into process.env (real env wins). */
+function initProfile() {
   const i = process.argv.indexOf('--env');
   if (i !== -1) {
     const p = process.argv[i + 1];
@@ -48,14 +53,13 @@ let profileBase = `${CONFIG_DIR}/deployer`;
     profileBase = p.endsWith('.env') ? p.slice(0, -4) : p;
     process.argv.splice(i, 2);
   }
-}
-const ENV_FILE = `${profileBase}.env`;
-const PQC_FILE = `${profileBase}-pqc.env`;
-
-for (const f of [ENV_FILE, PQC_FILE]) {
-  if (!existsSync(f)) continue;
-  for (const [name, value] of Object.entries(parseEnv(readFileSync(f, 'utf8')))) {
-    if (!(name in process.env)) process.env[name] = value;
+  ENV_FILE = `${profileBase}.env`;
+  PQC_FILE = `${profileBase}-pqc.env`;
+  for (const f of [ENV_FILE, PQC_FILE]) {
+    if (!existsSync(f)) continue;
+    for (const [name, value] of Object.entries(parseEnv(readFileSync(f, 'utf8')))) {
+      if (!(name in process.env)) process.env[name] = value;
+    }
   }
 }
 const envVar = (name, legacy) => process.env[name] || (legacy && process.env[legacy]);
@@ -251,9 +255,14 @@ const commands = {
   },
 };
 
-const [cmd, ...args] = process.argv.slice(2);
-if (!Object.hasOwn(commands, cmd ?? '')) {
-  die('usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close');
+async function main() {
+  initProfile();
+  const [cmd, ...args] = process.argv.slice(2);
+  if (!Object.hasOwn(commands, cmd ?? '')) {
+    die('usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close');
+  }
+  await commands[cmd](args);
+  process.exit(0);
 }
-await commands[cmd](args);
-process.exit(0);
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

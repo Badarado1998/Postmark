@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { CLAIMANT, META, VERIFIERS, makeBounty } from "./fixtures";
-import { ESCROW_ADDRESS } from "../src/chain/config";
-import { claimLine, disputeLine } from "../src/formats/lines";
-import { identityHashOf, disputeEvidenceHashOf } from "../src/formats/hashes";
-import type { BuiltVerdict } from "../src/chain/verdict";
+import { CLAIMANT, META, VERIFIERS, makeBounty } from "../fixtures";
+import { ESCROW_ADDRESS } from "../../src/chain/config";
+import { claimLine, disputeLine } from "../../src/formats/lines";
+import { identityHashOf, disputeEvidenceHashOf } from "../../src/formats/hashes";
+import type { BuiltVerdict } from "../../src/chain/verdict";
 
 const m = vi.hoisted(() => ({
   address: undefined as string | undefined,
@@ -16,30 +16,30 @@ const m = vi.hoisted(() => ({
 }));
 
 vi.mock("wagmi", () => ({ useAccount: () => ({ address: m.address, isConnected: !!m.address }) }));
-vi.mock("../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/hooks/useTxAction", () => ({
+vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: { phase: "idle" }, run: m.run, busy: false }),
 }));
-vi.mock("../src/components/Toasts", () => ({ useToast: () => m.toast }));
-vi.mock("../src/wallet/qorex", () => ({ useQorex: () => ({ canSignArbitrary: false, qorAddress: null, native: null }) }));
-vi.mock("../src/github/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/github/client")>()),
+vi.mock("../../src/components/Toasts", () => ({ useToast: () => m.toast }));
+vi.mock("../../src/wallet/qorex", () => ({ useQorex: () => ({ canSignArbitrary: false, qorAddress: null, native: null }) }));
+vi.mock("../../src/github/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/github/client")>()),
   getAllComments: vi.fn(async () => { if (m.commentsError) throw m.commentsError; return m.comments; }),
   getPull: vi.fn(async () => { if (m.pullError) throw m.pullError; return m.pull; }),
   getLinkedPrs: vi.fn(async () => m.linked),
 }));
-vi.mock("../src/chain/localSigner", () => ({
+vi.mock("../../src/chain/localSigner", () => ({
   signerStatus: vi.fn(async () => ({ address: m.signerAddress, live: m.signerLive })),
   pairingCode: () => "abcd1234", setPairingCode: vi.fn(), signerPort: () => 47322, setSignerPort: vi.fn(),
   SignerError: class extends Error { constructor(public status: number, msg: string) { super(msg); } },
 }));
-vi.mock("../src/wallet/pqSigner", () => ({
+vi.mock("../../src/wallet/pqSigner", () => ({
   pickSigner: () => ({ id: "local", signVerdict: async () => m.signature }),
 }));
-vi.mock("../src/chain/pqc", () => ({ pqcKeyStatus: async () => ({ live: m.keyLive, pubkey: "0x00" }) }));
+vi.mock("../../src/chain/pqc", () => ({ pqcKeyStatus: async () => ({ live: m.keyLive, pubkey: "0x00" }) }));
 vi.mock("@qorechain/pqc", () => ({ mldsa87: { verify: () => m.verifyOk } }));
-vi.mock("../src/chain/verdict", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../src/chain/verdict")>();
+vi.mock("../../src/chain/verdict", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../../src/chain/verdict")>();
   return {
     ...real,
     buildVerdictFor: vi.fn(async (input) => {
@@ -50,13 +50,13 @@ vi.mock("../src/chain/verdict", async (importOriginal) => {
   };
 });
 
-import ReviewPanel from "../src/wallet/ReviewPanel";
-import { useIdentityCheck } from "../src/wallet/review/useIdentityCheck";
-import { usePrCheck } from "../src/wallet/review/usePrCheck";
-import { useVerdictBuilder } from "../src/wallet/review/useVerdictBuilder";
-import { useVerdictBundle } from "../src/wallet/review/useVerdictBundle";
-import { useVerdictSigning } from "../src/wallet/review/useVerdictSigning";
-import { PHASE } from "../src/chain/verdict";
+import ReviewPanel from "../../src/wallet/ReviewPanel";
+import { useIdentityCheck } from "../../src/wallet/review/useIdentityCheck";
+import { usePrCheck } from "../../src/wallet/review/usePrCheck";
+import { useVerdictBuilder } from "../../src/wallet/review/useVerdictBuilder";
+import { useVerdictBundle } from "../../src/wallet/review/useVerdictBundle";
+import { useVerdictSigning } from "../../src/wallet/review/useVerdictSigning";
+import { PHASE } from "../../src/chain/verdict";
 
 const IDENTITY_HASH = identityHashOf("e2e-claimant", CLAIMANT, 11n);
 const claimed = makeBounty({ state: 1, payee: CLAIMANT, claimRound: 1n, nonce: 1n,

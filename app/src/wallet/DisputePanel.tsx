@@ -16,7 +16,7 @@ import { nowSec } from "../chain/time";
 import type { Bounty } from "../chain/client";
 import type { BountyMeta } from "../chain/indexer";
 
-function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
+function DisputePanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const tx = useTxAction();
   const toast = useToast();
   const [login, setLogin] = useState("");
@@ -105,5 +105,5 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
 }
 
 export default function DisputePanel(props: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
-  return <WalletRoot><Panel {...props} /></WalletRoot>;
+  return <WalletRoot><DisputePanelBody {...props} /></WalletRoot>;
 }

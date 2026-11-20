@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { CLAIMANT, FUNDER, META, VERIFIERS, makeBounty } from "./fixtures";
-import { ESCROW_ADDRESS } from "../src/chain/config";
-import { claimLine, disputeLine } from "../src/formats/lines";
+import { CLAIMANT, FUNDER, META, VERIFIERS, makeBounty } from "../fixtures";
+import { ESCROW_ADDRESS } from "../../src/chain/config";
+import { claimLine, disputeLine } from "../../src/formats/lines";
 
 const m = vi.hoisted(() => ({
   address: undefined as string | undefined,
@@ -14,38 +14,38 @@ const m = vi.hoisted(() => ({
 }));
 
 vi.mock("wagmi", () => ({ useAccount: () => ({ address: m.address, isConnected: !!m.address }) }));
-vi.mock("../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/hooks/useTxAction", () => ({
+vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: { phase: "idle" }, run: m.run, busy: false }),
 }));
-vi.mock("../src/components/Toasts", () => ({ useToast: () => m.toast }));
-vi.mock("../src/wallet/qorex", () => ({ useQorex: () => ({ canSignArbitrary: false, qorAddress: null, native: null }) }));
-vi.mock("../src/hooks/queries", () => ({
+vi.mock("../../src/components/Toasts", () => ({ useToast: () => m.toast }));
+vi.mock("../../src/wallet/qorex", () => ({ useQorex: () => ({ canSignArbitrary: false, qorAddress: null, native: null }) }));
+vi.mock("../../src/hooks/queries", () => ({
   usePqcStatus: () => ({ data: m.myKeyLive === undefined ? undefined : { live: m.myKeyLive } }),
 }));
-vi.mock("../src/github/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/github/client")>()),
+vi.mock("../../src/github/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/github/client")>()),
   getAllComments: vi.fn(async () => {
     if (m.commentsError) throw m.commentsError;
     return m.comments;
   }),
 }));
-vi.mock("../src/chain/localSigner", () => ({
+vi.mock("../../src/chain/localSigner", () => ({
   signerStatus: vi.fn(async () => ({ address: m.signerAddress, live: m.signerLive })),
   pairingCode: () => "abcd1234", setPairingCode: vi.fn(),
   SignerError: class extends Error { constructor(public status: number, msg: string) { super(msg); } },
 }));
-vi.mock("../src/wallet/pqSigner", () => ({
+vi.mock("../../src/wallet/pqSigner", () => ({
   pickSigner: () => ({ id: "local", sign: async () => m.signature }),
 }));
-vi.mock("../src/chain/pqc", () => ({
+vi.mock("../../src/chain/pqc", () => ({
   pqcKeyStatus: async () => ({ live: m.keyLive, pubkey: "0x00" }),
 }));
 vi.mock("@qorechain/pqc", () => ({ mldsa87: { verify: () => m.verifyOk } }));
-vi.mock("../src/formats/messages", () => ({ claimMessage: () => "0x01" }));
+vi.mock("../../src/formats/messages", () => ({ claimMessage: () => "0x01" }));
 
-import ClaimPanel from "../src/wallet/ClaimPanel";
-import DisputePanel from "../src/wallet/DisputePanel";
+import ClaimPanel from "../../src/wallet/ClaimPanel";
+import DisputePanel from "../../src/wallet/DisputePanel";
 
 const comment = (id: number, login: string, body: string) =>
   ({ id, user: { login }, body, created_at: "2026-11-18T10:00:00Z" });

@@ -20,7 +20,7 @@ import {
 import type { Bounty } from "../chain/client";
 import type { BountyMeta } from "../chain/indexer";
 
-function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
+function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const { address } = useAccount();
   const qorex = useQorex();
   const tx = useTxAction();
@@ -82,5 +82,5 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
 }
 
 export default function ReviewPanel(props: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
-  return <WalletRoot><Panel {...props} /></WalletRoot>;
+  return <WalletRoot><ReviewPanelBody {...props} /></WalletRoot>;
 }

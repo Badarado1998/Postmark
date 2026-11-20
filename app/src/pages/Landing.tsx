@@ -116,212 +116,253 @@ function FadeIn({ children, className }: { children: React.ReactNode; className?
   );
 }
 
+function Hero() {
+  return (
+    <section className="relative overflow-hidden px-4 pb-12 pt-16 md:pb-20 text-center md:pt-24">
+      <div className="relative z-10 mx-auto max-w-3xl">
+        <FadeIn>
+          <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
+            Bounties that pay when the work is{" "}
+            <span className="text-deep">verified</span>.
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-charcoal">
+            Fund a real GitHub issue with test QOR. Two of three ML-DSA-87
+            verifier seals release the bounty after a 24-hour challenge window.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link to="/create"
+              className="rounded-lg bg-deep px-6 py-3 font-medium text-paper transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep">
+              Fund a bounty
+            </Link>
+            <Link to="/explore"
+              className="rounded-lg border border-ink/25 px-6 py-3 font-medium text-ink transition hover:bg-ink/5">
+              Browse bounties
+            </Link>
+          </div>
+        </FadeIn>
+        <FadeIn className="relative z-10 mt-12">
+          <ProductFrame />
+        </FadeIn>
+      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-1/3 bg-[radial-gradient(ellipse_at_50%_72%,#d9e6d9_0%,transparent_68%)]" />
+    </section>
+  );
+}
+
+function BuiltOn() {
+  return (
+    <section className="border-y border-ink/10 bg-paper px-4 py-6">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-gray">built on</span>
+        {BUILT_ON.map((b) => (
+          <span key={b} className="font-mono text-xs text-ink/70">{b}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ValueProp() {
+  return (
+    <section className="border-y border-ink/10 bg-white/60 px-4 py-20">
+      <FadeIn className="mx-auto max-w-3xl">
+        <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+          A leaked key can't release a bounty.
+        </h2>
+        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray">
+          An ECDSA key alone can't claim a bounty, release it, or withdraw a payout. Claims and
+          verdicts carry ML-DSA-87 signatures verified by chain precompiles,
+          and payee withdrawals need a live registered PQ key.
+        </p>
+      </FadeIn>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <section className="px-4 py-20">
+      <FadeIn className="mx-auto max-w-5xl">
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">How it works</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {STEPS.map(([t, b], i) => (
+            <div key={t} className="rounded-xl border border-ink/10 bg-white p-5">
+              <div className="font-mono text-[10px] text-deep">{String(i + 1).padStart(2, "0")}</div>
+              <h3 className="mt-2 font-semibold tracking-tight">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray">{b}</p>
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function Features() {
+  return (
+    <section className="px-4 py-20">
+      <FadeIn className="mx-auto max-w-5xl">
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          Post-quantum by construction, not by label.
+        </h2>
+        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(([t, b]) => (
+            <div key={t} className="bg-white p-6">
+              <PixelIcon />
+              <h3 className="mt-4 font-semibold tracking-tight">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray">{b}</p>
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function Disputes() {
+  return (
+    <section className="border-y border-ink/10 bg-leaf/25 px-4 py-20">
+      <FadeIn className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
+        <div>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            A bad verdict gets challenged, not settled.
+          </h2>
+          <p className="mt-5 leading-relaxed text-charcoal">
+            During the 24-hour window anyone can post a bond and dispute.
+            The bond freezes the payout, and the verifiers rule on a second
+            verdict — the same 2-of-3 quorum, the same ML-DSA-87 seals. If the
+            dispute is upheld, the disputer takes the bond and the challenge
+            reward; if it is rejected, the bond goes to the verdict's payee
+            and the reward to the funder.
+          </p>
+        </div>
+        <div className="rounded-xl border border-ink/10 bg-white p-6 font-mono text-xs leading-relaxed text-charcoal">
+          Disputed(bounty, disputer, bond)<br />
+          → payout frozen<br />
+          DisputeResolved(upheld=false) — PAY stands<br />
+          → payee credited principal + bond (gated)<br />
+          → funder credited challenge reward<br />
+          Settled(Paid)
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function Proof() {
+  return (
+    <section className="px-4 py-20">
+      <FadeIn className="mx-auto max-w-5xl">
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Proof, not promises</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PROOF.map((p) => (
+            <div key={p.label} className="rounded-xl border border-ink/10 bg-white p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">{p.label}</div>
+              {p.href ? (
+                <a href={p.href} target="_blank" rel="noreferrer"
+                  className={`mt-2 block break-all text-sm text-deep underline decoration-deep/30 underline-offset-2 hover:decoration-deep ${p.mono ? "font-mono text-xs" : "font-medium"}`}>
+                  {p.value}
+                </a>
+              ) : (
+                <p className="mt-2 text-sm text-ink">{p.value}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function Faq() {
+  return (
+    <section className="border-t border-ink/10 px-4 py-20">
+      <FadeIn className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[1fr_1.6fr]">
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Questions</h2>
+        <div className="divide-y divide-ink/10 border-y border-ink/10">
+          {FAQ.map(([q, a]) => (
+            <details key={q} className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium tracking-tight">
+                {q}
+                <span className="text-deep transition-transform group-open:rotate-45" aria-hidden>+</span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-gray">{a}</p>
+            </details>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function CtaBand() {
+  return (
+    <section className="border-t border-ink/10 bg-leaf/30 px-4 py-20 text-center text-ink">
+      <FadeIn>
+        <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+          Fund your first bounty in minutes.
+        </h2>
+        <Link to="/create"
+          className="mt-8 inline-block rounded-lg bg-ink px-8 py-3 font-medium text-paper transition hover:brightness-125">
+          Fund a bounty
+        </Link>
+        <p className="mt-4 font-mono text-[11px] text-ink/60">diana testnet · test QOR, no monetary value</p>
+      </FadeIn>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <section className="bg-ink px-4 py-16 text-paper">
+      <div className="mx-auto grid max-w-5xl gap-10 sm:grid-cols-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Logo size={22} />
+            <span className="font-semibold tracking-tight">Postmark</span>
+          </div>
+          <p className="mt-3 font-mono text-[11px] leading-relaxed text-paper/65">
+            GitHub bounties released by 2-of-3 ML-DSA-87 verifier verdicts on QoreChain.
+          </p>
+        </div>
+        <div>
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">App</h3>
+          <ul className="mt-3 space-y-2 text-sm text-paper/80">
+            <li><Link className="hover:text-paper" to="/explore">Explore bounties</Link></li>
+            <li><Link className="hover:text-paper" to="/create">Fund a bounty</Link></li>
+            <li><Link className="hover:text-paper" to="/me">My bounties</Link></li>
+            <li><Link className="hover:text-paper" to="/signer">Local signer</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">Protocol</h3>
+          <ul className="mt-3 space-y-2 text-sm text-paper/80">
+            <li><a className="hover:text-paper" href={explorerAddress(ESCROW_ADDRESS)} target="_blank" rel="noreferrer">Escrow contract</a></li>
+            <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a01")} target="_blank" rel="noreferrer">pqcVerify precompile</a></li>
+            <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a02")} target="_blank" rel="noreferrer">pqcKeyStatus precompile</a></li>
+          </ul>
+        </div>
+      </div>
+      <div className="mx-auto mt-12 flex max-w-5xl items-center justify-between border-t border-white/10 pt-6">
+        <p className="font-mono text-[10px] text-paper/60">diana testnet · test QOR, no monetary value</p>
+      </div>
+    </section>
+  );
+}
+
 export default function Landing() {
   return (
     <div className="-mx-4">
-      {/* ---------- hero ---------- */}
-      <section className="relative overflow-hidden px-4 pb-12 pt-16 md:pb-20 text-center md:pt-24">
-        <div className="relative z-10 mx-auto max-w-3xl">
-          <FadeIn>
-            <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              Bounties that pay when the work is{" "}
-              <span className="text-deep">verified</span>.
-            </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-charcoal">
-              Fund a real GitHub issue with test QOR. Two of three ML-DSA-87
-              verifier seals release the bounty after a 24-hour challenge window.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link to="/create"
-                className="rounded-lg bg-deep px-6 py-3 font-medium text-paper transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep">
-                Fund a bounty
-              </Link>
-              <Link to="/explore"
-                className="rounded-lg border border-ink/25 px-6 py-3 font-medium text-ink transition hover:bg-ink/5">
-                Browse bounties
-              </Link>
-            </div>
-          </FadeIn>
-          <FadeIn className="relative z-10 mt-12">
-            <ProductFrame />
-          </FadeIn>
-        </div>
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-1/3 bg-[radial-gradient(ellipse_at_50%_72%,#d9e6d9_0%,transparent_68%)]" />
-      </section>
-
-      {/* ---------- built on ---------- */}
-      <section className="border-y border-ink/10 bg-paper px-4 py-6">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-gray">built on</span>
-          {BUILT_ON.map((b) => (
-            <span key={b} className="font-mono text-xs text-ink/70">{b}</span>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------- dark value prop ---------- */}
-      <section className="border-y border-ink/10 bg-white/60 px-4 py-20">
-        <FadeIn className="mx-auto max-w-3xl">
-          <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
-            A leaked key can't release a bounty.
-          </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray">
-            An ECDSA key alone can't claim a bounty, release it, or withdraw a payout. Claims and
-            verdicts carry ML-DSA-87 signatures verified by chain precompiles,
-            and payee withdrawals need a live registered PQ key.
-          </p>
-        </FadeIn>
-      </section>
-
-      {/* ---------- how it works ---------- */}
-      <section className="px-4 py-20">
-        <FadeIn className="mx-auto max-w-5xl">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">How it works</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {STEPS.map(([t, b], i) => (
-              <div key={t} className="rounded-xl border border-ink/10 bg-white p-5">
-                <div className="font-mono text-[10px] text-deep">{String(i + 1).padStart(2, "0")}</div>
-                <h3 className="mt-2 font-semibold tracking-tight">{t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray">{b}</p>
-              </div>
-            ))}
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ---------- dark features grid ---------- */}
-      <section className="px-4 py-20">
-        <FadeIn className="mx-auto max-w-5xl">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Post-quantum by construction, not by label.
-          </h2>
-          <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(([t, b]) => (
-              <div key={t} className="bg-white p-6">
-                <PixelIcon />
-                <h3 className="mt-4 font-semibold tracking-tight">{t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray">{b}</p>
-              </div>
-            ))}
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ---------- deep-green disputes ---------- */}
-      <section className="border-y border-ink/10 bg-leaf/25 px-4 py-20">
-        <FadeIn className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              A bad verdict gets challenged, not settled.
-            </h2>
-            <p className="mt-5 leading-relaxed text-charcoal">
-              During the 24-hour window anyone can post a bond and dispute.
-              The bond freezes the payout, and the verifiers rule on a second
-              verdict — the same 2-of-3 quorum, the same ML-DSA-87 seals. If the
-              dispute is upheld, the disputer takes the bond and the challenge
-              reward; if it is rejected, the bond goes to the verdict's payee
-              and the reward to the funder.
-            </p>
-          </div>
-          <div className="rounded-xl border border-ink/10 bg-white p-6 font-mono text-xs leading-relaxed text-charcoal">
-            Disputed(bounty, disputer, bond)<br />
-            → payout frozen<br />
-            DisputeResolved(upheld=false) — PAY stands<br />
-            → payee credited principal + bond (gated)<br />
-            → funder credited challenge reward<br />
-            Settled(Paid)
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ---------- proof ---------- */}
-      <section className="px-4 py-20">
-        <FadeIn className="mx-auto max-w-5xl">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Proof, not promises</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {PROOF.map((p) => (
-              <div key={p.label} className="rounded-xl border border-ink/10 bg-white p-5">
-                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">{p.label}</div>
-                {p.href ? (
-                  <a href={p.href} target="_blank" rel="noreferrer"
-                    className={`mt-2 block break-all text-sm text-deep underline decoration-deep/30 underline-offset-2 hover:decoration-deep ${p.mono ? "font-mono text-xs" : "font-medium"}`}>
-                    {p.value}
-                  </a>
-                ) : (
-                  <p className="mt-2 text-sm text-ink">{p.value}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ---------- FAQ ---------- */}
-      <section className="border-t border-ink/10 px-4 py-20">
-        <FadeIn className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[1fr_1.6fr]">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Questions</h2>
-          <div className="divide-y divide-ink/10 border-y border-ink/10">
-            {FAQ.map(([q, a]) => (
-              <details key={q} className="group py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium tracking-tight">
-                  {q}
-                  <span className="text-deep transition-transform group-open:rotate-45" aria-hidden>+</span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-gray">{a}</p>
-              </details>
-            ))}
-          </div>
-        </FadeIn>
-      </section>
-
-      {/* ---------- lime CTA with dithered edges ---------- */}
-      <section className="border-t border-ink/10 bg-leaf/30 px-4 py-20 text-center text-ink">
-        <FadeIn>
-          <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
-            Fund your first bounty in minutes.
-          </h2>
-          <Link to="/create"
-            className="mt-8 inline-block rounded-lg bg-ink px-8 py-3 font-medium text-paper transition hover:brightness-125">
-            Fund a bounty
-          </Link>
-          <p className="mt-4 font-mono text-[11px] text-ink/60">diana testnet · test QOR, no monetary value</p>
-        </FadeIn>
-      </section>
-
-      {/* ---------- dark footer ---------- */}
-      <section className="bg-ink px-4 py-16 text-paper">
-        <div className="mx-auto grid max-w-5xl gap-10 sm:grid-cols-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Logo size={22} />
-              <span className="font-semibold tracking-tight">Postmark</span>
-            </div>
-            <p className="mt-3 font-mono text-[11px] leading-relaxed text-paper/65">
-              GitHub bounties released by 2-of-3 ML-DSA-87 verifier verdicts on QoreChain.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">App</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/80">
-              <li><Link className="hover:text-paper" to="/explore">Explore bounties</Link></li>
-              <li><Link className="hover:text-paper" to="/create">Fund a bounty</Link></li>
-              <li><Link className="hover:text-paper" to="/me">My bounties</Link></li>
-              <li><Link className="hover:text-paper" to="/signer">Local signer</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/60">Protocol</h3>
-            <ul className="mt-3 space-y-2 text-sm text-paper/80">
-              <li><a className="hover:text-paper" href={explorerAddress(ESCROW_ADDRESS)} target="_blank" rel="noreferrer">Escrow contract</a></li>
-              <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a01")} target="_blank" rel="noreferrer">pqcVerify precompile</a></li>
-              <li><a className="hover:text-paper" href={explorerAddress("0x0000000000000000000000000000000000000a02")} target="_blank" rel="noreferrer">pqcKeyStatus precompile</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="mx-auto mt-12 flex max-w-5xl items-center justify-between border-t border-white/10 pt-6">
-          <p className="font-mono text-[10px] text-paper/60">diana testnet · test QOR, no monetary value</p>
-        </div>
-      </section>
+      <Hero />
+      <BuiltOn />
+      <ValueProp />
+      <HowItWorks />
+      <Features />
+      <Disputes />
+      <Proof />
+      <Faq />
+      <CtaBand />
+      <Footer />
     </div>
   );
 }

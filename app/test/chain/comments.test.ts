@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { getAllComments, findClaimComments } from "../src/github/client";
+import { getAllComments, findClaimComments } from "../../src/github/client";
 
 const ESCROW = "0xae80681e92b63efea78cb742dd612ecc940b896a";
 const CLAIMANT = "0x478f2a08a81be7cea42bd34bd6900593fa56c4b6";

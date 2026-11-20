@@ -6,16 +6,16 @@ const m = vi.hoisted(() => ({
   getBlockNumber: vi.fn(), getLogs: vi.fn(), watch: vi.fn(), unwatch: vi.fn(),
   onError: null as null | (() => void),
 }));
-vi.mock("../src/chain/client", () => ({
+vi.mock("../../src/chain/client", () => ({
   httpClient: { getBlockNumber: m.getBlockNumber, getLogs: m.getLogs },
   wsPublicClient: () => ({
     watchContractEvent: (opts: { onError: () => void }) => { m.onError = opts.onError; m.watch(); return m.unwatch; },
   }),
 }));
 
-import { IndexerProvider, useFeedStatus } from "../src/chain/IndexerProvider";
-import { wagmiConfig } from "../src/wallet/wagmi";
-import { DEPLOYMENT_NAME, ESCROW_ADDRESS, NATIVE_CHAIN_ID, MESSAGE_PREFIX, diana } from "../src/chain/config";
+import { IndexerProvider, useFeedStatus } from "../../src/chain/IndexerProvider";
+import { wagmiConfig } from "../../src/wallet/wagmi";
+import { DEPLOYMENT_NAME, ESCROW_ADDRESS, NATIVE_CHAIN_ID, MESSAGE_PREFIX, diana } from "../../src/chain/config";
 
 const Status = () => <p>feed:{useFeedStatus()}</p>;
 const mount = async (qc = new QueryClient()) => {

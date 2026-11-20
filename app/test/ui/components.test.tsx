@@ -1,25 +1,25 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Routes, Route } from "react-router";
-import { renderApp } from "./fixtures";
+import { renderApp } from "../fixtures";
 
-vi.mock("../src/chain/IndexerProvider", () => ({
+vi.mock("../../src/chain/IndexerProvider", () => ({
   useFeedStatus: () => "live",
   IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("../src/wallet/ConnectWallet", () => ({
+vi.mock("../../src/wallet/ConnectWallet", () => ({
   default: () => <button>Connect wallet</button>,
 }));
 
-import { Shell } from "../src/components/Shell";
-import { ErrorBoundary } from "../src/components/ErrorBoundary";
-import { ToastProvider, useToast } from "../src/components/Toasts";
-import { DeferredConnect } from "../src/components/Deferred";
+import { Shell } from "../../src/components/Shell";
+import { ErrorBoundary } from "../../src/components/ErrorBoundary";
+import { ToastProvider, useToast } from "../../src/components/Toasts";
+import { DeferredConnect } from "../../src/components/Deferred";
 import {
   AddressLink, Card, Countdown, EmptyState, ErrorState, Qor, SectionLabel, StatusChip, shortAddr,
-} from "../src/components/ui";
-import NotFound from "../src/pages/NotFound";
-import Signer from "../src/pages/Signer";
+} from "../../src/components/ui";
+import NotFound from "../../src/pages/NotFound";
+import Signer from "../../src/pages/Signer";
 
 afterEach(() => vi.useRealTimers());
 

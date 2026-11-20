@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getBounty, nextBountyId, totalLiabilities } from "../chain/client";
 import { fetchIndex, type IndexerState } from "../chain/indexer";
 import { pqcKeyStatus, type PqcStatus } from "../chain/pqc";
@@ -39,15 +39,6 @@ export const useEvmWindow = (addr: string | undefined | null) => useQuery({
   enabled: !!addr,
   staleTime: 15_000, retry: 1,
 });
-export const useInvalidateBounty = () => {
-  const qc = useQueryClient();
-  return (id: bigint) =>
-    Promise.all([
-      qc.invalidateQueries({ queryKey: ["bounty", id.toString()] }),
-      qc.invalidateQueries({ queryKey: ["totalLiabilities"] }),
-    ]);
-};
-
 import { httpClient, escrow } from "../chain/client";
 
 /** One multicall getBounty over every indexed id. */

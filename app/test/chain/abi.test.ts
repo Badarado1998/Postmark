@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { postmarkEscrowAbi } from "../src/chain/abi";
+import { postmarkEscrowAbi } from "../../src/chain/abi";
 
 describe("generated abi.ts", () => {
   it("matches the Foundry artifact exactly", () => {

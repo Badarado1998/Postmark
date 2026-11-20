@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { checkPull, mergedAtSeconds } from "../src/github/prcheck";
-import { findDisputeComments, type GhPull, type GhComment } from "../src/github/client";
-import { disputeEvidenceHashOf, resolutionEvidenceHashOf, payEvidenceHashOf } from "../src/formats/hashes";
-import { assembleVerdict, PHASE, OUTCOME, verdictPayloadHash } from "../src/chain/verdict";
-import { verdictMessage } from "../src/formats/messages";
+import { checkPull, mergedAtSeconds } from "../../src/github/prcheck";
+import { findDisputeComments, type GhPull, type GhComment } from "../../src/github/client";
+import { disputeEvidenceHashOf, resolutionEvidenceHashOf, payEvidenceHashOf } from "../../src/formats/hashes";
+import { assembleVerdict, PHASE, OUTCOME, verdictPayloadHash } from "../../src/chain/verdict";
+import { verdictMessage } from "../../src/formats/messages";
 import { encodeAbiParameters, keccak256 } from "viem";
 
 const CLAIMANT = "0x478f2a08a81be7cea42bd34bd6900593fa56c4b6" as const;

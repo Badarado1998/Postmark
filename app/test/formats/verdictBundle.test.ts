@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mldsa87 } from "@qorechain/pqc";
-import { parseBundle, mergeBundles, verifyBundleSignatures, BUNDLE_FORMAT } from "../src/formats/verdictBundle";
-import { verdictMessage } from "../src/formats/messages";
+import { parseBundle, mergeBundles, verifyBundleSignatures, BUNDLE_FORMAT } from "../../src/formats/verdictBundle";
+import { verdictMessage } from "../../src/formats/messages";
 
 const escrow = "0xb781E296FB35ccd2497589526114373bA0bff79b" as const;
 const hex = (u: Uint8Array): `0x${string}` =>

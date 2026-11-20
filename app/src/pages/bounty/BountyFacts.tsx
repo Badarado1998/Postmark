@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AddressLink, Countdown, Qor, Card } from "../../components/ui";
+import { SECONDS_PER_HOUR } from "../../chain/time";
 import { isZeroAddress, isZeroHash } from "../../chain/address";
 import type { Bounty } from "../../chain/client";
 
@@ -26,7 +27,7 @@ export function BountyFacts({ bounty: b }: { bounty: Bounty }) {
         <Field label="challenge reward"><Qor wei={b.challengeReward} /></Field>
         <Field label="bond"><Qor wei={b.bondAmount} /></Field>
         <Field label="deadline"><Countdown to={b.deadline} /></Field>
-        <Field label="claim timeout">{Number(b.claimTimeout) / 3600}h</Field>
+        <Field label="claim timeout">{Number(b.claimTimeout) / SECONDS_PER_HOUR}h</Field>
         <Field label="claim round">{b.claimRound.toString()}</Field>
         {!isZeroAddress(b.payee) && (
           <Field label="claimant / payee"><AddressLink address={b.payee} /></Field>

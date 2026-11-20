@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { validateForm } from "../src/formats/createForm";
-import { preflightTx } from "../src/chain/preflight";
-import type { EvmWindow } from "../src/chain/window";
+import { validateForm } from "../../src/formats/createForm";
+import { preflightTx } from "../../src/chain/preflight";
+import type { EvmWindow } from "../../src/chain/window";
 
 const V = "0x01B451550bEf4cc51Bb24B8C5E5b4b23a368a9cE";
 const V2 = "0x8e815476f878b05a2a0E4BC452112311eAEcEa31";

@@ -2,6 +2,7 @@ import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { useToast } from "../components/Toasts";
 import { sameAddress } from "../chain/address";
+import { formatUnixTime } from "../chain/time";
 import type { Bounty } from "../chain/client";
 
 export default function FunderShare(props: { bounty: Bounty }) {
@@ -24,8 +25,8 @@ function Share({ bounty }: { bounty: Bounty }) {
           Copy share link
         </button>
         <span className="font-mono text-xs text-gray">
-          deadline <span className="text-ink">{new Date(Number(bounty.deadline) * 1000).toLocaleString()}</span>
-          {bounty.challengeEndsAt > 0n && <> · challenge ends <span className="text-ink">{new Date(Number(bounty.challengeEndsAt) * 1000).toLocaleString()}</span></>}
+          deadline <span className="text-ink">{formatUnixTime(bounty.deadline)}</span>
+          {bounty.challengeEndsAt > 0n && <> · challenge ends <span className="text-ink">{formatUnixTime(bounty.challengeEndsAt)}</span></>}
         </span>
       </div>
     </div>

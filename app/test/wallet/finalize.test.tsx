@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 
-vi.mock("../src/wallet/WalletRoot", () => ({
+vi.mock("../../src/wallet/WalletRoot", () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("wagmi", () => ({
   useAccount: () => ({ isConnected: true, address: "0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6" }),
 }));
-vi.mock("../src/hooks/useTxAction", () => ({
+vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: { phase: "idle" }, run: vi.fn() }),
 }));
-vi.mock("../src/components/Toasts", () => ({ useToast: () => vi.fn() }));
+vi.mock("../../src/components/Toasts", () => ({ useToast: () => vi.fn() }));
 
-import TxActions from "../src/wallet/TxActions";
-import DisputePanel from "../src/wallet/DisputePanel";
-import type { Bounty } from "../src/chain/client";
+import TxActions from "../../src/wallet/TxActions";
+import DisputePanel from "../../src/wallet/DisputePanel";
+import type { Bounty } from "../../src/chain/client";
 
 const CHALLENGE_ENDS = 1_800_000_000n;
 const pending: Bounty = {

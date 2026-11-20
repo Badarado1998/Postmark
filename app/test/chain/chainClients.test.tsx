@@ -4,23 +4,23 @@ import { encodeEventTopics, encodeAbiParameters as enc } from "viem";
 import type { ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { newQueryClient, ZERO_ADDR } from "./fixtures";
-import { postmarkEscrowAbi } from "../src/chain/abi";
-import { ESCROW_ADDRESS, explorerAddress, explorerBlock, explorerTx } from "../src/chain/config";
-import { workHashOf } from "../src/formats/hashes";
+import { newQueryClient, ZERO_ADDR } from "../fixtures";
+import { postmarkEscrowAbi } from "../../src/chain/abi";
+import { ESCROW_ADDRESS, explorerAddress, explorerBlock, explorerTx } from "../../src/chain/config";
+import { workHashOf } from "../../src/formats/hashes";
 
 const rpc = vi.hoisted(() => ({
   request: vi.fn(), getLogs: vi.fn(), getBlockNumber: vi.fn(),
   nextBountyId: vi.fn(), getBounty: vi.fn(),
 }));
-vi.mock("../src/chain/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/chain/client")>()),
+vi.mock("../../src/chain/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/chain/client")>()),
   httpClient: rpc, nextBountyId: rpc.nextBountyId, getBounty: rpc.getBounty,
 }));
 
-import { pqcKeyStatus, livePqcKey, pqcRestStatus } from "../src/chain/pqc";
-import { decodeLogs, getLogsChunked, indexEvents } from "../src/chain/indexer";
-import { useBountyRoute } from "../src/hooks/useBountyRoute";
+import { pqcKeyStatus, livePqcKey, pqcRestStatus } from "../../src/chain/pqc";
+import { decodeLogs, getLogsChunked, indexEvents } from "../../src/chain/indexer";
+import { useBountyRoute } from "../../src/hooks/useBountyRoute";
 
 const word = (n: number | bigint) => BigInt(n).toString(16).padStart(64, "0");
 function keyStatusReturn(registered: boolean, algo: number, pubkeyBytes: number, proven: boolean) {

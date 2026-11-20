@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { errorMessage } from "../src/chain/errors";
-import { sameAddress, isZeroAddress, isZeroHash } from "../src/chain/address";
-import { tryQorToEvm, evmToQor } from "../src/chain/bech32";
-import { githubItemUrl, githubItemLabel } from "../src/github/parse";
-import { claimLine, disputeLine } from "../src/formats/lines";
+import { errorMessage } from "../../src/chain/errors";
+import { sameAddress, isZeroAddress, isZeroHash } from "../../src/chain/address";
+import { tryQorToEvm, evmToQor } from "../../src/chain/bech32";
+import { githubItemUrl, githubItemLabel } from "../../src/github/parse";
+import { claimLine, disputeLine } from "../../src/formats/lines";
 
 const ESCROW = "0x13De819fE37133d19287aAFE1991a921F84b9F45" as const;
 const ME = "0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6" as const;

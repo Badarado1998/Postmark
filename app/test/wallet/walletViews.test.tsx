@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { CLAIMANT, FUNDER, META, VERIFIERS, makeBounty, renderApp } from "./fixtures";
+import { CLAIMANT, FUNDER, META, VERIFIERS, makeBounty, renderApp } from "../fixtures";
 
 const m = vi.hoisted(() => ({
   address: undefined as string | undefined,
@@ -20,28 +20,28 @@ vi.mock("wagmi", () => ({
 vi.mock("react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router")>()), useNavigate: () => m.navigate,
 }));
-vi.mock("../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/hooks/useTxAction", () => ({
+vi.mock("../../src/wallet/WalletRoot", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: m.txState, run: m.run, busy: m.busy }),
 }));
-vi.mock("../src/components/Toasts", () => ({ useToast: () => m.toast }));
-vi.mock("../src/chain/client", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/chain/client")>()),
+vi.mock("../../src/components/Toasts", () => ({ useToast: () => m.toast }));
+vi.mock("../../src/chain/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/chain/client")>()),
   creditOf: vi.fn(async () => m.credits),
 }));
-vi.mock("../src/hooks/queries", () => ({
+vi.mock("../../src/hooks/queries", () => ({
   useIndex: () => m.index, useBounties: () => m.bounties,
   usePqcStatus: () => ({ data: m.pqcLive === undefined ? undefined : { live: m.pqcLive } }),
   useGithubItem: () => m.githubItem,
 }));
-vi.mock("../src/chain/pqc", () => ({ livePqcKey: (...a: unknown[]) => m.livePqcKey(...a) }));
+vi.mock("../../src/chain/pqc", () => ({ livePqcKey: (...a: unknown[]) => m.livePqcKey(...a) }));
 
-import MeInner from "../src/wallet/MeInner";
-import CreateInner from "../src/wallet/CreateInner";
-import TxActions from "../src/wallet/TxActions";
-import ClaimedNote from "../src/wallet/ClaimedNote";
-import FunderShare from "../src/wallet/FunderShare";
-import { TxStatusPanel } from "../src/wallet/TxWidgets";
+import MeInner from "../../src/wallet/MeInner";
+import CreateInner from "../../src/wallet/CreateInner";
+import TxActions from "../../src/wallet/TxActions";
+import ClaimedNote from "../../src/wallet/ClaimedNote";
+import FunderShare from "../../src/wallet/FunderShare";
+import { TxStatusPanel } from "../../src/wallet/TxWidgets";
 
 const withIndex = (rows: { id: bigint; bounty: ReturnType<typeof makeBounty> }[]) => {
   m.index = { data: { bountyIds: rows.map((r) => r.id), metaById: new Map(rows.map((r) => [r.id, META])) },

@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
-import Explore from "../src/pages/Explore";
-import * as queries from "../src/hooks/queries";
+import Explore from "../../src/pages/Explore";
+import * as queries from "../../src/hooks/queries";
 
-vi.mock("../src/hooks/queries", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../src/hooks/queries")>();
+vi.mock("../../src/hooks/queries", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../../src/hooks/queries")>();
   return { ...mod, useIndex: vi.fn(), useBounties: vi.fn() };
 });
-vi.mock("../src/chain/IndexerProvider", () => ({
+vi.mock("../../src/chain/IndexerProvider", () => ({
   useFeedStatus: () => "polling",
   IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

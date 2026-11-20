@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { CLAIMANT } from "./fixtures";
+import { CLAIMANT } from "../fixtures";
 
 const wagmi = vi.hoisted(() => ({
   account: { address: undefined as string | undefined, isConnected: false },
@@ -20,16 +20,16 @@ vi.mock("wagmi", () => ({
   useChainId: () => wagmi.chainId,
   useSwitchChain: () => ({ switchChain: wagmi.switchChain }),
 }));
-vi.mock("../src/wallet/WalletRoot", () => ({
+vi.mock("../../src/wallet/WalletRoot", () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("../src/wallet/qorex", () => ({ useQorex: () => wagmi.qorex }));
-vi.mock("../src/hooks/queries", () => ({
+vi.mock("../../src/wallet/qorex", () => ({ useQorex: () => wagmi.qorex }));
+vi.mock("../../src/hooks/queries", () => ({
   useEvmWindow: () => ({ data: wagmi.windowData }),
   usePqcStatus: () => ({ data: wagmi.pqcData }),
 }));
 
-import ConnectWallet from "../src/wallet/ConnectWallet";
+import ConnectWallet from "../../src/wallet/ConnectWallet";
 
 // jsdom has no <dialog> modal support
 beforeEach(() => {

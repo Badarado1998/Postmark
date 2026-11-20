@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { parseGithubUrl } from "../src/github/parse";
-import { classifyWindowRefusal, explainError } from "../src/chain/errors";
-import { StatusChip, Countdown } from "../src/components/ui";
-import { GithubRateLimitError, findClaimComments } from "../src/github/client";
+import { parseGithubUrl } from "../../src/github/parse";
+import { classifyWindowRefusal, explainError } from "../../src/chain/errors";
+import { StatusChip, Countdown } from "../../src/components/ui";
+import { GithubRateLimitError, findClaimComments } from "../../src/github/client";
 
 describe("parseGithubUrl", () => {
   it.each([
