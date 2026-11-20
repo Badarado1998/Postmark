@@ -8,9 +8,9 @@
 //   new-account <name>   create e2e/<name>.env + <name>-pqc.env
 //   recovery-code        write the -pqc.env file for the selected profile
 //   status | register | send <to> <uqor> | open <b> <n> <v> [targets] | close
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import {
   unifiedAccountFromSeed,
   pqcKeyFromRecoveryCode,
@@ -26,18 +26,18 @@ import {
   EthNativeSigner,
   qoreAddresses,
   keccak256,
-} from '@qorechain/sdk';
-import { hex, toBytes, sha256hex, json, parseEnv, makeDie } from './lib/common.mjs';
+} from "@qorechain/sdk";
+import { hex, toBytes, sha256hex, json, parseEnv, makeDie } from "./lib/common.mjs";
 
-const REST = process.env.QORE_REST || 'https://api-testnet.qore.host';
-const RPC = process.env.QORE_RPC || 'https://rpc-testnet.qore.host';
-const CHAIN_ID = 'qorechain-diana';
-const DENOM = 'uqor';
+const REST = process.env.QORE_REST || "https://api-testnet.qore.host";
+const RPC = process.env.QORE_RPC || "https://rpc-testnet.qore.host";
+const CHAIN_ID = "qorechain-diana";
+const DENOM = "uqor";
 const CONFIG_DIR = `${process.env.HOME}/.config/postmark`;
 const E2E_DIR = `${CONFIG_DIR}/e2e`;
-const FEE = { amount: [{ denom: DENOM, amount: '60000' }], gas: '600000' };
+const FEE = { amount: [{ denom: DENOM, amount: "60000" }], gas: "600000" };
 
-const die = makeDie('window');
+const die = makeDie("window");
 
 // Profile selected by --env (default: the deployer pair); set by initProfile().
 let profileBase = `${CONFIG_DIR}/deployer`;
@@ -46,18 +46,18 @@ let PQC_FILE = `${profileBase}-pqc.env`;
 
 /** Parse --env <base> out of argv, then load the profile files into process.env (real env wins). */
 function initProfile() {
-  const i = process.argv.indexOf('--env');
+  const i = process.argv.indexOf("--env");
   if (i !== -1) {
     const p = process.argv[i + 1];
-    if (!p) die('--env needs a path');
-    profileBase = p.endsWith('.env') ? p.slice(0, -4) : p;
+    if (!p) die("--env needs a path");
+    profileBase = p.endsWith(".env") ? p.slice(0, -4) : p;
     process.argv.splice(i, 2);
   }
   ENV_FILE = `${profileBase}.env`;
   PQC_FILE = `${profileBase}-pqc.env`;
   for (const f of [ENV_FILE, PQC_FILE]) {
     if (!existsSync(f)) continue;
-    for (const [name, value] of Object.entries(parseEnv(readFileSync(f, 'utf8')))) {
+    for (const [name, value] of Object.entries(parseEnv(readFileSync(f, "utf8")))) {
       if (!(name in process.env)) process.env[name] = value;
     }
   }
@@ -65,10 +65,10 @@ function initProfile() {
 const envVar = (name, legacy) => process.env[name] || (legacy && process.env[legacy]);
 
 function keyBytes() {
-  const k = envVar('KEY', 'DEPLOYER_KEY');
+  const k = envVar("KEY", "DEPLOYER_KEY");
   if (!k) die(`KEY not set (env or ${ENV_FILE})`);
   const b = toBytes(k);
-  if (b.length !== 32) die('KEY is not 32 bytes');
+  if (b.length !== 32) die("KEY is not 32 bytes");
   return b;
 }
 
@@ -79,7 +79,7 @@ function classicalAccount() {
   const uncompressed = secp256k1.getPublicKey(seed, false).slice(1);
   const addr20 = keccak256(uncompressed).slice(12);
   const addrs = qoreAddresses({ hex: hex(addr20) });
-  const want = (envVar('ADDRESS', 'DEPLOYER_ADDRESS') || '').toLowerCase();
+  const want = (envVar("ADDRESS", "DEPLOYER_ADDRESS") || "").toLowerCase();
   if (addrs.evm.toLowerCase() !== want) {
     die(`signer mismatch: KEY derives ${addrs.evm}, expected ${want}`);
   }
@@ -88,11 +88,11 @@ function classicalAccount() {
 
 // Unified account incl. PQC key from the recovery code.
 function unified() {
-  const code = envVar('PQC_RECOVERY_CODE', 'DEPLOYER_PQC_RECOVERY_CODE');
+  const code = envVar("PQC_RECOVERY_CODE", "DEPLOYER_PQC_RECOVERY_CODE");
   if (!code) die(`PQC_RECOVERY_CODE not set (env or ${PQC_FILE})`);
   const { seed } = classicalAccount();
   const account = unifiedAccountFromSeed(seed, { recoveryCode: code });
-  const expected = qoreAddresses({ evm: envVar('ADDRESS', 'DEPLOYER_ADDRESS') });
+  const expected = qoreAddresses({ evm: envVar("ADDRESS", "DEPLOYER_ADDRESS") });
   if (account.cosmos !== expected.cosmos) {
     die(`signer mismatch: account derives ${account.cosmos}, expected ${expected.cosmos}`);
   }
@@ -101,9 +101,9 @@ function unified() {
 
 async function tmBroadcast(tx) {
   const res = await fetch(RPC, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'broadcast_tx_commit',
-      params: { tx: Buffer.from(tx).toString('base64') } }),
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "broadcast_tx_commit",
+      params: { tx: Buffer.from(tx).toString("base64") } }),
   });
   const j = await res.json();
   if (j.error) throw new Error(`rpc: ${JSON.stringify(j.error)}`);
@@ -116,7 +116,7 @@ async function tmBroadcast(tx) {
     height: BigInt(r.height || 0),
     gasUsed: BigInt(r.deliver_tx?.gas_used || 0),
     gasWanted: BigInt(r.deliver_tx?.gas_wanted || 0),
-    rawLog: r.deliver_tx?.log || r.check_tx?.log || '',
+    rawLog: r.deliver_tx?.log || r.check_tx?.log || "",
   };
 }
 
@@ -134,7 +134,7 @@ async function accountSeq(cosmos) {
 
 function checkBroadcast(res) {
   if (res.code !== 0) {
-    const reason = classifyEvmWindowRejection(new Error(res.rawLog || ''));
+    const reason = classifyEvmWindowRejection(new Error(res.rawLog || ""));
     die(`tx failed code=${res.code} reason=${reason} log=${res.rawLog}`, 1);
   }
   return res;
@@ -153,8 +153,8 @@ const txSummary = (res) => ({
 });
 
 const commands = {
-  'new-account'([name]) {
-    if (!/^[a-z0-9_-]+$/i.test(name || '')) die('usage: new-account <name> ([a-z0-9_-])');
+  "new-account"([name]) {
+    if (!/^[a-z0-9_-]+$/i.test(name || "")) die("usage: new-account <name> ([a-z0-9_-])");
     const envF = `${E2E_DIR}/${name}.env`;
     const pqcF = `${E2E_DIR}/${name}-pqc.env`;
     if (existsSync(envF) || existsSync(pqcF)) {
@@ -175,13 +175,13 @@ const commands = {
     }));
   },
 
-  'recovery-code'() {
+  "recovery-code"() {
     if (existsSync(PQC_FILE)) die(`${PQC_FILE} already exists; refusing to overwrite`);
     const { cosmos } = classicalAccount();
     const code = generatePqcRecoveryCode();
     const key = pqcKeyFromRecoveryCode(code, cosmos);
-    const varName = profileBase.endsWith('/deployer')
-      ? 'DEPLOYER_PQC_RECOVERY_CODE' : 'PQC_RECOVERY_CODE';
+    const varName = profileBase.endsWith("/deployer")
+      ? "DEPLOYER_PQC_RECOVERY_CODE" : "PQC_RECOVERY_CODE";
     writeFileSync(PQC_FILE, `${varName}=${code}\n`, { mode: 0o600 });
     console.log(json({
       file: PQC_FILE,
@@ -205,7 +205,7 @@ const commands = {
     const status = await fetchPqcStatus({ rest: REST, address: account.cosmos });
     if (status.registered) {
       const match = isRegisteredPqcKey(status, account.pqc.publicKey);
-      if (match === false) die('account already has a DIFFERENT PQC key registered', 1);
+      if (match === false) die("account already has a DIFFERENT PQC key registered", 1);
       console.log(json({ alreadyRegistered: true, keyVerified: match !== false }));
       return;
     }
@@ -213,18 +213,18 @@ const commands = {
       chainId: CHAIN_ID, account: account.cosmos, keypair: account.pqc });
     const message = buildRegisterPqcKeyMsg(account.cosmos, {
       pqcKeypair: account.pqc, ecdsaPubkey: toBytes(account.publicKey), proofOfPossession: proof });
-    const signer = new EthNativeSigner(account, { signMode: 'classical', rest: REST });
+    const signer = new EthNativeSigner(account, { signMode: "classical", rest: REST });
     console.log(json(txSummary(await broadcast(signer, account, [message]))));
   },
 
   async send([to, uqor]) {
     if (!to || !uqor || !/^[0-9]+$/.test(uqor)) {
-      die('usage: send <to-qor1-or-0x> <uqor>');
+      die("usage: send <to-qor1-or-0x> <uqor>");
     }
     const account = unified();
     const status = await fetchPqcStatus({ rest: REST, address: account.cosmos });
-    if (!status.registered) die('sender has no registered PQC key; run register first', 1);
-    const toQor = to.startsWith('0x') ? qoreAddresses({ evm: to }).cosmos : to;
+    if (!status.registered) die("sender has no registered PQC key; run register first", 1);
+    const toQor = to.startsWith("0x") ? qoreAddresses({ evm: to }).cosmos : to;
     const signer = new EthNativeSigner(account, { rest: REST });
     const seq = await accountSeq(account.cosmos);
     const res = checkBroadcast(await signer.bankSend({ broadcastTx: tmBroadcast }, toQor,
@@ -235,7 +235,7 @@ const commands = {
   },
 
   async open([blocks, maxTxs, maxValue, ...targets]) {
-    if (!blocks || !maxTxs || !maxValue) die('usage: open <blocks> <maxTxs> <maxValueUqor> [target,...]');
+    if (!blocks || !maxTxs || !maxValue) die("usage: open <blocks> <maxTxs> <maxValueUqor> [target,...]");
     const account = unified();
     const message = openEvmWindowMsg({
       sender: account.cosmos,
@@ -258,8 +258,8 @@ const commands = {
 async function main() {
   initProfile();
   const [cmd, ...args] = process.argv.slice(2);
-  if (!Object.hasOwn(commands, cmd ?? '')) {
-    die('usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close');
+  if (!Object.hasOwn(commands, cmd ?? "")) {
+    die("usage: window.mjs [--env <profileBase>] new-account <name>|recovery-code|status|register|send <to> <uqor>|open <blocks> <maxTxs> <maxValue> [targets]|close");
   }
   await commands[cmd](args);
   process.exit(0);

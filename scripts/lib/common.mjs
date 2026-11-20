@@ -1,13 +1,13 @@
 // Small helpers shared by the Postmark CLI scripts.
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-export const hex = (b) => Buffer.from(b).toString('hex');
-export const toBytes = (h) => Uint8Array.from(Buffer.from(String(h).replace(/^0x/, ''), 'hex'));
-export const utf8 = (s) => Uint8Array.from(Buffer.from(s, 'utf8'));
-export const sha256hex = (b) => createHash('sha256').update(b).digest('hex');
+export const hex = (b) => Buffer.from(b).toString("hex");
+export const toBytes = (h) => Uint8Array.from(Buffer.from(String(h).replace(/^0x/, ""), "hex"));
+export const utf8 = (s) => Uint8Array.from(Buffer.from(s, "utf8"));
+export const sha256hex = (b) => createHash("sha256").update(b).digest("hex");
 
 /** JSON.stringify that renders bigints as decimal strings. */
-export const json = (o) => JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
+export const json = (o) => JSON.stringify(o, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
 
 /** Parse `NAME=value` lines (NAME in [A-Z0-9_]) into an object; other lines are ignored. */
 export function parseEnv(text) {
