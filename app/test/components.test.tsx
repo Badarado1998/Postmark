@@ -1,0 +1,167 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { Routes, Route } from "react-router";
+import { renderApp } from "./fixtures";
+
+vi.mock("../src/chain/IndexerProvider", () => ({
+  useFeedStatus: () => "live",
+  IndexerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("../src/wallet/ConnectWallet", () => ({
+  default: () => <button>Connect wallet</button>,
+}));
+
+import { Shell } from "../src/components/Shell";
+import { ErrorBoundary } from "../src/components/ErrorBoundary";
+import { ToastProvider, useToast } from "../src/components/Toasts";
+import { DeferredConnect } from "../src/components/Deferred";
+import {
+  AddressLink, Card, Countdown, EmptyState, ErrorState, Qor, SectionLabel, StatusChip, shortAddr,
+} from "../src/components/ui";
+import NotFound from "../src/pages/NotFound";
+import Signer from "../src/pages/Signer";
+
+afterEach(() => vi.useRealTimers());
+
+describe("Shell", () => {
+  it("shows the announcement, nav links, feed status and wallet button", async () => {
+    renderApp(<Shell><p>page body</p></Shell>);
+    expect(screen.getByText(/test QOR, no monetary value/i)).toBeInTheDocument();
+    for (const name of ["Explore", "Create", "Mine"]) {
+      expect(screen.getAllByRole("link", { name })[0]).toBeInTheDocument();
+    }
+    expect(screen.getByText("page body")).toBeInTheDocument();
+    expect(screen.getByTitle("Chain feed: live")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+  });
+
+  it("toggles the mobile menu", () => {
+    renderApp(<Shell />);
+    const menu = screen.getByRole("button", { name: "Menu" });
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(menu);
+    expect(menu).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("link", { name: "Explore" })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("link", { name: "Explore" })[1]!);
+    expect(menu).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("renders routed content through the outlet-less children slot", () => {
+    renderApp(
+      <Shell><Routes><Route path="/" element={<p>home</p>} /></Routes></Shell>);
+    expect(screen.getByText("home")).toBeInTheDocument();
+  });
+});
+
+describe("DeferredConnect", () => {
+  it("mounts the wallet button after the first paint", async () => {
+    render(<DeferredConnect />);
+    expect(await screen.findByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+  });
+});
+
+describe("ErrorBoundary", () => {
+  it("shows the error message and a way home", () => {
+    const Boom = () => { throw new Error("kaboom"); };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderApp(<ErrorBoundary><Boom /></ErrorBoundary>);
+    expect(screen.getByText("This page hit an error.")).toBeInTheDocument();
+    expect(screen.getByText("kaboom")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back home" })).toHaveAttribute("href", "/");
+    log.mockRestore();
+  });
+
+  it("renders children when nothing throws", () => {
+    renderApp(<ErrorBoundary><p>fine</p></ErrorBoundary>);
+    expect(screen.getByText("fine")).toBeInTheDocument();
+  });
+});
+
+describe("Toasts", () => {
+  function Pusher() {
+    const toast = useToast();
+    return <button onClick={() => toast({ kind: "info", text: "saved" })}>push</button>;
+  }
+
+  it("shows a toast and removes it after eight seconds", () => {
+    vi.useFakeTimers();
+    render(<ToastProvider><Pusher /></ToastProvider>);
+    fireEvent.click(screen.getByText("push"));
+    expect(screen.getByText("saved")).toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(8001); });
+    expect(screen.queryByText("saved")).toBeNull();
+  });
+
+  it("is a no-op outside a provider", () => {
+    render(<Pusher />);
+    fireEvent.click(screen.getByText("push"));
+    expect(screen.queryByText("saved")).toBeNull();
+  });
+});
+
+describe("ui primitives", () => {
+  it("names every bounty state and falls back for unknown ones", () => {
+    const names = ["Open", "Claimed", "Pending", "Disputed", "Paid", "Refunded"];
+    names.forEach((n, i) => {
+      const { unmount } = render(<StatusChip state={i} />);
+      expect(screen.getByText(n)).toBeInTheDocument();
+      unmount();
+    });
+    render(<StatusChip state={9} />);
+    expect(screen.getByText("#9")).toBeInTheDocument();
+  });
+
+  it("formats QOR amounts with the wei in the tooltip", () => {
+    render(<Qor wei={1_500_000_000_000_000_000n} />);
+    expect(screen.getByText(/1\.5/)).toHaveAttribute("title", "1500000000000000000 wei");
+  });
+
+  it("counts down and reports expiry", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000_000_000);
+    const { rerender } = render(<Countdown to={1_000_000_000n + 90_061n} />);
+    expect(screen.getByText(/1d 1h 1m/)).toBeInTheDocument();
+    rerender(<Countdown to={1_000_000_000n - 1n} />);
+    expect(screen.getByText("expired")).toBeInTheDocument();
+  });
+
+  it("shortens addresses and tolerates missing ones", () => {
+    expect(shortAddr("0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6")).toBe("0x478F…c4B6");
+    expect(shortAddr(undefined)).toBe("—");
+  });
+
+  it("links an address to the explorer", () => {
+    render(<AddressLink address="0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6" />);
+    expect(screen.getByRole("link", { name: "0x478F…c4B6" }))
+      .toHaveAttribute("href", expect.stringContaining("/address/0x478F2A08"));
+  });
+
+  it("renders cards, section labels and the error and empty states", () => {
+    const retry = vi.fn();
+    render(<>
+      <Card tone="warn"><SectionLabel tone="warn">heads up</SectionLabel></Card>
+      <ErrorState message="rpc down" onRetry={retry} />
+      <EmptyState title="Nothing here"><p>try later</p></EmptyState>
+    </>);
+    expect(screen.getByRole("heading", { name: "heads up" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("rpc down");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByText("Nothing here")).toBeInTheDocument();
+  });
+});
+
+describe("static pages", () => {
+  it("NotFound links home", () => {
+    renderApp(<NotFound />);
+    expect(screen.getByRole("heading", { name: /never arrived/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back home" })).toBeInTheDocument();
+  });
+
+  it("Signer page explains the security model", () => {
+    render(<Signer />);
+    expect(screen.getByRole("heading", { name: "The local signer" })).toBeInTheDocument();
+    expect(screen.getByText(/Binds/)).toBeInTheDocument();
+    expect(screen.getByText(/pairing code/i, { selector: "p" })).toBeInTheDocument();
+  });
+});

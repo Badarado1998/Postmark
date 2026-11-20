@@ -59,17 +59,17 @@ function CreateForm() {
     }
     setKeyStates(out);
     setCheckingKeys(false);
-    return shared;
+    return { shared, missing: out.includes(false) };
   };
 
   const submit = async () => {
     if (!form.ok || !gref) return;
-    const shared = await checkKeys(form.parsed.verifiers);
+    const { shared, missing } = await checkKeys(form.parsed.verifiers);
     if (shared) {
       toast({ kind: "error", text: "Two verifier slots share the same PQ key." });
       return;
     }
-    if (keyStates.includes(false)) {
+    if (missing) {
       toast({ kind: "error", text: "A verifier has no live ML-DSA-87 key." });
       return;
     }
