@@ -8,13 +8,20 @@ const e2eDeployment = JSON.parse(readFileSync(new URL("../../deployments/diana-e
 
 export const E2E_ESCROW = e2eDeployment.address as `0x${string}`;
 
-const PROFILE = `${homedir()}/.config/postmark/e2e/funder.env`;
+const PROFILES_DIR = `${homedir()}/.config/postmark/e2e`;
 
-export function loadAccount() {
-  const env = readFileSync(PROFILE, "utf8");
-  const key = env.match(/^KEY=(0x[0-9a-fA-F]{64})$/m)?.[1];
-  if (!key) throw new Error("funder.env missing KEY=");
+export function loadAccount(profile = "funder") {
+  const env = readFileSync(`${PROFILES_DIR}/${profile}.env`, "utf8");
+  const key = env.match(/^(?:DEPLOYER_)?KEY=(0x[0-9a-fA-F]{64})$/m)?.[1];
+  if (!key) throw new Error(`${profile}.env missing KEY=`);
   return privateKeyToAccount(key as `0x${string}`);
+}
+
+export function profileAddress(profile: string) {
+  const env = readFileSync(`${PROFILES_DIR}/${profile}.env`, "utf8");
+  const a = env.match(/^(?:DEPLOYER_)?ADDRESS=(0x[0-9a-fA-F]{40})$/m)?.[1];
+  if (!a) throw new Error(`${profile}.env missing ADDRESS`);
+  return a as `0x${string}`;
 }
 
 const CHAIN = {
@@ -29,26 +36,26 @@ export function nodePublic() {
     transport: http("https://evm-testnet.qore.host", { timeout: 30_000 }) });
 }
 
-export function nodeWallet() {
+export function nodeWallet(profile = "funder") {
   return createWalletClient({
-    account: loadAccount(),
+    account: loadAccount(profile),
     chain: CHAIN,
     transport: http("https://evm-testnet.qore.host", { timeout: 30_000 }),
   });
 }
 
-/** Run window.mjs for the funder profile. */
-export function windowCtl(args: string[]) {
+/** Run window.mjs for a profile. */
+export function windowCtl(args: string[], profile = "funder") {
   return execFileSync("node",
-    ["../scripts/window.mjs", "--env", PROFILE.replace(/\.env$/, ""), ...args],
+    ["../scripts/window.mjs", "--env", `${PROFILES_DIR}/${profile}`, ...args],
     { cwd: new URL("..", import.meta.url).pathname, stdio: ["ignore", "pipe", "inherit"] })
     .toString();
 }
 
 /** Inject an EIP-6963 EIP-1193 provider; all requests are proxied into Node
  * via an exposed binding, so the private key never enters page JS. */
-export async function installTestWallet(page: Page) {
-  const client = nodeWallet();
+export async function installTestWallet(page: Page, profile = "funder") {
+  const client = nodeWallet(profile);
   const address = client.account.address;
   await page.exposeBinding("__postmarkE2eRequest", async (_s, req: { method: string; params?: unknown[] }) => {
     const { method, params } = req;
@@ -113,7 +120,7 @@ export async function installTestWallet(page: Page) {
 }
 
 /** Github API fixtures for postmark-e2e/sandbox#1. */
-export async function mockGithub(page: Page) {
+export async function mockGithub(page: Page, opts: { comments?: unknown[] } = {}) {
   const issue = {
     number: 1, title: "Postmark sandbox: wire the funder flow",
     state: "open", html_url: "https://github.com/postmark-e2e/sandbox/issues/1",
@@ -121,6 +128,10 @@ export async function mockGithub(page: Page) {
   };
   await page.route("https://api.github.com/**", (route) => {
     const u = route.request().url();
+    if (u.includes("/issues/1/comments")) {
+      return route.fulfill({ status: 200, contentType: "application/json",
+        body: JSON.stringify(opts.comments ?? []) });
+    }
     if (u.includes("/issues/1")) {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(issue) });
     }

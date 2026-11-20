@@ -48,39 +48,61 @@ export function validateForm(f: {
   }
   const vs: `0x${string}`[] = [];
   for (const [i, raw] of f.verifiers.entries()) {
-    const v = raw.trim();
-    let evm: `0x${string}`;
-    try { evm = v.startsWith("0x") ? v as `0x${string}` : qorToEvm(v); }
-    catch { return { ok: false, error: `Verifier ${i + 1}: not a valid 0x or qor1 address.` }; }
-    if (!isAddress(evm, { strict: false }) || evm === "0x0000000000000000000000000000000000000000") {
-      return { ok: false, error: `Verifier ${i + 1}: invalid address.` };
-    }
-    if (f.funder && evm.toLowerCase() === f.funder.toLowerCase()) {
-      return { ok: false, error: `Verifier ${i + 1} equals the funder.` };
-    }
-    if (vs.some((x) => x.toLowerCase() === evm.toLowerCase())) {
-      return { ok: false, error: `Verifier ${i + 1} is duplicated.` };
-    }
-    vs.push(evm);
+    const err = verifierFieldError(raw, i, f.verifiers, f.funder);
+    if (err) return { ok: false, error: `Verifier ${i + 1}: ${err}` };
+    vs.push(normalizeVerifier(raw));
   }
   return { ok: true, parsed: {
     amount, reward, bond, deadline: BigInt(dl),
     claimTimeout: BigInt(f.claimTimeoutSec), verifiers: vs as [`0x${string}`, `0x${string}`, `0x${string}`] & `0x${string}`[] } };
 }
 
-function VerifierInput({ i, value, onChange, live, checking }:
+function normalizeVerifier(raw: string): `0x${string}` {
+  const v = raw.trim();
+  try { return v.startsWith("0x") ? v as `0x${string}` : qorToEvm(v); }
+  catch { return "0x0000000000000000000000000000000000000000"; }
+}
+
+/** Per-field verifier error (undefined when the field is empty or valid). */
+export function verifierFieldError(
+  raw: string, index: number, all: string[], funder?: string,
+): string | undefined {
+  const v = raw.trim();
+  if (!v) return "Required — three verifier addresses.";
+  let evm: `0x${string}`;
+  try { evm = v.startsWith("0x") ? v as `0x${string}` : qorToEvm(v); }
+  catch { return "Not a valid 0x or qor1 address."; }
+  if (!isAddress(evm, { strict: false })) return "Invalid address.";
+  if (evm === "0x0000000000000000000000000000000000000000") return "Cannot be the zero address.";
+  if (funder && evm.toLowerCase() === funder.toLowerCase()) return "Equals the funder.";
+  if (all.some((o, j) => j !== index && o.trim()
+    && normalizeVerifier(o).toLowerCase() === evm.toLowerCase())) {
+    return "Duplicated — verifier addresses must differ.";
+  }
+  return undefined;
+}
+
+function VerifierInput({ i, value, onChange, live, checking, error }:
   { i: number; value: string; onChange: (v: string) => void;
-    live: boolean | undefined; checking: boolean }) {
+    live: boolean | undefined; checking: boolean; error?: string | undefined }) {
+  const show = value.trim().length > 0;
   return (
     <div>
       <div className="flex items-center gap-2">
         <input value={value} onChange={(e) => onChange(e.target.value)}
+          aria-invalid={show && !!error}
+          aria-label={`Verifier ${i + 1}`}
           placeholder={`Verifier ${i + 1} — 0x… or qor1…`}
-          className="w-full rounded-lg border border-white/10 bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-vermilion" />
+          className={`w-full rounded-lg border bg-ink-900 px-3 py-2 font-mono text-sm text-paper-100 placeholder:text-ink-500 focus:outline-none focus:ring-1 focus:ring-vermilion ${
+            show && error ? "border-vermilion/60" : "border-white/10"}`} />
         {checking && <span className="shrink-0 text-xs text-ink-400">checking…</span>}
         {live === true && <span className="shrink-0 rounded-full border border-emerald-400/40 px-2 py-0.5 text-[10px] text-emerald-300">PQ live</span>}
         {live === false && <span className="shrink-0 rounded-full border border-vermilion/50 px-2 py-0.5 text-[10px] text-vermilion">no key</span>}
       </div>
+      {show && error && <p role="alert" className="mt-1 text-xs text-vermilion">{error}</p>}
+      {show && !error && live === false && (
+        <p role="alert" className="mt-1 text-xs text-vermilion">No live ML-DSA-87 key registered — ineligible as a verifier.</p>
+      )}
     </div>
   );
 }
@@ -268,6 +290,7 @@ function CreateForm() {
             <VerifierInput key={i} i={i} value={v}
               checking={checkingKeys}
               live={keyStates[i]}
+              error={verifierFieldError(v, i, verifiers, address)}
               onChange={(nv) => {
                 const next = [...verifiers]; next[i] = nv; setVerifiers(next);
                 const ks = [...keyStates]; ks[i] = undefined; setKeyStates(ks);

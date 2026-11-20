@@ -1,8 +1,13 @@
 import { useAccount } from "wagmi";
+import WalletRoot from "./WalletRoot";
 import { useToast } from "../components/Toasts";
 import type { Bounty } from "../chain/client";
 
-export default function FunderShare({ bounty }: { bounty: Bounty }) {
+export default function FunderShare(props: { bounty: Bounty }) {
+  return <WalletRoot><Share {...props} /></WalletRoot>;
+}
+
+function Share({ bounty }: { bounty: Bounty }) {
   const { address } = useAccount();
   const toast = useToast();
   if (!address || address.toLowerCase() !== bounty.funder.toLowerCase()) return null;

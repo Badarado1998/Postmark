@@ -1,5 +1,16 @@
+import { formatUnits } from "viem";
 import { explorerTx } from "../chain/config";
 import type { TxState } from "../hooks/useTxAction";
+
+function MaxFee({ state }: { state: TxState }) {
+  if (state.maxFeeWei === undefined) return null;
+  return (
+    <p className="mt-2 font-mono text-[11px] text-ink-400">
+      max fee ≈ {Number(formatUnits(state.maxFeeWei, 18)).toFixed(4)} QOR
+      {state.gasLimit !== undefined && ` (gas ≤ ${state.gasLimit.toString()})`}
+    </p>
+  );
+}
 
 export function WindowGuide({ guide }: { guide: NonNullable<TxState["guide"]> }) {
   return (
@@ -30,6 +41,7 @@ export function TxStatusPanel({ state }: { state: TxState }) {
       {state.phase === "simulating" && <p className="text-ink-300">Simulating on diana…</p>}
       {state.phase === "ready" && <p className="text-ink-300">Ready — confirm in the wallet.</p>}
       {state.phase === "wallet" && <p className="text-ink-300">Waiting for the wallet…</p>}
+      {(state.phase === "ready" || state.phase === "wallet" || state.phase === "submitted") && <MaxFee state={state} />}
       {state.phase === "submitted" && (
         <p className="text-ink-300">Submitted.{" "}
           <a className="text-vermilion underline underline-offset-4" href={explorerTx(state.hash!)} target="_blank" rel="noreferrer">

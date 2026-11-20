@@ -25,7 +25,7 @@ function Waves({ progress }: { progress: MotionValue<number> }) {
     `M-60 ${60 + k * 26} Q 80 ${30 + k * 26} 220 ${60 + k * 26} T 500 ${60 + k * 26} T 780 ${60 + k * 26} T 1060 ${60 + k * 26} T 1340 ${60 + k * 26} T 1620 ${60 + k * 26}`;
   return (
     <motion.svg viewBox="0 0 1560 210" preserveAspectRatio="xMidYMid slice"
-      className="absolute inset-x-0 top-1/2 -z-10 h-[30vh] w-full -translate-y-1/2 text-vermilion"
+      className="absolute inset-x-0 top-[78%] -z-10 h-[30vh] w-full -translate-y-1/2 text-vermilion opacity-60 md:top-1/2 md:opacity-100"
       style={{ y }} aria-hidden>
       {[0, 1, 2, 3, 4].map((i) => (
         <motion.path key={i} d={d(i)} fill="none" stroke="currentColor"
@@ -88,13 +88,18 @@ function IssueCard() {
 function ClaimStamp({ local }: { local: MotionValue<number> }) {
   const draw = useTransform(local, [0.15, 0.85], [0, 1]);
   return (
-    <div className="relative rounded-sm bg-paper-100 p-3 shadow-2xl shadow-black/60"
-      style={{ WebkitMaskImage: PERFORATION, maskImage: PERFORATION,
-        WebkitMaskSize: "16px 16px", maskSize: "16px 16px" }}>
-      <div className="grid place-items-center rounded-sm border border-ink-900/15 bg-[#f6efdd] px-8 py-10 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-900/60">postmark-claim v1</p>
-        <p className="mt-2 font-serif text-2xl font-semibold text-ink-950">chain 9800</p>
-        <svg viewBox="0 0 220 60" className="mt-2 w-44 text-ink-950/80" aria-hidden>
+    <div className="relative">
+      {/* perforated edge: a masked paper ring; the solid face is a sibling, never masked */}
+      <div aria-hidden className="absolute inset-0 rounded-sm bg-paper-100 shadow-2xl shadow-black/60"
+        style={{ WebkitMaskImage: PERFORATION, maskImage: PERFORATION,
+          WebkitMaskSize: "16px 16px", maskSize: "16px 16px" }} />
+      <div className="relative m-2.5 grid place-items-center border border-ink-900/20 bg-[#f6efdd] px-8 py-8 text-center">
+        <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-ink-900/50">postmark · diana</p>
+        <p className="mt-1 font-serif text-4xl font-semibold tabular-nums text-ink-950">0.25</p>
+        <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-ink-900/50">test qor</p>
+        <div className="my-3 h-px w-40 bg-ink-900/20" />
+        <p className="font-mono text-[10px] text-ink-900/70">postmark-e2e/sandbox #1</p>
+        <svg viewBox="0 0 220 60" className="mt-1 w-44 text-ink-950/80" aria-hidden>
           <motion.path
             d="M10 40 C 40 10, 70 55, 100 30 S 160 45, 210 22"
             fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"
@@ -238,7 +243,7 @@ export default function Landing() {
           <div className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(7,11,20,0.9)_100%)]" />
           <Waves progress={scrollYProgress} />
 
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 px-4 md:grid-cols-2 md:gap-14">
+          <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 px-4 md:grid-cols-[1.25fr_1fr] md:gap-14">
             {/* text column */}
             <div className="relative order-2 min-h-[40dvh] md:order-1 md:min-h-[55dvh]">
               {/* act 0: hero text */}
@@ -246,7 +251,7 @@ export default function Landing() {
                 <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-vermilion">
                   Real issues · testnet payouts
                 </p>
-                <h1 className="mt-5 font-serif text-5xl font-semibold leading-[1.02] tracking-tight text-paper-100 sm:text-6xl lg:text-7xl xl:text-8xl">
+                <h1 className="mt-5 font-serif text-5xl font-semibold leading-[1.02] tracking-tight text-paper-100 sm:text-6xl lg:text-6xl xl:text-7xl">
                   Get stamped for<br />merged work.
                 </h1>
                 <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-200 lg:text-xl">

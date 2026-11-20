@@ -96,13 +96,13 @@ test("verifier without a PQ key is caught before sending", async ({ page }) => {
 test("an account with no window sees the QoreX guide (no tx sent)", async ({ page }) => {
   test.skip(test.info().project.name !== "desktop", "chain state — desktop only");
   await mockGithub(page);
-  // the claimant profile has a live PQ key but no EVM window — preflight
+  // the disputer profile has a live PQ key but no EVM window — preflight
   // must stop at the QoreX guide without ever reaching the wallet
-  const env = readFileSync(`${homedir()}/.config/postmark/e2e/claimant.env`, "utf8");
-  const claimant = env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m)![1]!;
+  const env = readFileSync(`${homedir()}/.config/postmark/e2e/disputer.env`, "utf8");
+  const disputer = env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})$/m)![1]!;
   await page.exposeBinding("__postmarkE2eRequest", async (_s, req: { method: string }) => {
     if (req.method === "eth_accounts" || req.method === "eth_requestAccounts")
-      return [claimant];
+      return [disputer];
     if (req.method === "eth_chainId") return "0x2648";
     if (req.method === "eth_sendTransaction")
       throw new Error("a transaction was sent — preflight failed");

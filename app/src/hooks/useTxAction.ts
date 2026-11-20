@@ -23,9 +23,20 @@ export interface TxState {
   guide?: { target: string; suggestedTxs: number; suggestedValueUqor: string } | undefined;
   hash?: `0x${string}` | undefined;
   error?: string | undefined;
+  gasLimit?: bigint | undefined;
+  maxFeeWei?: bigint | undefined;
 }
 
-const MAX_FEE_WEI = 800_000n * 112_500_000_000n; // 800k gas * 112.5 gwei upper bound for calls
+// diana feemarket: min_gas_multiplier 0.5 — a tx pays at least half its limit,
+// so the limit must be a real estimate, not a generous constant.
+const FEE_CAP_WEI = 112_500_000_000n; // 112.5 gwei
+
+// used only if eth_estimateGas fails but the call itself simulates fine
+const FALLBACK_GAS: Record<string, bigint> = {
+  createBounty: 900_000n, claim: 400_000n, dispute: 500_000n,
+  refundExpired: 300_000n, finalize: 300_000n, reopen: 300_000n,
+  withdraw: 250_000n, submitVerdict: 2_500_000n, resolveDispute: 2_500_000n,
+};
 
 export function useTxAction() {
   const { address, isConnected } = useAccount();
@@ -60,6 +71,25 @@ export function useTxAction() {
         try { await switchChainAsync({ chainId: 9800 }); }
         catch { setState({ phase: "blocked", blockReason: "Switch the wallet to QoreChain diana (9800)." }); return; }
       }
+      // gas first: estimate from the sender with value. An estimate failure is
+      // usually a revert — but the window preflight comes before simulation so a
+      // window-less wallet still gets the QoreX guide instead of an RPC error.
+      setState({ phase: "simulating" });
+      let gasLimit: bigint;
+      let estimateFailed = false;
+      try {
+        const est = await httpClient.estimateContractGas({
+          address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
+          functionName: req.functionName,
+          args: req.args as ContractFunctionArgs,
+          account: address, value: req.value,
+        });
+        gasLimit = req.gas ?? (est * 125n) / 100n + 1n;
+      } catch {
+        estimateFailed = true;
+        gasLimit = req.gas ?? FALLBACK_GAS[req.functionName] ?? 800_000n;
+      }
+      const maxFeeWei = gasLimit * FEE_CAP_WEI;
       // fresh reads at submit time — never trust possibly-stale query state
       const [pqcData, winData] = await Promise.all([
         pqcKeyStatus(address).catch(() => undefined),
@@ -70,27 +100,29 @@ export function useTxAction() {
         pqcLive: pqcData?.live,
         window: winData,
         valueWei: req.value ?? 0n,
-        maxFeeWei: MAX_FEE_WEI,
+        maxFeeWei,
         escrow: ESCROW_ADDRESS,
       });
       if (!pre.ok) {
-        setState({ phase: "blocked", blockReason: pre.reason, guide: pre.guide });
+        setState({ phase: "blocked", blockReason: pre.reason, guide: pre.guide,
+          gasLimit, maxFeeWei });
         return;
       }
-      setState({ phase: "simulating" });
-      try {
-        await httpClient.simulateContract({
-          address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
-          functionName: req.functionName,
-          args: req.args as ContractFunctionArgs,
-          account: address, value: req.value,
-          gas: req.gas ?? 1_500_000n,
-        });
-      } catch (e) {
-        setState({ phase: "failed", error: explainError(e) });
-        return;
+      if (estimateFailed) {
+        // decode the real revert now that the window is known-good
+        try {
+          await httpClient.simulateContract({
+            address: ESCROW_ADDRESS, abi: escrow.abi as Abi,
+            functionName: req.functionName,
+            args: req.args as ContractFunctionArgs,
+            account: address, value: req.value,
+          });
+        } catch (e2) {
+          setState({ phase: "failed", error: explainError(e2) });
+          return;
+        }
       }
-      setState({ phase: "wallet" });
+      setState({ phase: "wallet", gasLimit, maxFeeWei });
       let hash: `0x${string}`;
       try {
         hash = await writeContractAsync({
@@ -98,7 +130,7 @@ export function useTxAction() {
           functionName: req.functionName,
           args: req.args as ContractFunctionArgs,
           value: req.value,
-          gas: req.gas ?? 1_500_000n, // public RPC caps estimation; fixed limit
+          gas: gasLimit,
         });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -109,8 +141,8 @@ export function useTxAction() {
         setState({ phase: "failed", error: explainError(e) });
         return;
       }
-      setState({ phase: "submitted", hash });
-      setState({ phase: "confirming", hash });
+      setState({ phase: "submitted", hash, gasLimit, maxFeeWei });
+      setState({ phase: "confirming", hash, gasLimit, maxFeeWei });
       try {
         const receipt = await (walletClient ?? httpClient).waitForTransactionReceipt({
           hash, timeout: 120_000,
@@ -124,7 +156,7 @@ export function useTxAction() {
           error: `Still unconfirmed — check the explorer. ${explainError(e)}` });
         return;
       }
-      setState({ phase: "confirmed", hash });
+      setState({ phase: "confirmed", hash, gasLimit, maxFeeWei });
       for (const key of req.invalidates ?? []) {
         void qc.invalidateQueries({ queryKey: [...key] });
       }

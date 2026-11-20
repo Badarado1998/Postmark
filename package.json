@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node node_modules/@foundry-rs/forge/bin.mjs test -vv",
     "key-status": "node scripts/key-status.mjs",
-    "window": "node scripts/window.mjs"
+    "window": "node scripts/window.mjs",
+    "signer": "node scripts/signer.mjs",
+    "test:signer": "node --test scripts/signer.test.mjs"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.7.0",

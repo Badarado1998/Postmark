@@ -1,9 +1,9 @@
 import { test } from "@playwright/test";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { installTestWallet, mockGithub } from "./testWallet";
 
-const OUT = "../notes/screens/w2";
+const OUT = "../notes/screens/w3";
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
 
 test("landing + explore screenshots", async ({ page }, testInfo) => {
@@ -83,4 +83,73 @@ test("create form + dashboard screenshots", async ({ page }, testInfo) => {
   await page.waitForSelector("text=/FUNDED|haven't funded/i", { timeout: 30_000 });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${OUT}/dashboard-${size}.png` });
+});
+
+test("claim panel + signer page screenshots", async ({ page }, testInfo) => {
+  const size = testInfo.project.name;
+  // claim steps on an Open bounty (read-only — no tx sent)
+  const pub = (await import("./testWallet")).nodePublic();
+  const { postmarkEscrowAbi } = await import("../src/chain/abi");
+  const e2eDeployment = JSON.parse(
+    readFileSync(new URL("../../deployments/diana-e2e.json", import.meta.url), "utf8"),
+  ) as { address: string };
+  const escrow = e2eDeployment.address as `0x${string}`;
+  const next = (await pub.readContract({ address: escrow, abi: postmarkEscrowAbi,
+    functionName: "nextBountyId" })) as bigint;
+  let openId: bigint | null = null, claimedId: bigint | null = null;
+  const nowSec = BigInt(Math.floor(Date.now() / 1000));
+  for (let id = next - 1n; id >= 1n && (openId === null || claimedId === null); id--) {
+    const b = await pub.readContract({ address: escrow, abi: postmarkEscrowAbi,
+      functionName: "getBounty", args: [id] }) as
+      { state: number; deadline: bigint; claimTimeout: bigint };
+    if (b.state === 0 && b.deadline > nowSec + b.claimTimeout + 600n && openId === null) openId = id;
+    if (b.state === 1 && claimedId === null) claimedId = id;
+  }
+  if (openId !== null) {
+    const claimant = "0x478F2A08a81be7CEa42bd34BD6900593fA56c4B6";
+    const line = `postmark-claim v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${openId} claimant=${claimant.toLowerCase()}`;
+    await mockGithub(page, { comments: [{ id: 987654321, user: { login: "e2e-claimant" },
+      body: line, created_at: new Date().toISOString() }] });
+    await installTestWallet(page, "claimant");
+    await page.goto(`/bounty/${openId}`);
+    const connectBtn = page.getByRole("button", { name: /connect/i }).first();
+    if (await connectBtn.isVisible({ timeout: 6_000 }).catch(() => false)) {
+      await connectBtn.click();
+      const pick = page.getByText("Postmark E2E");
+      if (await pick.isVisible({ timeout: 6_000 }).catch(() => false)) await pick.click();
+    }
+    await page.getByText(/postmark-claim v1 chain=9800/).first().waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${OUT}/claim-step1-${size}.png` });
+    // step 2 after the comment scan finds the line
+    await page.getByRole("button", { name: /find my comment/i }).click();
+    await page.getByText(/@e2e-claimant/).waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${OUT}/claim-step2-${size}.png` });
+    // step 3 — after the local signer returns a verified signature
+    const stateFile = new URL("./.signer-state.json", import.meta.url).pathname;
+    if (existsSync(stateFile)) {
+      const { pairingCode } = JSON.parse(readFileSync(stateFile, "utf8")) as { pairingCode: string };
+      await page.getByPlaceholder(/8-char code/i).fill(pairingCode);
+      await page.getByRole("button", { name: /sign the claim/i }).click();
+      await page.getByText(/verified locally/i).waitFor({ timeout: 60_000 });
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: `${OUT}/claim-step3-${size}.png` });
+    }
+    // /me with the claims section
+    await page.goto("/me");
+    await page.getByText(/my claims/i).first().waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${OUT}/me-claims-${size}.png` });
+  }
+  if (claimedId !== null) {
+    await page.goto(`/bounty/${claimedId}`);
+    await page.getByText(/your claim is live|claimed/i).first().waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${OUT}/claimed-${size}.png` });
+  }
+  await page.goto("/signer");
+  await page.waitForSelector("text=The local signer", { timeout: 15_000 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${OUT}/signer-${size}.png` });
 });

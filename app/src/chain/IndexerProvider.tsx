@@ -55,25 +55,53 @@ export function IndexerProvider({ children }: { children: ReactNode }) {
       }, 6000);
     };
 
-    (async () => {
+    let wsRetry: ReturnType<typeof setTimeout> | undefined;
+    let healthy: ReturnType<typeof setTimeout> | undefined;
+
+    const startWs = () => {
+      if (dead) return;
+      setFeed((f) => (f === "live" ? f : "connecting"));
       try {
-        const head = await httpClient.getBlockNumber();
-        lastBlock.current = head;
         unwatch = wsPublicClient().watchContractEvent({
           address: ESCROW_ADDRESS,
           abi: postmarkEscrowAbi,
           onLogs: (logs) => { void ingest(logs as Log[]); },
-          onError: () => { unwatch?.(); unwatch = undefined; startPolling(); },
+          onError: () => {
+            unwatch?.(); unwatch = undefined;
+            if (healthy) clearTimeout(healthy);
+            startPolling();
+            // the node can be stable (eth_subscribe works) but drops idle
+            // sockets — back off and try again instead of staying on polling
+            wsRetry = setTimeout(startWs, 25_000);
+          },
           pollingInterval: 6000,
         });
-        setFeed("live");
-      } catch { startPolling(); }
+        // only declare "live" once the watch survived a grace period without
+        // an error — avoids flickering live→polling on a dead socket
+        healthy = setTimeout(() => {
+          if (!dead && unwatch) { setFeed("live"); poll && clearInterval(poll); poll = undefined; }
+        }, 4_000);
+      } catch {
+        startPolling();
+        wsRetry = setTimeout(startWs, 25_000);
+      }
+    };
+
+    (async () => {
+      try {
+        const head = await httpClient.getBlockNumber();
+        lastBlock.current = head;
+      } catch { /* polling will recover */ }
+      startPolling(); // never blind while the WS comes up
+      startWs();
     })();
 
     return () => {
       dead = true;
       unwatch?.();
       if (poll) clearInterval(poll);
+      if (wsRetry) clearTimeout(wsRetry);
+      if (healthy) clearTimeout(healthy);
     };
   }, [qc]);
 

@@ -8,6 +8,8 @@ import { explorerAddress, explorerTx } from "../chain/config";
 import { getIssue, getPull, getLinkedPrs, GithubRateLimitError, type GhIssue, type GhPull } from "../github/client";
 
 const TxActions = lazy(() => import("../wallet/TxActions"));
+const ClaimPanel = lazy(() => import("../wallet/ClaimPanel"));
+const ClaimedNote = lazy(() => import("../wallet/ClaimedNote"));
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -204,6 +206,17 @@ export default function BountyDetail() {
               {bounty.data.initialMergedAt > 0n && ` · merged ${new Date(Number(bounty.data.initialMergedAt) * 1000).toLocaleDateString()}`}
             </Field>
           </dl>
+
+          {bounty.data.state === 1 && (
+            <Suspense fallback={null}>
+              <ClaimedNote bounty={bounty.data} />
+            </Suspense>
+          )}
+          {bounty.data.state === 0 && index.data?.metaById.get(id) && (
+            <Suspense fallback={null}>
+              <ClaimPanel id={id} bounty={bounty.data} meta={index.data.metaById.get(id)!} />
+            </Suspense>
+          )}
 
           <Suspense fallback={null}>
             <TxActions id={id} bounty={bounty.data} />

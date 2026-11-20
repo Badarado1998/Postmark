@@ -52,7 +52,11 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
 import { TxStatusPanel as TxPanel } from "./TxWidgets";
 
 export default function TxActions(props: { id: bigint; bounty: Bounty }) {
+  return <WalletRoot><Gate {...props} /></WalletRoot>;
+}
+
+function Gate(props: { id: bigint; bounty: Bounty }) {
   const { isConnected } = useAccount();
   if (!isConnected) return null;
-  return <WalletRoot><ActionsInner {...props} /></WalletRoot>;
+  return <ActionsInner {...props} />;
 }
