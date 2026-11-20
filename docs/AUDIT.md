@@ -2,12 +2,14 @@
 
 | Run | Date | Setting | Source | Report | Result |
 |---|---|---|---|---|---|
-| 1 | 2026-11-20 | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `241d0c7`, the code deployed at `0xb781E296FB35ccd2497589526114373bA0bff79b` | [`audit/qcai-stage1-2026-11-20.pdf`](audit/qcai-stage1-2026-11-20.pdf) | 65/100, 6 findings (2 high, 2 medium, 1 low, 1 info) |
-| 2 | pending | Ethereum (EVM/Solidity) | same source | — | — |
+| 1 | 2026-11-20 | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `241d0c7` (deployed at `0xb781E296FB35ccd2497589526114373bA0bff79b`, now superseded) | [`audit/qcai-stage1-2026-11-20.pdf`](audit/qcai-stage1-2026-11-20.pdf) | 65/100, 6 findings (2 high, 2 medium, 1 low, 1 info) |
+| 2 | pending | Ethereum (EVM/Solidity) | `src/PostmarkEscrow.sol` at `6babd14` (hardened, see below) | — | — |
 
-Every run 1 finding is answered below. None needed a code change: each one describes a risk the
-contract already handles, and the named tests prove it. The contract source is unchanged, so the
-deployed bytecode still matches `forge inspect PostmarkEscrow deployedBytecode` exactly.
+Every run 1 finding is answered below. None was an exploitable defect: each describes a risk the
+contract already handled, and the named tests prove it. After run 1 the source was hardened where
+each flag was raised (`6babd14`): documentation, named bounds and two defensive checks, with the
+external interface, events, errors and signed message formats unchanged (the exported ABI is
+byte-identical). See "Changes after run 1" below.
 
 The report's line numbers don't line up with the source (line 177 is `_validOwnerRepo`, line 540 is
 inside `_keyStatus`), so each finding is matched to the code it describes.
@@ -81,6 +83,24 @@ Postmark escrows native test QOR only (SPEC.md, native-only decision). It issues
 holds none, so ERC-20/721/1155 don't apply. Integrations use the events (`BountyCreated`,
 `BountyWork`, `Claimed`, `VerdictSubmitted`, `Disputed`, `DisputeResolved`, `Settled`, `Credited`)
 and the public view functions.
+
+## Changes after run 1 (`6babd14`)
+
+| Finding | Before (run 1 source) | After |
+|---|---|---|
+| 1 `reopen` access | `/// Anyone may call.` | Full NatSpec: why it's permissionless, that it moves no funds or credits, its preconditions in revert order, and the event it emits. Code path unchanged. |
+| 2 credit overflow | `pragma solidity ^0.8.24`; `_credit` and `withdraw` undocumented | Pragma pinned to `0.8.24`. NatSpec on the liability model: credits relabel value already in `totalLiabilities`, and `+=` is checked. New guard in `withdraw`: `if (total > address(this).balance) revert TransferFailed();`, unreachable under the invariant. |
+| 3 claim front-running | No comment on the signature binding | NatSpec on `claim` and an inline comment at the signature check: the claim is bound to `msg.sender` and verified against the caller's own live key; squatting is limited by the timeout (T-11). |
+| 4 precompile return values | Magic numbers `0xa0`, `0x80`, `32` | Named constants `KEYS_STATUS_MIN_BYTES`, `KEYS_STATUS_DATA_OFFSET`, `VERIFY_RET_BYTES`, with the values unchanged. Fail-closed NatSpec lists every check on both calls. |
+| 5 loops | Literal `3` and `140` | `VERIFIER_COUNT = 3` and `MAX_OWNER_REPO_BYTES = 140` in every loop, each loop commented with its bound. New `MAX_CHAIN_ID_BYTES = 64` in the constructor: the only behavior change, and it only affects deployment input (`testConstructorChainIdLengthBound`). |
+| 6 ERC standards | Title line only | Contract `@notice`/`@dev`: native test QOR only, why ERC-20/721/1155 don't apply, and the events and views integrations use. |
+
+Tests: 126/126, including the new constructor bound test. Coverage of `PostmarkEscrow.sol` is 100% of
+lines and 96.43% of branches; the drop from 97.47% is the deliberately unreachable `withdraw` guard
+plus the new constructor branch. The hardened source is deployed to production at
+`0x13De819fE37133d19287aAFE1991a921F84b9F45` (tx `0xa01ae24d57869e0e16bbfbfec29a36a539bd65998600188d1f5439b0663ffdbc`,
+block 10429957). Its on-chain code is byte-equal to `forge inspect PostmarkEscrow deployedBytecode`. The run 1
+deployment `0xb781E296…f79b` is kept as superseded in `deployments/diana.json`.
 
 ## Where the contract uses QoreChain PQC
 

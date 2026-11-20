@@ -22,10 +22,10 @@ Prior work: Proven, our outcome-paid escrow on NEAR. This is a new, post-quantum
 
 | Item | Value |
 |---|---|
-| PostmarkEscrow (production) | [`0xb781E296FB35ccd2497589526114373bA0bff79b`](https://dashboard.qorechain.io/explorer/address/0xb781E296FB35ccd2497589526114373bA0bff79b) (chain 9800, `qorechain-diana`) |
-| Deploy tx | [`0xe993fe8a…e4a34b`](https://dashboard.qorechain.io/explorer/tx/0xe993fe8a73deb05bf6f780dba2a08a0e9e65db9453de53cf1c6394ea7fe4a34b), block 10395350, 3,382,207 gas |
+| PostmarkEscrow (production) | [`0x13De819fE37133d19287aAFE1991a921F84b9F45`](https://dashboard.qorechain.io/explorer/address/0x13De819fE37133d19287aAFE1991a921F84b9F45) (chain 9800, `qorechain-diana`) |
+| Deploy tx | [`0xa01ae24d…3ffdbc`](https://dashboard.qorechain.io/explorer/tx/0xa01ae24d57869e0e16bbfbfec29a36a539bd65998600188d1f5439b0663ffdbc), block 10429957, 3,389,585 gas |
 | Deployer | `0x9d7d0f1364d6F37115d1d5be1C89362595287313` (testnet-only key with a registered ML-DSA-87 key) |
-| Scoped EVM window | opened `4CCED589…AFF0F9` (600 blocks, 3 txs, 2 QOR cap; no target list, because a target list refuses contract creation), closed right after the deploy in `472BE49D…45C9DC` |
+| Scoped EVM window | opened `E0AEE6F4…35BE10` (600 blocks, 3 txs, 2 QOR cap; no target list, because a target list refuses contract creation), closed right after the deploy in `F6093526…2E2893` |
 
 The on-chain code matches `forge inspect PostmarkEscrow deployedBytecode` byte for byte. Full record, including the
 superseded first deployment: [`deployments/diana.json`](deployments/diana.json). Window tooling:
