@@ -3,6 +3,7 @@ import { installTestWallet, mockGithub, nodePublic, nodeWallet, profileAddress,
   openBountyOrCreate, connectInjected, pairingCodeFor, E2E_ESCROW as ESCROW } from "./testWallet";
 import { encodeAbiParameters, keccak256 } from "viem";
 import { postmarkEscrowAbi } from "../src/chain/abi";
+import { e2eLog } from "./util";
 
 test.use({ ignoreHTTPSErrors: true });
 test.describe.configure({ retries: 0 });
@@ -44,7 +45,7 @@ async function claimOnChain(bountyId: bigint): Promise<`0x${string}`> {
   });
   const r = await nodePublic().waitForTransactionReceipt({ hash, timeout: 120_000 });
   if (r.status !== "success") throw new Error(`claim reverted: ${hash}`);
-  console.log("[e2e] claim tx", hash);
+  e2eLog("e2e", "claim tx", hash);
   return hash;
 }
 

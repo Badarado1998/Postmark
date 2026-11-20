@@ -1,13 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { installTestWallet, mockGithub, nodePublic, profileAddress,
   openBountyOrCreate, connectInjected, pairingCodeFor } from "./testWallet";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { encodeAbiParameters, keccak256 } from "viem";
+import { E2E_DEPLOYMENT } from "./util";
 
-const e2eDeployment = JSON.parse(
-  readFileSync(new URL("../../deployments/diana-e2e.json", import.meta.url), "utf8"),
-) as { address: string };
-const ESCROW = e2eDeployment.address as `0x${string}`;
+const ESCROW = E2E_DEPLOYMENT.address as `0x${string}`;
 const STATE_FILE = new URL("./.signer-state.json", import.meta.url).pathname;
 
 import { postmarkEscrowAbi } from "../src/chain/abi";

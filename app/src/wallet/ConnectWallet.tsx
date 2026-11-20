@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
 import { useQorex } from "./qorex";
-import { useEvmWindow, usePqcStatus, useQorEvm } from "../hooks/queries";
+import { useEvmWindow, usePqcStatus } from "../hooks/queries";
+import { tryQorToEvm } from "../chain/bech32";
 import WalletRoot from "./WalletRoot";
 import { diana } from "../chain/config";
 import { shortAddr } from "../components/ui";
@@ -14,7 +15,7 @@ function ConnectButtonInner() {
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const qorex = useQorex();
-  const qorEvm = useQorEvm(qorex.qorAddress);
+  const qorEvm = tryQorToEvm(qorex.qorAddress);
   const evmAddr = isConnected ? address : qorEvm;
   const pqc = usePqcStatus(evmAddr);
   const win = useEvmWindow(qorex.qorAddress);

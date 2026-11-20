@@ -6,6 +6,7 @@ import { signClaim as localSignClaim, signVerdict as localSignVerdict,
   signerUrl, SignerError } from "../chain/localSigner";
 import { hexToBytes, type Hex } from "viem";
 import type { VerdictFields } from "../formats/messages";
+import type { QorexState } from "./qorex";
 
 export interface ClaimSignRequest {
   bountyId: bigint;
@@ -59,6 +60,12 @@ export function qorexSigner(native: QorexNativeProvider, qor1: string): PqSigner
     sign: (req) => qorexSign(native, qor1, req.message),
     signVerdict: (req) => qorexSign(native, qor1, req.message),
   };
+}
+
+/** QoreX when it can sign arbitrary messages for the active account, else the local signer. */
+export function pickSigner(qorex: QorexState): PqSigner {
+  return qorex.canSignArbitrary && qorex.native && qorex.qorAddress
+    ? qorexSigner(qorex.native, qorex.qorAddress) : localSigner;
 }
 
 export { SignerError };

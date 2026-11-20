@@ -1,26 +1,22 @@
 // Dispute a Pending verdict: post the SPEC line on GitHub, prove it with a
 // comment id, then bond the dispute. Evidence = keccak(login, commentId).
 import { useState } from "react";
-import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
-import { Qor } from "../components/ui";
-import { getAllComments, findDisputeComments, GithubRateLimitError } from "../github/client";
+import { Card, Qor, SectionLabel } from "../components/ui";
+import { getAllComments, findDisputeComments } from "../github/client";
+import { githubItemUrl, githubItemLabel } from "../github/parse";
 import { disputeEvidenceHashOf } from "../formats/hashes";
+import { disputeLine } from "../formats/lines";
 import { ESCROW_ADDRESS } from "../chain/config";
+import { errorMessage } from "../chain/errors";
+import { nowSec } from "../chain/time";
 import type { Bounty } from "../chain/client";
 import type { BountyMeta } from "../chain/indexer";
 
-const now = () => BigInt(Math.floor(Date.now() / 1000));
-
-export function disputeLine(bountyId: bigint, escrow: `0x${string}`) {
-  return `postmark-dispute v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${bountyId}`;
-}
-
 function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
-  useAccount();
   const tx = useTxAction();
   const toast = useToast();
   const [login, setLogin] = useState("");
@@ -28,8 +24,8 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
   const [scanErr, setScanErr] = useState<string | null>(null);
   const [found, setFound] = useState<{ commentId: bigint; hash: `0x${string}`; url: string } | null>(null);
 
-  const closed = now() >= bounty.challengeEndsAt;
-  const itemUrl = `https://github.com/${meta.ownerRepo}/${meta.kind === 1 ? "pull" : "issues"}/${meta.number}`;
+  const closed = nowSec() >= bounty.challengeEndsAt;
+  const itemUrl = githubItemUrl(meta);
   const line = disputeLine(id, ESCROW_ADDRESS);
 
   const scan = async () => {
@@ -48,8 +44,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
         hash: disputeEvidenceHashOf(c.githubLogin, BigInt(c.commentId)),
         url: `${itemUrl}#issuecomment-${c.commentId}` });
     } catch (e) {
-      setScanErr(e instanceof GithubRateLimitError ? e.message
-        : e instanceof Error ? e.message : "GitHub lookup failed.");
+      setScanErr(errorMessage(e, "GitHub lookup failed."));
     } finally { setScanning(false); }
   };
 
@@ -67,13 +62,13 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
   if (closed) return null;
 
   return (
-    <div className="rounded-xl border border-orange/40 bg-orange/10 p-5">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-orange">dispute this verdict</h2>
+    <Card tone="warn">
+      <SectionLabel tone="warn">dispute this verdict</SectionLabel>
       <p className="mt-2 text-sm text-gray">
         Anyone can bond <Qor wei={bounty.bondAmount} /> against this verdict before the window
         closes. Post this exact line as a comment on{" "}
         <a className="text-deep underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
-          {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}</a>, with your reasons:
+          {githubItemLabel(meta)}</a>, with your reasons:
       </p>
       <div className="mt-2 flex items-start gap-2">
         <code className="grow break-all rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink">{line}</code>
@@ -105,7 +100,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
         </div>
       )}
       <TxStatusPanel state={tx.state} />
-    </div>
+    </Card>
   );
 }
 

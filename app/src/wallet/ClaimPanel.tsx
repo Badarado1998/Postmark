@@ -7,23 +7,22 @@ import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
 import { claimMessage } from "../formats/messages";
+import { claimLine } from "../formats/lines";
 import { identityHashOf } from "../formats/hashes";
-import { getAllComments, findClaimComments, GithubRateLimitError } from "../github/client";
+import { getAllComments, findClaimComments } from "../github/client";
+import { githubItemUrl, githubItemLabel } from "../github/parse";
 import { pqcKeyStatus } from "../chain/pqc";
 import { signerStatus, pairingCode, setPairingCode, SignerError } from "../chain/localSigner";
-import { localSigner, qorexSigner } from "./pqSigner";
+import { pickSigner } from "./pqSigner";
 import { useQorex } from "./qorex";
 import { usePqcStatus } from "../hooks/queries";
-import { shortAddr } from "../components/ui";
+import { Card, SectionLabel, shortAddr } from "../components/ui";
 import { ESCROW_ADDRESS } from "../chain/config";
+import { sameAddress } from "../chain/address";
+import { errorMessage } from "../chain/errors";
+import { nowSec } from "../chain/time";
 import type { Bounty } from "../chain/client";
 import type { BountyMeta } from "../chain/indexer";
-
-const now = () => BigInt(Math.floor(Date.now() / 1000));
-
-export function claimLine(bountyId: bigint, claimant: `0x${string}`, escrow: `0x${string}`) {
-  return `postmark-claim v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${bountyId} claimant=${claimant.toLowerCase()}`;
-}
 
 type Step = "identity" | "scan" | "signature" | "send";
 
@@ -52,31 +51,19 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
 
   if (!address) return null;
   const me = address.toLowerCase();
-  if (me === bounty.funder.toLowerCase()
-      || bounty.verifiers.some((v) => v.toLowerCase() === me)) {
-    return (
-      <div className="rounded-xl border border-ink/10 bg-white/70 p-5 text-sm text-gray">
-        Funders and verifiers cannot claim their own bounty.
-      </div>
-    );
+  if (sameAddress(address, bounty.funder)
+      || bounty.verifiers.some((v) => sameAddress(v, address))) {
+    return <Card className="text-sm text-gray">Funders and verifiers cannot claim their own bounty.</Card>;
   }
-  const t = now();
+  const t = nowSec();
   if (t >= bounty.deadline) {
-    return (
-      <div className="rounded-xl border border-ink/10 bg-white/70 p-5 text-sm text-gray">
-        Claiming is closed — the deadline has passed.
-      </div>
-    );
+    return <Card className="text-sm text-gray">Claiming is closed — the deadline has passed.</Card>;
   }
   if (bounty.claimTimeout > bounty.deadline - t) {
-    return (
-      <div className="rounded-xl border border-ink/10 bg-white/70 p-5 text-sm text-gray">
-        The claim window no longer fits before the deadline.
-      </div>
-    );
+    return <Card className="text-sm text-gray">The claim window no longer fits before the deadline.</Card>;
   }
 
-  const itemUrl = `https://github.com/${meta.ownerRepo}/${meta.kind === 1 ? "pull" : "issues"}/${meta.number}`;
+  const itemUrl = githubItemUrl(meta);
 
   const scan = async () => {
     setScanning(true); setScanError(null);
@@ -95,13 +82,12 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
       setClaim({
         login: c.githubLogin, commentId: BigInt(c.commentId),
         identityHash: identityHashOf(c.githubLogin, address, BigInt(c.commentId)),
-        commentUrl: `https://github.com/${meta.ownerRepo}/${meta.kind === 1 ? "pull" : "issues"}/${meta.number}#issuecomment-${c.commentId}`,
+        commentUrl: `${itemUrl}#issuecomment-${c.commentId}`,
       });
       setSigStatus({ ok: true, text: `Found the claim line by @${c.githubLogin} (comment ${c.commentId})${extra}.` });
       setStep("signature");
     } catch (e) {
-      setScanError(e instanceof GithubRateLimitError ? e.message
-        : e instanceof Error ? e.message : "GitHub lookup failed.");
+      setScanError(errorMessage(e, "GitHub lookup failed."));
     } finally { setScanning(false); }
   };
 
@@ -111,12 +97,10 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
     try {
       const claimRound = bounty.claimRound + 1n;
       const message = claimMessage(id, address, claim.identityHash, claimRound);
-      const signer = qorex.canSignArbitrary && qorex.native && qorex.qorAddress
-        ? qorexSigner(qorex.native, qorex.qorAddress)
-        : localSigner;
+      const signer = pickSigner(qorex);
       if (signer.id === "local") {
         const st = await signerStatus();
-        if (st.address.toLowerCase() !== me) {
+        if (!sameAddress(st.address, address)) {
           throw new SignerError(422,
             `The local signer holds ${st.address}, but the connected account is ${address}.`);
         }
@@ -134,7 +118,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
       setSignature(signature);
       setStep("send");
     } catch (e) {
-      setSignError(e instanceof Error ? e.message : String(e));
+      setSignError(errorMessage(e));
     } finally { setSigning(false); }
   };
 
@@ -148,11 +132,9 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
     });
   };
 
-  const busy = ["checking", "simulating", "wallet", "submitted", "confirming"].includes(tx.state.phase);
-
   return (
-    <div className="rounded-xl border border-salmon/30 bg-white/70 p-5">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-deep">claim this bounty</h2>
+    <Card tone="accent">
+      <SectionLabel tone="accent">claim this bounty</SectionLabel>
 
       {/* pairing — shown up front so the signer is ready before the signature step */}
       {!(qorex.canSignArbitrary && qorex.qorAddress) && (
@@ -175,7 +157,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
         <p className="text-sm text-gray">
           <span className="font-mono text-xs text-gray">1 ·</span> Post this exact line as a comment
           on <a className="text-deep underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
-            {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}
+            {githubItemLabel(meta)}
           </a>, from the GitHub account that will open the PR:
         </p>
         <div className="mt-2 flex items-start gap-2">
@@ -190,7 +172,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
             {scanning ? "Scanning comments…" : "I've posted it — find my comment"}
           </button>
         )}
-        {scanError && <p role="alert" className="mt-2 text-sm text-deep">{scanError}</p>}
+        {scanError && <p role="alert" className="mt-2 text-sm text-orange">{scanError}</p>}
       </div>
 
       {/* step 2 — signature */}
@@ -206,7 +188,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
             <a className="underline decoration-dotted hover:text-deep" href={claim.commentUrl} target="_blank" rel="noreferrer">comment</a>
           </p>
           {myKey.data && !myKey.data.live && (
-            <p role="alert" className="mt-2 text-sm text-deep">
+            <p role="alert" className="mt-2 text-sm text-orange">
               Your connected account has no live ML-DSA-87 key on diana — claims will revert with KeyIneligible.
             </p>
           )}
@@ -219,7 +201,7 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
               {signing ? "Signing…" : "Sign the claim"}
             </button>
           )}
-          {signError && <p role="alert" className="mt-2 text-sm text-deep">{signError}</p>}
+          {signError && <p role="alert" className="mt-2 text-sm text-orange">{signError}</p>}
         </div>
       )}
 
@@ -231,14 +213,14 @@ function Panel({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyM
             Signature verified locally against your live key. Send the claim transaction
             for <span className="font-mono">{shortAddr(address)}</span>.
           </p>
-          <button type="button" onClick={send} disabled={busy}
+          <button type="button" onClick={send} disabled={tx.busy}
             className="mt-3 rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
-            {busy ? "Working…" : "Claim bounty"}
+            {tx.busy ? "Working…" : "Claim bounty"}
           </button>
         </div>
       )}
       <TxStatusPanel state={tx.state} />
-    </div>
+    </Card>
   );
 }
 

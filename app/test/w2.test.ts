@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateForm } from "../src/wallet/CreateInner";
+import { validateForm } from "../src/formats/createForm";
 import { preflightTx } from "../src/chain/preflight";
 import type { EvmWindow } from "../src/chain/window";
 

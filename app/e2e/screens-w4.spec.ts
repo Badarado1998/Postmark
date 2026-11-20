@@ -5,6 +5,7 @@ import {
   installTestWallet, mockGithub, nodePublic, nodeWallet, profileAddress,
   connectInjected, pairingCodeFor, E2E_ESCROW as ESCROW,
 } from "./testWallet";
+import { e2eLog } from "./util";
 
 const OUT = "../notes/screens/w4";
 const PORTS = { v0: 47322, v1: 47323, v2: 47324 };
@@ -137,7 +138,7 @@ test("w4 pending view and dispute form", async ({ page, context }) => {
     });
     const r = await nodePublic().waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (r.status !== "success") throw new Error(`submitVerdict reverted: ${hash}`);
-    console.log("[e2e] pending fixture tx", hash);
+    e2eLog("e2e", "pending fixture tx", hash);
   }
   if (st.state !== 1 && st.state !== 2) test.skip(true, `bounty 13 in state ${st.state}`);
 

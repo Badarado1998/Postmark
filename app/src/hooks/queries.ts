@@ -3,7 +3,8 @@ import { getBounty, nextBountyId, totalLiabilities } from "../chain/client";
 import { fetchIndex, type IndexerState } from "../chain/indexer";
 import { pqcKeyStatus, type PqcStatus } from "../chain/pqc";
 import { fetchEvmWindow } from "../chain/window";
-import { qorToEvm } from "../chain/bech32";
+import { getIssue, getPull, type GhIssue, type GhPull } from "../github/client";
+import type { WorkItem } from "../github/parse";
 
 export const useIndex = () => useQuery<IndexerState>({
   queryKey: ["index"], queryFn: fetchIndex,
@@ -38,9 +39,6 @@ export const useEvmWindow = (addr: string | undefined | null) => useQuery({
   enabled: !!addr,
   staleTime: 15_000, retry: 1,
 });
-export const useQorEvm = (qor: string | null | undefined) => {
-  try { return qor ? qorToEvm(qor) : undefined; } catch { return undefined; }
-};
 export const useInvalidateBounty = () => {
   const qc = useQueryClient();
   return (id: bigint) =>
@@ -68,4 +66,15 @@ export const useBounties = (ids: bigint[] | undefined) => useQuery({
     }));
   },
   staleTime: 10_000,
+});
+
+/** The GitHub issue or pull request a bounty (or a form field) points at. */
+export const useGithubItem = (w: WorkItem, opts: {
+  staleTime?: number; retry?: boolean | ((count: number, err: unknown) => boolean);
+} = {}) => useQuery<GhIssue | GhPull>({
+  queryKey: ["gh", w.kind === 1 ? "pull" : "issue", w.ownerRepo, Number(w.number)],
+  queryFn: () => (w.kind === 1
+    ? getPull(w.ownerRepo, Number(w.number)) : getIssue(w.ownerRepo, Number(w.number))),
+  staleTime: opts.staleTime ?? 5 * 60_000,
+  retry: opts.retry ?? false,
 });

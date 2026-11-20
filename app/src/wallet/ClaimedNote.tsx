@@ -1,16 +1,15 @@
 import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
-import { Countdown } from "../components/ui";
+import { Countdown, SectionLabel } from "../components/ui";
+import { sameAddress } from "../chain/address";
 import type { Bounty } from "../chain/client";
 
 function Note({ bounty }: { bounty: Bounty }) {
   const { address } = useAccount();
-  const mine = !!address && address.toLowerCase() === bounty.payee.toLowerCase();
+  const mine = sameAddress(address, bounty.payee);
   return (
     <div className="rounded-xl border border-leaf/50 bg-leaf/10 p-5">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-deep">
-        {mine ? "your claim is live" : "claimed"}
-      </h2>
+      <SectionLabel tone="accent">{mine ? "your claim is live" : "claimed"}</SectionLabel>
       <p className="mt-2 text-sm text-gray">
         {mine
           ? "Your ML-DSA-87 claim is stamped on chain. Now open the pull request and let the three verifiers review it — two seals settle the verdict."

@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { installTestWallet, mockGithub } from "./testWallet";
+import { installTestWallet, mockGithub, E2E_ESCROW } from "./testWallet";
 
 const OUT = "../notes/screens/w3";
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
@@ -90,10 +90,7 @@ test("claim panel + signer page screenshots", async ({ page }, testInfo) => {
   // claim steps on an Open bounty (read-only — no tx sent)
   const pub = (await import("./testWallet")).nodePublic();
   const { postmarkEscrowAbi } = await import("../src/chain/abi");
-  const e2eDeployment = JSON.parse(
-    readFileSync(new URL("../../deployments/diana-e2e.json", import.meta.url), "utf8"),
-  ) as { address: string };
-  const escrow = e2eDeployment.address as `0x${string}`;
+  const escrow = E2E_ESCROW;
   const next = (await pub.readContract({ address: escrow, abi: postmarkEscrowAbi,
     functionName: "nextBountyId" })) as bigint;
   let openId: bigint | null = null, claimedId: bigint | null = null;

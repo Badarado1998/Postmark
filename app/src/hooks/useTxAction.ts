@@ -7,11 +7,10 @@ import { type Abi, type ContractFunctionArgs } from "viem";
 import { escrow, httpClient } from "../chain/client";
 import { ESCROW_ADDRESS } from "../chain/config";
 import { preflightTx } from "../chain/preflight";
-import { explainError } from "../chain/errors";
+import { explainError, errorMessage } from "../chain/errors";
 import { evmToQor } from "../chain/bech32";
 import { fetchEvmWindow } from "../chain/window";
 import { pqcKeyStatus } from "../chain/pqc";
-import { useToast } from "../components/Toasts";
 
 export type TxPhase =
   | "idle" | "checking" | "blocked" | "simulating" | "ready"
@@ -38,6 +37,10 @@ const FALLBACK_GAS: Record<string, bigint> = {
   withdraw: 250_000n, submitVerdict: 2_500_000n, resolveDispute: 2_500_000n,
 };
 
+const BUSY_PHASES: readonly TxPhase[] = [
+  "checking", "simulating", "wallet", "submitted", "confirming",
+];
+
 export function useTxAction() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -45,7 +48,6 @@ export function useTxAction() {
   const { writeContractAsync } = useWriteContract();
   const walletClient = usePublicClient();
   const qc = useQueryClient();
-  const toast = useToast();
   const [state, setState] = useState<TxState>({ phase: "idle" });
   const running = useRef(false);
 
@@ -133,8 +135,7 @@ export function useTxAction() {
           gas: gasLimit,
         });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (/user rejected|denied|rejected the request/i.test(msg)) {
+        if (/user rejected|denied|rejected the request/i.test(errorMessage(e))) {
           setState({ phase: "ready", error: "Rejected in the wallet — nothing was sent." });
           return;
         }
@@ -168,5 +169,5 @@ export function useTxAction() {
   }, [address, isConnected, chainId, switchChainAsync, writeContractAsync,
       walletClient, qc]);
 
-  return { state, run, reset, toast };
+  return { state, run, reset, busy: BUSY_PHASES.includes(state.phase) };
 }

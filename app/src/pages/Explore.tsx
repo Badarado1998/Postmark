@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useBounties, useIndex } from "../hooks/queries";
 import { StatusChip, Countdown, Qor, Skeleton, EmptyState, ErrorState, STATE_NAMES } from "../components/ui";
 import { explainError } from "../chain/errors";
+import { githubItemLabel, githubItemUrl } from "../github/parse";
 
 const FILTERS = ["all", ...STATE_NAMES] as const;
 
@@ -14,15 +15,16 @@ export default function Explore() {
   const [q, setQ] = useState("");
 
   const rows = useMemo(() => {
-    if (!bounties.data) return [];
-    return bounties.data.filter(({ id, bounty }) => {
-      if (!bounty) return false;
+    const out = [];
+    for (const { id, bounty } of bounties.data ?? []) {
+      if (!bounty) continue;
       const meta = index.data?.metaById.get(id);
-      if (status !== "all" && STATE_NAMES[bounty.state] !== status) return false;
+      if (status !== "all" && STATE_NAMES[bounty.state] !== status) continue;
       if (q && !meta?.ownerRepo.includes(q.toLowerCase()) &&
-          !String(meta?.number ?? "").includes(q.trim())) return false;
-      return true;
-    });
+          !String(meta?.number ?? "").includes(q.trim())) continue;
+      out.push({ id, bounty, meta });
+    }
+    return out;
   }, [bounties.data, index.data, status, q]);
 
   const loading = index.isPending || (ids !== undefined && ids.length > 0 && bounties.isPending);
@@ -60,35 +62,34 @@ export default function Explore() {
             <p>The first stamp hasn't landed. <Link to="/create" className="text-deep underline underline-offset-4">Fund a GitHub issue</Link> — payouts are test QOR, no monetary value.</p>
           </EmptyState>
         )}
-        {rows.map(({ id, bounty }) => {
-          const meta = index.data?.metaById.get(id);
+        {rows.map(({ id, bounty, meta }) => {
           return (
             <Link key={id.toString()} to={`/bounty/${id}`}
               className="block rounded-xl border border-ink/10 bg-white/70 p-5 transition hover:border-salmon/40 hover:bg-white focus-visible:outline-2 focus-visible:outline-deep">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs text-gray">#{id.toString()}</span>
-                  <StatusChip state={bounty!.state} />
+                  <StatusChip state={bounty.state} />
                   {meta?.workHashMismatch && (
                     <span className="text-xs text-deep" title="On-chain workHash does not match the emitted metadata">⚠ hash mismatch</span>
                   )}
                 </div>
-                <Qor wei={bounty!.amount + bounty!.challengeReward} className="font-mono text-sm text-ink" />
+                <Qor wei={bounty.amount + bounty.challengeReward} className="font-mono text-sm text-ink" />
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                 {meta ? (
                   <a className="font-mono text-ink hover:text-deep"
-                    href={`https://github.com/${meta.ownerRepo}/${meta.kind === 1 ? "pull" : "issues"}/${meta.number}`}
+                    href={githubItemUrl(meta)}
                     target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-                    {meta.ownerRepo}{meta.kind === 1 ? "/pull/" : "#"}{meta.number.toString()}
+                    {githubItemLabel(meta)}
                   </a>
                 ) : <span className="text-gray">work reference unavailable</span>}
                 <span className="text-gray">
-                  deadline <Countdown to={bounty!.deadline} className="text-ink" />
+                  deadline <Countdown to={bounty.deadline} className="text-ink" />
                 </span>
-                {bounty!.state === 1 && bounty!.claimExpiresAt > 0n && (
+                {bounty.state === 1 && bounty.claimExpiresAt > 0n && (
                   <span className="text-gray">
-                    claim expires <Countdown to={bounty!.claimExpiresAt} className="text-ink" />
+                    claim expires <Countdown to={bounty.claimExpiresAt} className="text-ink" />
                   </span>
                 )}
               </div>

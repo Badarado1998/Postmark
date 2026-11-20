@@ -1,6 +1,7 @@
 import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { useToast } from "../components/Toasts";
+import { sameAddress } from "../chain/address";
 import type { Bounty } from "../chain/client";
 
 export default function FunderShare(props: { bounty: Bounty }) {
@@ -10,7 +11,7 @@ export default function FunderShare(props: { bounty: Bounty }) {
 function Share({ bounty }: { bounty: Bounty }) {
   const { address } = useAccount();
   const toast = useToast();
-  if (!address || address.toLowerCase() !== bounty.funder.toLowerCase()) return null;
+  if (!sameAddress(address, bounty.funder)) return null;
   const url = typeof location !== "undefined" ? location.href : "";
   return (
     <div className="rounded-xl border border-ink/10 bg-white/70 p-4 text-sm">

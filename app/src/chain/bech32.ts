@@ -60,3 +60,8 @@ export function evmToQor(addr: string): string {
   const chk = Array.from({ length: 6 }, (_, i) => (mod >>> (5 * (5 - i))) & 31);
   return `qor1${[...words, ...chk].map((w) => CHARM[w]).join("")}`;
 }
+
+/** qorToEvm, or undefined when the input is missing or not a valid qor1 address. */
+export function tryQorToEvm(qor: string | null | undefined): `0x${string}` | undefined {
+  try { return qor ? qorToEvm(qor) : undefined; } catch { return undefined; }
+}

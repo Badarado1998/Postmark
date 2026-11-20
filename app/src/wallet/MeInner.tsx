@@ -1,16 +1,18 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
-import { creditOf } from "../chain/client";
-import { getIssue, getPull, type GhIssue, type GhPull } from "../github/client";
-import { useIndex, useBounties } from "../hooks/queries";
-import { StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
+import { creditOf, type Bounty } from "../chain/client";
+import { githubItemLabel } from "../github/parse";
+import { useIndex, useBounties, useGithubItem, usePqcStatus } from "../hooks/queries";
+import { Card, SectionLabel, StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
-import { usePqcStatus } from "../hooks/queries";
 import { TxStatusPanel } from "./TxWidgets";
 import TxActions from "./TxActions";
+import { sameAddress } from "../chain/address";
+import { nowSec } from "../chain/time";
+import type { BountyMeta } from "../chain/indexer";
 
 function Credits() {
   const { address } = useAccount();
@@ -22,7 +24,6 @@ function Credits() {
   const pqc = usePqcStatus(address);
   const tx = useTxAction();
   const toast = useToast();
-  const busy = ["checking","simulating","wallet","submitted","confirming"].includes(tx.state.phase);
   if (!address) return null;
   if (credits.isPending) return <Skeleton className="h-28" />;
   const [ungated, gated] = credits.data ?? [0n, 0n];
@@ -30,7 +31,7 @@ function Credits() {
     return <p className="text-sm text-gray">No credits yet.</p>;
   }
   return (
-    <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
+    <Card>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-8">
           <div>
@@ -42,7 +43,7 @@ function Credits() {
             <Qor wei={gated} />
           </div>
         </div>
-        <button disabled={busy || (ungated === 0n && gated === 0n)}
+        <button disabled={tx.busy || (ungated === 0n && gated === 0n)}
           onClick={() => void tx.run({ functionName: "withdraw", args: [],
             onConfirmed: () => toast({ kind: "info", text: "Withdrawn." }) })}
           className="rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
@@ -56,137 +57,126 @@ function Credits() {
         </p>
       )}
       <TxStatusPanel state={tx.state} />
-    </div>
+    </Card>
   );
 }
 
-function WorkRef({ ownerRepo, kind, number }:
-  { ownerRepo: string; kind: number; number: bigint }) {
-  const n = Number(number);
-  const q = useQuery({
-    queryKey: ["gh", kind === 1 ? "pull" : "issue", ownerRepo, n],
-    queryFn: (): Promise<GhIssue | GhPull> =>
-      (kind === 1 ? getPull(ownerRepo, n) : getIssue(ownerRepo, n)),
-    staleTime: 5 * 60_000, retry: false,
-  });
+function WorkRef({ meta }: { meta: BountyMeta }) {
+  const q = useGithubItem(meta);
   return (
     <div className="min-w-0">
-      <span className="font-mono text-xs text-gray">{ownerRepo}{kind === 1 ? "/pull/" : "#"}{n}</span>
+      <span className="font-mono text-xs text-gray">{githubItemLabel(meta)}</span>
       {q.data?.title && <p className="truncate text-sm text-ink">{q.data.title}</p>}
     </div>
   );
 }
 
-function FundedBounties() {
+type Row = { id: bigint; bounty: Bounty };
+
+/** Bounties matching `pick`, rendered as linked rows; `aside` is the right-hand column. */
+function BountyList({ pick, empty, skeleton, aside, extra }: {
+  pick: (b: Bounty, me: string) => boolean;
+  empty: ReactNode;
+  skeleton: string;
+  aside: (row: Row) => ReactNode;
+  extra?: (row: Row) => ReactNode;
+}) {
   const { address } = useAccount();
   const index = useIndex();
-  const ids = index.data?.bountyIds;
-  const bounties = useBounties(ids);
+  const bounties = useBounties(index.data?.bountyIds);
   if (!address) return null;
-  if (index.isPending || bounties.isPending) return <Skeleton className="h-40" />;
-  const mine = (bounties.data ?? []).filter(
-    (b) => b.bounty && b.bounty.funder.toLowerCase() === address.toLowerCase());
-  if (mine.length === 0) {
-    return <p className="text-sm text-gray">You haven't funded a bounty yet. <Link className="text-deep underline" to="/create">Fund one.</Link></p>;
+  if (index.isPending || bounties.isPending) return <Skeleton className={skeleton} />;
+  const mine: Row[] = [];
+  for (const { id, bounty } of bounties.data ?? []) {
+    if (bounty && pick(bounty, address)) mine.push({ id, bounty });
   }
+  if (mine.length === 0) return <p className="text-sm text-gray">{empty}</p>;
   return (
     <ul className="space-y-3">
-      {mine.map(({ id, bounty }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
-              <StatusChip state={bounty.state} />
-              {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
-            </Link>
-            <div className="flex items-center gap-4 text-sm text-gray">
-              <Qor wei={bounty.amount} />
-              <span className="font-mono text-xs">deadline <Countdown to={bounty.deadline} /></span>
+      {mine.map((row) => {
+        const meta = index.data?.metaById.get(row.id);
+        return (
+          <li key={row.id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link to={`/bounty/${row.id}`} className="group flex min-w-0 items-center gap-3">
+                <span className="font-mono text-deep group-hover:underline">#{row.id.toString()}</span>
+                <StatusChip state={row.bounty.state} />
+                {meta && <WorkRef meta={meta} />}
+              </Link>
+              {aside(row)}
             </div>
-          </div>
-          <Suspense fallback={null}>
-            <TxActions id={id} bounty={bounty} />
-          </Suspense>
-        </li>
-      ))}
+            {extra?.(row)}
+          </li>
+        );
+      })}
     </ul>
+  );
+}
+
+function FundedBounties() {
+  return (
+    <BountyList skeleton="h-40"
+      pick={(b, me) => sameAddress(b.funder, me)}
+      empty={<>You haven't funded a bounty yet. <Link className="text-deep underline" to="/create">Fund one.</Link></>}
+      aside={({ bounty }) => (
+        <div className="flex items-center gap-4 text-sm text-gray">
+          <Qor wei={bounty.amount} />
+          <span className="font-mono text-xs">deadline <Countdown to={bounty.deadline} /></span>
+        </div>
+      )}
+      extra={({ id, bounty }) => (
+        <Suspense fallback={null}>
+          <TxActions id={id} bounty={bounty} />
+        </Suspense>
+      )} />
   );
 }
 
 function MyClaims() {
-  const { address } = useAccount();
-  const index = useIndex();
-  const ids = index.data?.bountyIds;
-  const bounties = useBounties(ids);
-  if (!address) return null;
-  if (index.isPending || bounties.isPending) return <Skeleton className="h-28" />;
-  const me = address.toLowerCase();
-  // claim history for this account from Claimed events + current state
-  const mine = (bounties.data ?? [])
-    .filter((b) => b.bounty && b.bounty.payee.toLowerCase() === me)
-    .map((b) => ({
-      ...b,
-      active: b.bounty!.state === 1 && b.bounty!.claimExpiresAt > BigInt(Math.floor(Date.now() / 1000)),
-    }));
-  if (mine.length === 0) {
-    return <p className="text-sm text-gray">No claims yet — claim a bounty from its page.</p>;
-  }
   return (
-    <ul className="space-y-3">
-      {mine.map(({ id, bounty, active }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
-              <StatusChip state={bounty.state} />
-              {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
-            </Link>
-            <div className="text-right font-mono text-xs text-gray">
-              <div>{active ? "expires" : "claim"} <Countdown to={bounty.claimExpiresAt} /></div>
-              <div className="text-gray">round {bounty.claimRound.toString()}</div>
-            </div>
+    <BountyList skeleton="h-28"
+      pick={(b, me) => sameAddress(b.payee, me)}
+      empty="No claims yet — claim a bounty from its page."
+      aside={({ bounty }) => {
+        const active = bounty.state === 1 && bounty.claimExpiresAt > nowSec();
+        return (
+          <div className="text-right font-mono text-xs text-gray">
+            <div>{active ? "expires" : "claim"} <Countdown to={bounty.claimExpiresAt} /></div>
+            <div className="text-gray">round {bounty.claimRound.toString()}</div>
           </div>
-        </li>
-      ))}
-    </ul>
+        );
+      }} />
   );
 }
 
+const verifierAction = (state: number) =>
+  state === 1 ? "review claim" : state === 3 ? "resolve dispute"
+  : state === 2 ? "verdict pending" : null;
+
 function VerifierBounties() {
-  const { address } = useAccount();
-  const index = useIndex();
-  const ids = index.data?.bountyIds;
-  const bounties = useBounties(ids);
-  if (!address) return null;
-  if (index.isPending || bounties.isPending) return <Skeleton className="h-28" />;
-  const me = address.toLowerCase();
-  const mine = (bounties.data ?? []).filter(
-    (b) => b.bounty && b.bounty.verifiers.some((v) => v.toLowerCase() === me));
-  if (mine.length === 0) {
-    return <p className="text-sm text-gray">You're not a verifier on any bounty.</p>;
-  }
-  const action = (state: number) =>
-    state === 1 ? "review claim" : state === 3 ? "resolve dispute"
-    : state === 2 ? "verdict pending" : null;
   return (
-    <ul className="space-y-3">
-      {mine.map(({ id, bounty }) => bounty && (
-        <li key={id.toString()} className="rounded-xl border border-ink/10 bg-white/70 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link to={`/bounty/${id}`} className="group flex min-w-0 items-center gap-3">
-              <span className="font-mono text-deep group-hover:underline">#{id.toString()}</span>
-              <StatusChip state={bounty.state} />
-              {index.data?.metaById.get(id) && <WorkRef {...index.data.metaById.get(id)!} />}
-            </Link>
-            <div className="flex items-center gap-4 text-sm">
-              {action(bounty.state)
-                ? <Link to={`/bounty/${id}/review`} className="text-deep underline underline-offset-4">{action(bounty.state)} →</Link>
-                : <span className="font-mono text-xs text-gray">nothing due</span>}
-            </div>
+    <BountyList skeleton="h-28"
+      pick={(b, me) => b.verifiers.some((v) => sameAddress(v, me))}
+      empty="You're not a verifier on any bounty."
+      aside={({ id, bounty }) => {
+        const action = verifierAction(bounty.state);
+        return (
+          <div className="flex items-center gap-4 text-sm">
+            {action
+              ? <Link to={`/bounty/${id}/review`} className="text-deep underline underline-offset-4">{action} →</Link>
+              : <span className="font-mono text-xs text-gray">nothing due</span>}
           </div>
-        </li>
-      ))}
-    </ul>
+        );
+      }} />
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <>
+      <SectionLabel className="mt-8">{title}</SectionLabel>
+      <div className="mt-3">{children}</div>
+    </>
   );
 }
 
@@ -204,14 +194,10 @@ export default function MeInner() {
     <div className="mx-auto max-w-3xl py-10">
       <h1 className="font-sans text-4xl font-semibold text-ink">My bounties</h1>
       <p className="mt-1 font-mono text-sm text-gray">{shortAddr(address)}</p>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">credits</h2>
-      <div className="mt-3"><Credits /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">funded</h2>
-      <div className="mt-3"><FundedBounties /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">my claims</h2>
-      <div className="mt-3"><MyClaims /></div>
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">verifier</h2>
-      <div className="mt-3"><VerifierBounties /></div>
+      <Section title="credits"><Credits /></Section>
+      <Section title="funded"><FundedBounties /></Section>
+      <Section title="my claims"><MyClaims /></Section>
+      <Section title="verifier"><VerifierBounties /></Section>
     </div>
   );
 }

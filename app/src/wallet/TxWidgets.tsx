@@ -57,7 +57,7 @@ export function TxStatusPanel({ state }: { state: TxState }) {
           </a>
         </p>
       )}
-      {state.phase === "failed" && <p role="alert" className="text-deep">{state.error}</p>}
+      {state.phase === "failed" && <p role="alert" className="text-orange">{state.error}</p>}
       {state.error && state.phase === "ready" && <p className="text-orange">{state.error}</p>}
     </div>
   );

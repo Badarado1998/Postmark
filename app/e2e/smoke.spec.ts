@@ -1,16 +1,14 @@
 import { test, expect } from "@playwright/test";
 
 // Read-only smoke against the real diana RPC.
-test("landing renders with live chain numbers", async ({ page }) => {
+test("landing renders its hero and calls to action", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /stamped for merged work/i }))
+  await expect(page.getByRole("heading", { name: /bounties that pay when the work is verified/i }))
     .toBeVisible();
-  // live strip shows real numbers from diana
-  await expect(page.getByText("bounties on diana")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("test QOR in escrow")).toBeVisible();
-  await expect(page.getByRole("link", { name: /explore bounties/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Fund a bounty" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse bounties" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

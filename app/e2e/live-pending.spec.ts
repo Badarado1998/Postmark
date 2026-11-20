@@ -3,6 +3,7 @@ import { encodeAbiParameters, keccak256 } from "viem";
 import { postmarkEscrowAbi } from "../src/chain/abi";
 import { nodePublic, nodeWallet, profileAddress,
   pairingCodeFor, verifierAddr, E2E_ESCROW as ESCROW } from "./testWallet";
+import { e2eLog } from "./util";
 
 // One-shot live fixture: funder creates, claimant claims, verifier0+verifier1
 // sign an INITIAL PAY verdict, claimant relays submitVerdict — stop at Pending.
@@ -68,7 +69,7 @@ test("live bounty driven to Pending for the 24h challenge", async () => {
   });
   const cr = await wait(createHash);
   if (cr.status !== "success") throw new Error(`createBounty reverted: ${createHash}`);
-  console.log(`[live] create bounty #${id} tx ${createHash}`);
+  e2eLog("live", `create bounty #${id} tx ${createHash}`);
 
   // ---- claim: ML-DSA-87 signature from the claimant's local signer ----
   const commentId = 987654321n;
@@ -82,7 +83,7 @@ test("live bounty driven to Pending for the 24h challenge", async () => {
     args: [id, idHash, claimSig], gas: 500_000n });
   if ((await wait(claimHash)).status !== "success")
     throw new Error(`claim reverted: ${claimHash}`);
-  console.log(`[live] claim tx ${claimHash}`);
+  e2eLog("live", `claim tx ${claimHash}`);
   b = await getBounty(id);
   expect(b.state).toBe(1);
 
@@ -102,19 +103,19 @@ test("live bounty driven to Pending for the 24h challenge", async () => {
     nonce: b.nonce.toString(), claimRound: b.claimRound.toString() };
   const sig0 = await sign(PORTS.v0, { kind: "verdict", verdict: sigFields });
   const sig1 = await sign(PORTS.v1, { kind: "verdict", verdict: sigFields });
-  console.log(`[live] verdictMessage ${msg.slice(0, 26)}… signed by verifier0+verifier1`);
+  e2eLog("live", `verdictMessage ${msg.slice(0, 26)}… signed by verifier0+verifier1`);
 
   const submitHash = await nodeWallet("claimant").writeContract({
     address: ESCROW, abi: postmarkEscrowAbi, functionName: "submitVerdict",
     args: [verdict, [0, 1], [sig0, sig1]], gas: 900_000n });
   if ((await wait(submitHash)).status !== "success")
     throw new Error(`submitVerdict reverted: ${submitHash}`);
-  console.log(`[live] submitVerdict tx ${submitHash}`);
+  e2eLog("live", `submitVerdict tx ${submitHash}`);
 
   b = await getBounty(id);
   expect(b.state).toBe(2); // Pending
-  console.log(`[live] PENDING bounty=${id} challengeEndsAt=${b.challengeEndsAt}` +
+  e2eLog("live", `PENDING bounty=${id} challengeEndsAt=${b.challengeEndsAt}` +
     ` (${new Date(Number(b.challengeEndsAt) * 1000).toISOString()})`);
-  console.log(`[live] summary id=${id} create=${createHash} claim=${claimHash}` +
+  e2eLog("live", `summary id=${id} create=${createHash} claim=${claimHash}` +
     ` verdict=${submitHash} ends=${b.challengeEndsAt}`);
 });

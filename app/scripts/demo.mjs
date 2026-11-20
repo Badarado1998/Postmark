@@ -4,7 +4,6 @@
 // profile's EIP-6963 test wallet plus a role badge, optionally opens scoped EVM
 // windows, and prints the signer commands to run in separate terminals.
 //   npm run demo -- [--github stub|live] [--no-windows] [--headless]
-import { readFileSync, existsSync } from "node:fs";
 import { execFileSync, spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { chromium } from "@playwright/test";

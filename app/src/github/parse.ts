@@ -24,3 +24,15 @@ export function parseGithubUrl(input: string): GithubRef | null {
     number,
   };
 }
+
+export interface WorkItem { ownerRepo: string; kind: number; number: number | bigint }
+
+/** github.com URL of an issue or pull request. */
+export function githubItemUrl(w: WorkItem): string {
+  return `https://github.com/${w.ownerRepo}/${w.kind === 1 ? "pull" : "issues"}/${w.number}`;
+}
+
+/** Short display form: `owner/repo#12` for issues, `owner/repo/pull/12` for PRs. */
+export function githubItemLabel(w: WorkItem): string {
+  return `${w.ownerRepo}${w.kind === 1 ? "/pull/" : "#"}${w.number}`;
+}

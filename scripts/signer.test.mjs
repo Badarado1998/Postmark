@@ -6,7 +6,7 @@ import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  createHandler, processSignRequest, SignRefusal, SignerConfigError,
+  createHandler, processSignRequest, SignerConfigError,
   loadProfile, buildClaimMessage, assertKeyLive, yesAllowed, claimCallData, verdictCallData,
 } from "./signer.mjs";
 import { generatePqcKeypair } from "@qorechain/sdk";

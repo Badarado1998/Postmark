@@ -2,9 +2,10 @@ import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
+import { Card, SectionLabel } from "../components/ui";
+import { sameAddress } from "../chain/address";
+import { nowSec } from "../chain/time";
 import type { Bounty } from "../chain/client";
-
-const now = () => BigInt(Math.floor(Date.now() / 1000));
 
 function ActionButton({ label, run, busy }:
   { label: string; run: () => void; busy: boolean }) {
@@ -20,9 +21,9 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
   const { address } = useAccount();
   const tx = useTxAction();
   const toast = useToast();
-  const busy = ["checking", "simulating", "wallet", "submitted", "confirming"].includes(tx.state.phase);
-  const t = now();
-  const isFunder = !!address && address.toLowerCase() === bounty.funder.toLowerCase();
+  const { busy } = tx;
+  const t = nowSec();
+  const isFunder = sameAddress(address, bounty.funder);
 
   const refund = isFunder && (bounty.state === 0 || bounty.state === 1) && t >= bounty.deadline;
   const finalize = bounty.state === 2 && bounty.challengeEndsAt > 0n && t >= bounty.challengeEndsAt;
@@ -34,8 +35,8 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
 
   if (!refund && !finalize && !reopen) return null;
   return (
-    <div className="rounded-xl border border-ink/10 bg-white/70 p-5">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">actions</h2>
+    <Card>
+      <SectionLabel>actions</SectionLabel>
       <div className="mt-3 flex flex-wrap gap-2">
         {refund && <ActionButton busy={busy} label="Refund expired bounty"
           run={() => void tx.run({ functionName: "refundExpired", args: [id], onConfirmed: done })} />}
@@ -45,7 +46,7 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
           run={() => void tx.run({ functionName: "reopen", args: [id], onConfirmed: done })} />}
       </div>
       <TxPanel state={tx.state} />
-    </div>
+    </Card>
   );
 }
 

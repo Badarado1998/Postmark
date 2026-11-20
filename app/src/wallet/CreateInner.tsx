@@ -1,143 +1,22 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
-import { parseUnits, formatUnits, isAddress } from "viem";
+import { formatUnits } from "viem";
 import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
-import { parseGithubUrl, type GithubRef } from "../github/parse";
-import { getIssue, getPull, GithubRateLimitError, type GhIssue, type GhPull } from "../github/client";
+import { parseGithubUrl } from "../github/parse";
+import { ItemPreview, VerifierInput } from "./createParts";
+import { validateForm, verifierFieldError } from "../formats/createForm";
 import { livePqcKey } from "../chain/pqc";
-import { qorToEvm } from "../chain/bech32";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
+import { Card } from "../components/ui";
 
 const CLAIM_PRESETS = [
   { label: "1 h", sec: 3600 }, { label: "6 h", sec: 21600 },
   { label: "24 h", sec: 86400 }, { label: "3 d", sec: 259200 },
   { label: "7 d", sec: 604800 },
 ];
-
-export function validateForm(f: {
-  amount: string; reward: string; bond: string;
-  deadlineLocal: string; claimTimeoutSec: number;
-  verifiers: string[]; funder?: string;
-}): { ok: true; parsed: {
-  amount: bigint; reward: bigint; bond: bigint;
-  deadline: bigint; claimTimeout: bigint; verifiers: `0x${string}`[];
-} } | { ok: false; error: string } {
-  let amount: bigint, reward: bigint, bond: bigint;
-  try {
-    amount = parseUnits(f.amount, 18);
-    reward = parseUnits(f.reward, 18);
-    bond = parseUnits(f.bond, 18);
-  } catch { return { ok: false, error: "Amounts must be decimal numbers (max 18 dp)." }; }
-  if (amount <= 0n) return { ok: false, error: "Amount must be above zero." };
-  if (reward <= 0n) return { ok: false, error: "Challenge reward must be above zero." };
-  if (bond <= 0n) return { ok: false, error: "Dispute bond must be above zero." };
-  const dl = Math.floor(new Date(f.deadlineLocal).getTime() / 1000);
-  if (!Number.isFinite(dl)) return { ok: false, error: "Pick a deadline." };
-  if (f.claimTimeoutSec < 3600 || f.claimTimeoutSec > 604800) {
-    return { ok: false, error: "Claim timeout must be between 1 hour and 7 days." };
-  }
-  const now = Math.floor(Date.now() / 1000);
-  if (dl <= now) return { ok: false, error: "Deadline is in the past." };
-  if (BigInt(dl - now) < BigInt(f.claimTimeoutSec) + 600n) {
-    return { ok: false, error:
-      "Deadline too close: a claim window plus a 10-minute buffer must fit before it." };
-  }
-  const vs: `0x${string}`[] = [];
-  for (const [i, raw] of f.verifiers.entries()) {
-    const err = verifierFieldError(raw, i, f.verifiers, f.funder);
-    if (err) return { ok: false, error: `Verifier ${i + 1}: ${err}` };
-    vs.push(normalizeVerifier(raw));
-  }
-  return { ok: true, parsed: {
-    amount, reward, bond, deadline: BigInt(dl),
-    claimTimeout: BigInt(f.claimTimeoutSec), verifiers: vs as [`0x${string}`, `0x${string}`, `0x${string}`] & `0x${string}`[] } };
-}
-
-function normalizeVerifier(raw: string): `0x${string}` {
-  const v = raw.trim();
-  try { return v.startsWith("0x") ? v as `0x${string}` : qorToEvm(v); }
-  catch { return "0x0000000000000000000000000000000000000000"; }
-}
-
-/** Per-field verifier error (undefined when the field is empty or valid). */
-export function verifierFieldError(
-  raw: string, index: number, all: string[], funder?: string,
-): string | undefined {
-  const v = raw.trim();
-  if (!v) return "Required — three verifier addresses.";
-  let evm: `0x${string}`;
-  try { evm = v.startsWith("0x") ? v as `0x${string}` : qorToEvm(v); }
-  catch { return "Not a valid 0x or qor1 address."; }
-  if (!isAddress(evm, { strict: false })) return "Invalid address.";
-  if (evm === "0x0000000000000000000000000000000000000000") return "Cannot be the zero address.";
-  if (funder && evm.toLowerCase() === funder.toLowerCase()) return "Equals the funder.";
-  if (all.some((o, j) => j !== index && o.trim()
-    && normalizeVerifier(o).toLowerCase() === evm.toLowerCase())) {
-    return "Duplicated — verifier addresses must differ.";
-  }
-  return undefined;
-}
-
-function VerifierInput({ i, value, onChange, live, checking, error }:
-  { i: number; value: string; onChange: (v: string) => void;
-    live: boolean | undefined; checking: boolean; error?: string | undefined }) {
-  const show = value.trim().length > 0;
-  return (
-    <div>
-      <div className="flex items-center gap-2">
-        <input value={value} onChange={(e) => onChange(e.target.value)}
-          aria-invalid={show && !!error}
-          aria-label={`Verifier ${i + 1}`}
-          placeholder={`Verifier ${i + 1} — 0x… or qor1…`}
-          className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep ${
-            show && error ? "border-salmon/60" : "border-ink/10"}`} />
-        {checking && <span className="shrink-0 text-xs text-gray">checking…</span>}
-        {live === true && <span className="shrink-0 rounded-full border border-leaf/60 px-2 py-0.5 text-[10px] text-deep">PQ live</span>}
-        {live === false && <span className="shrink-0 rounded-full border border-salmon px-2 py-0.5 text-[10px] text-orange">no key</span>}
-      </div>
-      {show && error && <p role="alert" className="mt-1 text-xs text-deep">{error}</p>}
-      {show && !error && live === false && (
-        <p role="alert" className="mt-1 text-xs text-deep">No live ML-DSA-87 key registered — ineligible as a verifier.</p>
-      )}
-    </div>
-  );
-}
-
-function ItemPreview({ gref }: { gref: GithubRef }) {
-  const q = useQuery({
-    queryKey: ["gh", gref.kind ? "pull" : "issue", gref.ownerRepo, gref.number],
-    queryFn: (): Promise<GhIssue | GhPull> =>
-      gref.kind === 1 ? getPull(gref.ownerRepo, gref.number) : getIssue(gref.ownerRepo, gref.number),
-    staleTime: 60_000, retry: false,
-  });
-  if (q.isPending) return <div className="mt-3 animate-pulse rounded-lg bg-ink/5 p-4 text-sm text-gray">Fetching from GitHub…</div>;
-  if (q.error) {
-    return <div role="alert" className="mt-3 rounded-lg border border-salmon/40 bg-salmon/5 p-4 text-sm text-ink">
-      {q.error instanceof GithubRateLimitError ? q.error.message : "Couldn't fetch that item — check the URL."}
-    </div>;
-  }
-  const d = q.data;
-  const warn = gref.kind === 0 && d.state !== "open"
-    ? "This issue is closed — contributors usually can't merge against it."
-    : gref.kind === 1 && (d as GhPull).merged
-      ? "This PR is already merged — a verdict may be signed immediately."
-      : gref.kind === 1 && d.state !== "open" ? "This PR is closed without merging." : null;
-  return (
-    <div className="mt-3 rounded-lg border border-ink/10 bg-white/70 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-ink">{d.title}</span>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${d.state === "open" ? "border-leaf/60 text-deep" : "border-gray/50 text-gray"}`}>{d.state}</span>
-        {gref.kind === 1 && (d as GhPull).merged && <span className="rounded-full border border-mustard px-2 py-0.5 text-[10px] text-orange">merged</span>}
-      </div>
-      <p className="mt-1 font-mono text-xs text-gray">{gref.ownerRepo}{gref.kind ? "/pull/" : "#"}{gref.number} · {d.user?.login}</p>
-      {warn && <p role="alert" className="mt-2 text-sm text-orange">{warn}</p>}
-    </div>
-  );
-}
 
 function CreateForm() {
   const { address, isConnected } = useAccount();
@@ -225,7 +104,7 @@ function CreateForm() {
           className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep" />
       </label>
       {urlTouched && !gref && (
-        <p role="alert" className="mt-2 text-sm text-deep">
+        <p role="alert" className="mt-2 text-sm text-orange">
           Not a github.com issue or PR URL.
         </p>
       )}
@@ -300,10 +179,10 @@ function CreateForm() {
       </fieldset>
 
       {!form.ok && (
-        <p role="alert" className="mt-4 text-sm text-deep">{form.error}</p>
+        <p role="alert" className="mt-4 text-sm text-orange">{form.error}</p>
       )}
 
-      <div className="mt-6 rounded-xl border border-ink/10 bg-white/70 p-5">
+      <Card className="mt-6">
         <div className="flex justify-between text-sm">
           <span className="text-gray">You send now</span>
           <span className="font-mono text-ink">{total} QOR <span className="text-[10px] uppercase text-deep">testnet</span></span>
@@ -312,7 +191,7 @@ function CreateForm() {
           amount + challenge reward. The bond is only required to dispute a verdict.
           If no valid claim is merged, you can refund after the deadline.
         </p>
-      </div>
+      </Card>
 
       <TxStatusPanel state={tx.state} />
 
@@ -320,8 +199,7 @@ function CreateForm() {
         <p className="mt-6 text-sm text-gray">Connect an EVM wallet to continue.</p>
       ) : (
         <button onClick={() => void submit()}
-          disabled={!form.ok || !gref || tx.state.phase === "checking" || tx.state.phase === "simulating"
-            || tx.state.phase === "wallet" || tx.state.phase === "submitted" || tx.state.phase === "confirming"}
+          disabled={!form.ok || !gref || tx.busy}
           className="mt-6 w-full rounded-lg bg-deep px-6 py-3 font-medium text-paper hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
           {tx.state.phase === "wallet" ? "Confirm in wallet…"
             : tx.state.phase === "submitted" || tx.state.phase === "confirming" ? "Confirming…"

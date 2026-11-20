@@ -33,9 +33,14 @@ const MESSAGES: Record<string, string> = {
   WrongValue: "The transaction value does not match the required amount.",
 };
 
+/** Message of an Error, or `fallback` (default: the stringified value). */
+export function errorMessage(err: unknown, fallback?: string): string {
+  return err instanceof Error ? err.message : fallback ?? String(err);
+}
+
 /** Decode a revert into a plain-English message; falls back to the raw text. */
 export function explainError(err: unknown): string {
-  const text = err instanceof Error ? err.message : String(err);
+  const text = errorMessage(err);
   const hex = (text.match(/0x[0-9a-fA-F]{8,}/)?.[0] ?? "") as Hex;
   if (hex) {
     try {

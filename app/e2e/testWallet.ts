@@ -1,12 +1,13 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Page } from "@playwright/test";
-const e2eDeployment = JSON.parse(readFileSync(new URL("../../deployments/diana-e2e.json", import.meta.url), "utf8")) as { address: string };
+import { postmarkEscrowAbi } from "../src/chain/abi.ts";
+import { e2eLog, readJsonFile, E2E_DEPLOYMENT } from "./util.ts";
 
-export const E2E_ESCROW = e2eDeployment.address as `0x${string}`;
+export const E2E_ESCROW = E2E_DEPLOYMENT.address as `0x${string}`;
 
 const PROFILES_DIR = `${homedir()}/.config/postmark/e2e`;
 
@@ -60,7 +61,7 @@ export async function installTestWallet(page: Page, profile = "funder") {
   await page.exposeBinding("__postmarkE2eRequest", async (_s, req: { method: string; params?: unknown[] }) => {
     const { method, params } = req;
     if (method !== "eth_chainId" && method !== "eth_accounts") {
-      console.log(`[testWallet] ${method}`, JSON.stringify(params));
+      e2eLog("testWallet", `${method}`, JSON.stringify(params));
     }
     if (method === "eth_accounts" || method === "eth_requestAccounts") return [address];
     if (method === "eth_chainId") return "0x2648";
@@ -82,7 +83,7 @@ export async function installTestWallet(page: Page, profile = "funder") {
       };
       const signed = await client.account.signTransaction(prep as never);
       const hash = await pub.request({ method: "eth_sendRawTransaction", params: [signed] });
-      console.log("[testWallet] sent", hash, "gas", tx.gas);
+      e2eLog("testWallet", "sent", hash, "gas", tx.gas);
       return hash;
     }
     // everything else (eth_sendTransaction, eth_call, gas, receipts…)
@@ -90,7 +91,7 @@ export async function installTestWallet(page: Page, profile = "funder") {
     try {
       return await client.request({ method, params } as never);
     } catch (e) {
-      console.log(`[testWallet] ${method} failed:`,
+      e2eLog("testWallet", `${method} failed:`,
         e instanceof Error ? e.message.slice(0, 500) : e);
       throw e;
     }
@@ -120,17 +121,15 @@ export async function installTestWallet(page: Page, profile = "funder") {
 }
 
 // ---- shared spec helpers ---------------------------------------------------
-import { postmarkEscrowAbi } from "../src/chain/abi.ts";
-import { existsSync } from "node:fs";
-
-const STATE_FILE = new URL("./.signer-state.json", import.meta.url).pathname;
+const STATE_URL = new URL("./.signer-state.json", import.meta.url);
+const STATE_FILE = STATE_URL.pathname;
 
 export function signerState() {
   if (!existsSync(STATE_FILE)) return null;
-  return JSON.parse(readFileSync(STATE_FILE, "utf8")) as {
+  return readJsonFile<{
     pairingCode: string; pid: number;
     signers?: Record<string, { pairingCode: string; pid: number; profile: string }>;
-  };
+  }>(STATE_URL);
 }
 
 /** pairing code for the signer on `port` (default: the claimant's). */
@@ -162,7 +161,7 @@ export async function openBountyOrCreate(): Promise<bigint> {
       functionName: "getBounty", args: [id] }) as
       { state: number; deadline: bigint; claimTimeout: bigint };
     if (b.state === 0 && b.deadline > now + b.claimTimeout + 600n) {
-      console.log("[e2e] reusing open bounty", id.toString());
+      e2eLog("e2e", "reusing open bounty", id.toString());
       return id;
     }
   }
@@ -175,7 +174,7 @@ export async function openBountyOrCreate(): Promise<bigint> {
   const [amount, reward, bond] = useFunder
     ? [200_000_000_000_000_000n, 50_000_000_000_000_000n, 50_000_000_000_000_000n]
     : [1_000n, 1_000n, 1_000n];
-  console.log(`[e2e] creating bounty via ${useFunder ? "funder" : "deployer (dust)"}`);
+  e2eLog("e2e", `creating bounty via ${useFunder ? "funder" : "deployer (dust)"}`);
   const hash = await wallet.writeContract({
     address: E2E_ESCROW, abi: postmarkEscrowAbi, functionName: "createBounty",
     args: [amount, "postmark-e2e/sandbox", 0, 1n,
@@ -186,7 +185,7 @@ export async function openBountyOrCreate(): Promise<bigint> {
   });
   const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
   if (receipt.status !== "success") throw new Error(`createBounty failed: ${hash}`);
-  console.log("[e2e] spec bounty", id.toString(), "tx", hash);
+  e2eLog("e2e", "spec bounty", id.toString(), "tx", hash);
   return id;
 }
 
