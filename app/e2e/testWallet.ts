@@ -120,7 +120,7 @@ export async function installTestWallet(page: Page, profile = "funder") {
 }
 
 // ---- shared spec helpers ---------------------------------------------------
-import { postmarkEscrowAbi } from "../src/chain/abi";
+import { postmarkEscrowAbi } from "../src/chain/abi.ts";
 import { existsSync } from "node:fs";
 
 const STATE_FILE = new URL("./.signer-state.json", import.meta.url).pathname;

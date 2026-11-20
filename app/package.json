@@ -12,7 +12,8 @@
     "test:chain": "vitest run --config vitest.chain.config.ts",
     "e2e": "VITE_DEPLOYMENT=e2e vite build && playwright test",
     "export-abi": "node scripts/export-abi.mjs",
-    "build:e2e": "VITE_DEPLOYMENT=e2e vite build"
+    "build:e2e": "VITE_DEPLOYMENT=e2e vite build",
+    "demo": "node scripts/demo.mjs"
   },
   "dependencies": {
     "@fontsource/fraunces": "5.3.0",
