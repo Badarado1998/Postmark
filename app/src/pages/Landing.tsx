@@ -209,7 +209,7 @@ export default function Landing() {
             A leaked key can't release a bounty.
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-paper/70">
-            An ECDSA key alone can't claim, release, or withdraw. Claims and
+            An ECDSA key alone can't claim a bounty, release it, or withdraw a payout. Claims and
             verdicts carry ML-DSA-87 signatures verified by chain precompiles,
             and payee withdrawals need a live registered PQ key.
           </p>
