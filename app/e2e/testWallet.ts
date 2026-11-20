@@ -199,9 +199,31 @@ export async function connectInjected(page: Page) {
   }
 }
 
-/** Github API fixtures for postmark-e2e/sandbox#1 (+ pull/2 + timeline). */
+/** Synthesized comments for the demo: every bounty id gets the exact claim
+ * line from e2e-claimant and the exact dispute line from e2e-disputer, with
+ * stable distinct comment ids, so every scan works in stub mode. */
+export function synthComments(escrow: string, claimant: string, upToId: bigint) {
+  const out: { id: number; user: { login: string }; body: string; created_at: string }[] = [];
+  const t0 = Math.floor(Date.now() / 1000) - 3600;
+  for (let id = 1n; id <= upToId; id++) {
+    out.push({ id: 900_000_000 + Number(id) * 2, user: { login: "e2e-claimant" },
+      body: `postmark-claim v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${id} claimant=${claimant.toLowerCase()}`,
+      created_at: new Date((t0 + Number(id)) * 1000).toISOString() });
+    out.push({ id: 900_000_001 + Number(id) * 2, user: { login: "e2e-disputer" },
+      body: `postmark-dispute v1 chain=9800 escrow=${escrow.toLowerCase()} bounty=${id}`,
+      created_at: new Date((t0 + Number(id)) * 1000 + 500).toISOString() });
+  }
+  return out;
+}
+
+/** Github API fixtures for postmark-e2e/sandbox#1 (+ pull/2 + timeline).
+ * `mergedAt` pins the default PR's merged_at (same PAY evidence in every
+ * window). `synthesize` replaces the comments fixture with per-bounty claim +
+ * dispute lines, paginated 100/page like the real API. */
 export async function mockGithub(page: Page, opts: {
   comments?: unknown[]; pull?: unknown; timeline?: unknown[];
+  mergedAt?: string;
+  synthesize?: { claimant: string; upToId: bigint };
 } = {}) {
   const issue = {
     number: 1, title: "Postmark sandbox: wire the funder flow",
@@ -210,10 +232,15 @@ export async function mockGithub(page: Page, opts: {
   };
   const pull = opts.pull ?? {
     number: 2, title: "wire the funder flow", state: "closed", merged: true,
-    merged_at: new Date().toISOString(), merge_commit_sha: "f".repeat(40),
+    merged_at: opts.mergedAt ?? new Date().toISOString(),
+    merge_commit_sha: "f".repeat(40),
     user: { login: "e2e-claimant" },
     html_url: "https://github.com/postmark-e2e/sandbox/pull/2",
   };
+  const allComments = opts.synthesize
+    ? [...synthComments(E2E_ESCROW, opts.synthesize.claimant, opts.synthesize.upToId),
+       ...(opts.comments ?? [])]
+    : (opts.comments ?? []);
   const timeline = opts.timeline ?? [{
     event: "cross-referenced",
     source: { issue: { number: 2, pull_request: {
@@ -222,8 +249,13 @@ export async function mockGithub(page: Page, opts: {
   await page.route("https://api.github.com/**", (route) => {
     const u = route.request().url();
     if (u.includes("/issues/1/comments")) {
-      return route.fulfill({ status: 200, contentType: "application/json",
-        body: JSON.stringify(opts.comments ?? []) });
+      // paginate 100/page like the real API (Link header + short last page)
+      const page = Math.max(1, Number(new URL(u).searchParams.get("page") ?? "1"));
+      const slice = allComments.slice((page - 1) * 100, page * 100) as unknown[];
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if ((allComments as unknown[]).length > page * 100)
+        headers.link = `<${u.replace(/page=\d+/, `page=${page + 1}`)}>; rel="next"`;
+      return route.fulfill({ status: 200, headers, body: JSON.stringify(slice) });
     }
     if (u.includes("/issues/1/timeline")) {
       return route.fulfill({ status: 200, contentType: "application/json",
