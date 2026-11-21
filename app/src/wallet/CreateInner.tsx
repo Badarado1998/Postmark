@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { parseGithubUrl, githubItemLabel } from "../github/parse";
@@ -10,6 +10,7 @@ import { livePqcKey } from "../chain/pqc";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
+import { PageBody, PageHeader } from "../components/Page";
 import { Card, Qor, SectionLabel, StatusChip } from "../components/ui";
 import { MS_PER_MINUTE, SECONDS_PER_DAY, SECONDS_PER_HOUR } from "../chain/time";
 
@@ -79,12 +80,18 @@ function ClaimTimeoutPicker({ preset, onPreset, custom, onCustom }: {
   );
 }
 
+/** Amount + challenge reward, from the raw inputs, independent of the rest of the form. */
+function lockedAmount(amount: string, reward: string): bigint | null {
+  try { return parseUnits(amount, 18) + parseUnits(reward, 18); } catch { return null; }
+}
+
 function CreateForm() {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
   const toast = useToast();
   const tx = useTxAction();
   const [url, setUrl] = useState("");
+  const [touched, setTouched] = useState(false);
   const gref = useMemo(() => (url.trim() ? parseGithubUrl(url) : null), [url]);
   const urlTouched = url.trim().length > 0;
   const [amount, setAmount] = useState("0.5");
@@ -131,27 +138,27 @@ function CreateForm() {
     });
   };
 
-  const total = form.ok ? formatUnits(form.parsed.amount + form.parsed.reward, 18) : "—";
+  const lockedWei = lockedAmount(amount, reward);
+  const total = lockedWei === null ? "—" : formatUnits(lockedWei, 18);
 
   const input = "mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-2 focus:ring-deep";
   const label = "font-mono text-[10px] uppercase tracking-[0.18em] text-gray";
   const deadlineDate = new Date(deadlineLocal);
   const deadlineValid = Number.isFinite(deadlineDate.getTime());
-  const lockedWei = form.ok ? form.parsed.amount + form.parsed.reward : 0n;
 
   return (
-    <div className="-mx-4 pb-4">
-      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
-        <div className="mx-auto max-w-6xl">
+    <div>
+      <PageHeader>
+        <div>
           <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">Fund an issue</h1>
           <p className="mt-2 text-sm text-charcoal">
             Escrow test QOR against a real GitHub item on diana. No monetary value.
           </p>
         </div>
-      </header>
+      </PageHeader>
 
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 pt-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0 space-y-6">
+      <PageBody className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6" onChangeCapture={() => setTouched(true)} onBlurCapture={() => setTouched(true)}>
           <Card>
             <SectionLabel>1 · work item</SectionLabel>
             <label className="mt-3 block text-sm">
@@ -220,7 +227,7 @@ function CreateForm() {
             </fieldset>
           </Card>
 
-          {!form.ok && (
+          {!form.ok && touched && (
             <p role="alert" className="text-sm text-orange">{form.error}</p>
           )}
         </div>
@@ -276,13 +283,13 @@ function CreateForm() {
               </div>
               <p className="mt-3 truncate font-mono text-sm">{gref ? githubItemLabel(gref) : "owner/repo#number"}</p>
               <div className="mt-3 flex items-end justify-between text-sm">
-                <Qor wei={lockedWei} className="font-mono text-base font-semibold" />
+                <Qor wei={lockedWei ?? 0n} className="font-mono text-base font-semibold" />
                 <span className="font-mono text-xs text-gray">{deadlineValid ? deadlineDate.toLocaleDateString() : "no deadline"}</span>
               </div>
             </div>
           </div>
         </aside>
-      </div>
+      </PageBody>
     </div>
   );
 }

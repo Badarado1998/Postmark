@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { creditOf, type Bounty } from "../chain/client";
 import { githubItemLabel } from "../github/parse";
 import { useIndex, useBounties, useGithubItem, usePqcStatus } from "../hooks/queries";
+import { PageBody, PageHeader } from "../components/Page";
 import { StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
@@ -200,18 +201,16 @@ export default function MeInner() {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("funded");
   if (!isConnected || !address) {
     return (
-      <div className="-mx-4 pb-4">
-        <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
-          </div>
-        </header>
-        <div className="mx-auto max-w-4xl px-4 pt-6">
+      <div>
+        <PageHeader>
+          <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
+        </PageHeader>
+        <PageBody>
           <div className="rounded-2xl border border-dashed border-ink/20 bg-white p-10 text-center">
             <p className="text-lg font-medium text-ink">Connect an EVM wallet to see your funded bounties and credits.</p>
             <p className="mt-2 text-sm text-gray">Your balance, claims and verifier duties appear here once a wallet is connected.</p>
           </div>
-        </div>
+        </PageBody>
       </div>
     );
   }
@@ -224,14 +223,12 @@ function Dashboard({ address, tab, setTab }: {
   const counts = useMyCounts(address);
   const tiles: [string, number][] = [["funded", counts.funded], ["claims", counts.claims], ["verifying", counts.verifying]];
   return (
-    <div className="-mx-4 pb-4">
-      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
-          <p className="mt-1 font-mono text-sm text-charcoal">{shortAddr(address)}</p>
-        </div>
-      </header>
-      <div className="mx-auto max-w-4xl space-y-6 px-4 pt-6">
+    <div>
+      <PageHeader>
+        <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
+        <p className="mt-1 font-mono text-sm text-charcoal">{shortAddr(address)}</p>
+      </PageHeader>
+      <PageBody className="space-y-6">
         <Credits />
         <div className="grid grid-cols-3 gap-3">
           {tiles.map(([label, n]) => (
@@ -258,7 +255,7 @@ function Dashboard({ address, tab, setTab }: {
             </div>
           ))}
         </div>
-      </div>
+      </PageBody>
     </div>
   );
 }

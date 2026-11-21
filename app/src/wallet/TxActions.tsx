@@ -17,7 +17,7 @@ function ActionButton({ label, run, busy }:
   );
 }
 
-function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
+function ActionsInner({ id, bounty, connected }: { id: bigint; bounty: Bounty; connected: boolean }) {
   const { address } = useAccount();
   const tx = useTxAction();
   const toast = useToast();
@@ -34,6 +34,17 @@ function ActionsInner({ id, bounty }: { id: bigint; bounty: Bounty }) {
   };
 
   if (!refund && !finalize && !reopen) return null;
+  if (!connected) {
+    return (
+      <Card tone="accent">
+        <SectionLabel tone="accent">actions</SectionLabel>
+        <p className="mt-3 text-sm text-charcoal">
+          {finalize ? "Challenge window closed — ready to finalize. Connect a wallet to finalize this payout; anyone can."
+            : "This claim has expired. Connect a wallet to reopen the bounty; anyone can."}
+        </p>
+      </Card>
+    );
+  }
   return (
     <Card>
       <SectionLabel>actions</SectionLabel>
@@ -58,6 +69,5 @@ export default function TxActions(props: { id: bigint; bounty: Bounty }) {
 
 function Gate(props: { id: bigint; bounty: Bounty }) {
   const { isConnected } = useAccount();
-  if (!isConnected) return null;
-  return <ActionsInner {...props} />;
+  return <ActionsInner {...props} connected={isConnected} />;
 }

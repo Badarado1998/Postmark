@@ -60,7 +60,7 @@ export function Shell({ children }: { children?: ReactNode }) {
         Live on QoreChain diana testnet · test QOR, no monetary value
       </div>
       <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
+        <div data-container="nav" className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2">
               <Logo size={28} />
@@ -90,8 +90,7 @@ export function Shell({ children }: { children?: ReactNode }) {
           </nav>
         )}
       </header>
-      <main className={onLanding ? "w-full flex-1"
-        : "mx-auto w-full max-w-6xl flex-1 px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"}>
+      <main className="w-full flex-1 pb-[env(safe-area-inset-bottom)]">
         {children ?? <Outlet />}
       </main>
       {!onLanding && <AppFooter />}
@@ -107,7 +106,7 @@ function AppFooter() {
   return (
     <footer className="on-dark mt-12 bg-ink text-paper">
       <PixelBand className="h-2" stripeHeight={6} />
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:justify-between">
+      <div data-container="footer" className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:justify-between">
         <div className="max-w-xs">
           <div className="flex items-center gap-2">
             <Logo size={22} />

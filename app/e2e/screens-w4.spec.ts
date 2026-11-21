@@ -2,10 +2,9 @@ import { test, expect } from "@playwright/test";
 import { encodeAbiParameters, keccak256 } from "viem";
 import { postmarkEscrowAbi } from "../src/chain/abi";
 import {
-  installTestWallet, mockGithub, nodePublic, nodeWallet, profileAddress,
+  installTestWallet, mockGithub, nodePublic, profileAddress,
   connectInjected, pairingCodeFor, E2E_ESCROW as ESCROW,
 } from "./testWallet";
-import { e2eLog } from "./util";
 
 const OUT = "../notes/screens/w4";
 const PORTS = { v0: 47322, v1: 47323, v2: 47324 };
@@ -20,8 +19,6 @@ const REPO = "postmark-e2e/sandbox";
 
 const claimLine = (bountyId: bigint, claimant: string) =>
   `postmark-claim v1 chain=9800 escrow=${ESCROW.toLowerCase()} bounty=${bountyId} claimant=${claimant.toLowerCase()}`;
-const disputeLine = (bountyId: bigint) =>
-  `postmark-dispute v1 chain=9800 escrow=${ESCROW.toLowerCase()} bounty=${bountyId}`;
 
 const shot = (page: import("@playwright/test").Page, name: string) =>
   page.screenshot({ path: `${OUT}/${name}-${test.info().project.name}.png`, fullPage: true });
@@ -118,44 +115,17 @@ test("w4 review and dispute views", async ({ page }) => {
   await shot(page, "review-merge");
 });
 
-test("w4 pending view and dispute form", async ({ page, context }) => {
-  test.skip(test.info().project.name !== "desktop", "chain tx — desktop only");
-  test.setTimeout(300_000);
+test("w4 pending view shows the finalize-ready state once the window closed", async ({ page }) => {
   const st = (await nodePublic().readContract({ address: ESCROW, abi: postmarkEscrowAbi,
-    functionName: "getBounty", args: [CLAIMED_BOUNTY] })) as { state: number };
-  if (st.state === 1) { // still Claimed — push it Pending once
-    const bundle = await buildSignedBundle(CLAIMED_BOUNTY);
-    const b = await getBounty(CLAIMED_BOUNTY);
-    const verdict = {
-      bountyId: CLAIMED_BOUNTY, phase: 0, outcome: 0, payee: b.payee,
-      mergedAt: MERGED_AT_SEC, evidenceHash: payEvidenceHash(),
-      nonce: b.nonce, claimRound: b.claimRound,
-    };
-    const hash = await nodeWallet("../deployer").writeContract({
-      address: ESCROW, abi: postmarkEscrowAbi, functionName: "submitVerdict",
-      args: [verdict, [0, 1], [bundle.signatures["0"]!, bundle.signatures["1"]!]],
-      gas: 900_000n,
-    });
-    const r = await nodePublic().waitForTransactionReceipt({ hash, timeout: 120_000 });
-    if (r.status !== "success") throw new Error(`submitVerdict reverted: ${hash}`);
-    e2eLog("e2e", "pending fixture tx", hash);
-  }
-  if (st.state !== 1 && st.state !== 2) test.skip(true, `bounty 13 in state ${st.state}`);
-
-  await installTestWallet(page, "disputer");
-  await mockGithub(page, {
-    comments: [{ id: 555000222, user: { login: "e2e-disputer" },
-      body: disputeLine(CLAIMED_BOUNTY), created_at: new Date().toISOString() }],
-  });
+    functionName: "getBounty", args: [CLAIMED_BOUNTY] })) as { state: number; challengeEndsAt: bigint };
+  expect(st.state, "e2e bounty 13 must be Pending").toBe(2);
   await page.goto(`/bounty/${CLAIMED_BOUNTY}`);
-  await connectInjected(page);
   await expect(page.getByText(/verdict pending/i)).toBeVisible({ timeout: 60_000 });
+  const closed = st.challengeEndsAt <= BigInt(Math.floor(Date.now() / 1000));
+  await expect(page.getByText(closed
+    ? /Challenge window closed — ready to finalize/
+    : /dispute this verdict/i).first()).toBeVisible();
   await shot(page, "pending");
-  await page.getByPlaceholder(/your github login/i).fill("e2e-disputer");
-  await page.getByRole("button", { name: /find my comment/i }).click();
-  await expect(page.getByText(/evidence 0x/i)).toBeVisible({ timeout: 60_000 });
-  await shot(page, "dispute-form");
-  await context.close();
 });
 
 test("w4 frozen, ruling and verifier dashboard", async ({ page, context }) => {

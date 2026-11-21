@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useBountyRoute } from "../hooks/useBountyRoute";
 import { StatusChip, Skeleton, ErrorState, EmptyState } from "../components/ui";
 import { explainError } from "../chain/errors";
+import { PageBody, PageHeader } from "../components/Page";
 import { githubItemLabel } from "../github/parse";
 
 const STEPS = ["Identity", "PR checks", "Verdict", "Sign", "Merge & submit"];
@@ -17,9 +18,9 @@ export default function Review() {
   }
 
   return (
-    <div className="-mx-4 pb-4">
-      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-8">
-        <div className="mx-auto max-w-4xl">
+    <div>
+      <PageHeader>
+        <div>
           <Link to={`/bounty/${id}`} className="text-sm text-charcoal hover:text-ink">← bounty</Link>
           {bounty.data && meta && !notFound && (
             <>
@@ -41,8 +42,8 @@ export default function Review() {
             </>
           )}
         </div>
-      </header>
-      <div className="mx-auto max-w-4xl px-4 pt-6">
+      </PageHeader>
+      <PageBody>
         {loading && <Skeleton className="h-64" />}
         {bounty.error && <ErrorState message={explainError(bounty.error)} onRetry={() => void bounty.refetch()} />}
         {notFound && !bounty.isPending && (
@@ -52,7 +53,7 @@ export default function Review() {
             <ReviewPanel id={id} bounty={bounty.data} meta={meta} />
           </Suspense>
         )}
-      </div>
+      </PageBody>
     </div>
   );
 }

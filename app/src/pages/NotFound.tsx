@@ -3,7 +3,7 @@ import { PixelBand } from "../components/PixelBand";
 
 export default function NotFound() {
   return (
-    <div className="-mx-4 pt-16 text-center">
+    <div className="pt-16 text-center">
       <p className="font-mono text-xs uppercase tracking-[0.3em] text-deep">404</p>
       <h1 className="mt-4 font-sans text-4xl font-semibold tracking-tight text-ink">This letter never arrived.</h1>
       <p className="mx-auto mt-3 max-w-md text-charcoal">That address isn't stamped on diana — check the link or head back.</p>

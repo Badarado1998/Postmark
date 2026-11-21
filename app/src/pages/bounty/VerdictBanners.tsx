@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { AddressLink, Card, Countdown, Qor, SectionLabel } from "../../components/ui";
 import { isZeroAddress } from "../../chain/address";
+import { nowSec } from "../../chain/time";
 import type { Bounty } from "../../chain/client";
 import type { BountyMeta } from "../../chain/indexer";
 
@@ -9,6 +10,7 @@ const DisputePanel = lazy(() => import("../../wallet/DisputePanel"));
 const outcomeName = (b: Bounty) => (b.initialOutcome === 0 ? "PAY" : "REFUND");
 
 export function PendingVerdict({ id, bounty: b, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta | undefined }) {
+  const closed = nowSec() >= b.challengeEndsAt;
   return (
     <Card>
       <SectionLabel>verdict pending</SectionLabel>
@@ -22,6 +24,11 @@ export function PendingVerdict({ id, bounty: b, meta }: { id: bigint; bounty: Bo
       <p className="mt-1 font-mono text-xs text-gray">
         challenge window <Countdown to={b.challengeEndsAt} />
       </p>
+      {closed && (
+        <p role="status" className="mt-4 rounded-lg bg-lime px-4 py-3 text-sm font-semibold text-ink">
+          Challenge window closed — ready to finalize. Anyone can finalize this payout.
+        </p>
+      )}
       <Suspense fallback={null}>
         {meta && (
           <div className="mt-4">

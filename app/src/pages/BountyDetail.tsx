@@ -4,6 +4,7 @@ import { useBountyRoute } from "../hooks/useBountyRoute";
 import { useGithubItem } from "../hooks/queries";
 import { StatusChip, Skeleton, ErrorState, EmptyState, Qor } from "../components/ui";
 import { explainError } from "../chain/errors";
+import { PageBody, PageHeader } from "../components/Page";
 import { githubItemLabel } from "../github/parse";
 import { GithubCard } from "./bounty/GithubCard";
 import { BountyFacts } from "./bounty/BountyFacts";
@@ -35,8 +36,8 @@ function WorkTitle({ meta }: { meta: BountyMeta | undefined }) {
 
 function Header({ id, bounty: b, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta | undefined }) {
   return (
-    <header className="border-b border-ink/10 bg-leaf/25 px-4 py-8">
-      <div className="mx-auto max-w-6xl">
+    <PageHeader>
+      <div>
         <Link to="/explore" className="text-sm text-charcoal hover:text-ink">← all bounties</Link>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -55,7 +56,7 @@ function Header({ id, bounty: b, meta }: { id: bigint; bounty: Bounty; meta: Bou
         </div>
         <div className="mt-6"><Lifecycle state={b.state} /></div>
       </div>
-    </header>
+    </PageHeader>
   );
 }
 
@@ -70,9 +71,9 @@ export default function BountyDetail() {
   const showDetail = !!b && !notFound;
 
   return (
-    <div className="-mx-4 pb-4">
+    <div>
       {showDetail && <Header id={id} bounty={b} meta={meta} />}
-      <div className="mx-auto max-w-6xl px-4 pt-6">
+      <PageBody>
         {!showDetail && <Link to="/explore" className="text-sm text-gray hover:text-ink">← all bounties</Link>}
         {loading && <Skeleton className="mt-6 h-64" />}
         {bounty.error && <div className="mt-6"><ErrorState message={explainError(bounty.error)} onRetry={() => void bounty.refetch()} /></div>}
@@ -95,7 +96,7 @@ export default function BountyDetail() {
               {b.state === STATE.Claimed && (
                 <Suspense fallback={null}><ClaimedNote bounty={b} /></Suspense>
               )}
-              {(b.state === STATE.Claimed || b.state === STATE.Pending || b.state === STATE.Disputed) && (
+              {(b.state === STATE.Claimed || b.state === STATE.Disputed) && (
                 <Link to={`/bounty/${id}/review`}
                   className="block rounded-xl border border-ink/10 bg-mustard/40 p-4 text-sm font-medium text-ink hover:bg-mustard/60">
                   {b.state === STATE.Disputed
@@ -124,7 +125,7 @@ export default function BountyDetail() {
             </aside>
           </div>
         )}
-      </div>
+      </PageBody>
     </div>
   );
 }

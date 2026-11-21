@@ -1,13 +1,16 @@
+import { PageBody, PageHeader } from "../components/Page";
+
 export default function Signer() {
   return (
-    <div className="-mx-4 pb-4">
-    <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
-      <div className="mx-auto max-w-3xl">
+    <div>
+    <PageHeader>
+      <div>
         <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">The local signer</h1>
         <p className="mt-2 text-sm text-charcoal">Post-quantum keys stay on your machine.</p>
       </div>
-    </header>
-    <div className="mx-auto max-w-3xl px-4 pt-2">
+    </PageHeader>
+    <PageBody className="max-w-6xl">
+    <div className="max-w-3xl">
       <p className="mt-6 leading-relaxed text-charcoal">
         Claims and verdicts need an ML-DSA-87 signature over the exact message the chain will
         check. Your post-quantum secret never leaves your machine: a small local process holds
@@ -53,6 +56,7 @@ export default function Signer() {
       </ul>
       <p className="mt-8 text-xs text-gray">Signatures are ML-DSA-87 over diana testnet messages — test QOR, no monetary value.</p>
     </div>
+    </PageBody>
     </div>
   );
 }

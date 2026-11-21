@@ -118,6 +118,8 @@ describe("CreateInner", () => {
     renderApp(<CreateInner />);
     expect(screen.getByRole("heading", { name: "Fund an issue" })).toBeInTheDocument();
     expect(screen.getByText(/Connect an EVM wallet to continue/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.blur(screen.getByPlaceholderText("Verifier 1 — 0x… or qor1…"));
     expect(screen.getByRole("alert")).toHaveTextContent(/Verifier 1: Required/);
   });
 
@@ -127,6 +129,15 @@ describe("CreateInner", () => {
     expect(screen.getByText("Not a github.com issue or PR URL.")).toBeInTheDocument();
     fill("https://github.com/owner/repo/issues/42", "https://github.com/postmark-e2e/sandbox/issues/1");
     expect(screen.getByText("Wire the funder flow")).toBeInTheDocument();
+  });
+
+  it("shows the amount to lock and the preview from the form values without a wallet", () => {
+    m.address = undefined;
+    renderApp(<CreateInner />);
+    expect(screen.getByText("0.6 QOR")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Bounty card preview" })).toHaveTextContent("0.6 QOR");
+    fill("https://github.com/owner/repo/issues/42", "https://github.com/acme/widgets/issues/7");
+    expect(screen.getByRole("group", { name: "Bounty card preview" })).toHaveTextContent("acme/widgets#7");
   });
 
   it("creates the bounty with the entered terms once connected", async () => {

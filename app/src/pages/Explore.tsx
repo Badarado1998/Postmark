@@ -4,6 +4,7 @@ import { useBounties, useIndex, useTotalLiabilities } from "../hooks/queries";
 import {
   StatusChip, Countdown, Qor, Skeleton, EmptyState, ErrorState, AddressLink, STATE_NAMES,
 } from "../components/ui";
+import { PageBody, PageHeader } from "../components/Page";
 import { statusStyle } from "../components/status";
 import { explainError } from "../chain/errors";
 import { isZeroAddress } from "../chain/address";
@@ -144,9 +145,9 @@ export default function Explore() {
   const error = index.error ?? bounties.error;
 
   return (
-    <div className="-mx-4 pb-4">
-      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
-        <div className="mx-auto max-w-6xl">
+    <div>
+      <PageHeader>
+        <div>
           <h1 className="font-sans text-4xl font-semibold tracking-tight">Bounties</h1>
           <p className="mt-2 text-sm text-charcoal">GitHub issues funded in test QOR on diana.</p>
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -156,9 +157,9 @@ export default function Explore() {
             <Stat label="escrowed">{liabilities.data !== undefined ? <Qor wei={liabilities.data} /> : "…"}</Stat>
           </div>
         </div>
-      </header>
+      </PageHeader>
 
-      <div className="mx-auto max-w-6xl px-4 pt-6">
+      <PageBody>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div role="tablist" aria-label="Filter by status" className="flex flex-wrap gap-1.5">
             {FILTERS.map((f) => (
@@ -199,7 +200,7 @@ export default function Explore() {
             </>
           )}
         </div>
-      </div>
+      </PageBody>
     </div>
   );
 }
