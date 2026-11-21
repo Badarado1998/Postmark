@@ -161,7 +161,9 @@ export function useTxAction() {
           return;
         }
       } catch (e) {
-        fail(`Still unconfirmed — check the explorer. ${explainError(e)}`, { hash });
+        const error = `Still unconfirmed — check the explorer. ${explainError(e)}`;
+        setState({ phase: "failed", hash, error });
+        toast({ kind: "warning", title: "Still waiting for confirmation", text: "It may still land — check the explorer before retrying." });
         return;
       }
       setState({ phase: "confirmed", hash, gasLimit, maxFeeWei });
