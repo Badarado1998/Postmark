@@ -1,6 +1,6 @@
-name: Funder verifier
+name: Postmark public verifier
 
-# The funder's own verifier bot for this repository. Keys live only in encrypted repository secrets.
+# The public Postmark verifier bot, run from this repository. Keys live only in encrypted repository secrets.
 # Schedule and manual runs only: never pull_request or pull_request_target, so a PR can't reach the secrets.
 on:
   schedule:

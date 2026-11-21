@@ -7,7 +7,6 @@ import { assembleVerdict } from "../../app/src/chain/verdictCore";
 import { verdictMessage } from "../../app/src/formats/messages";
 import { BUNDLE_FORMAT, type VerdictBundle } from "../../app/src/formats/verdictBundle";
 import { formatVerdictComment, parseVerdictComments, type ParsedVerdictComment } from "../../app/src/formats/verdictComment";
-import type { GhComment } from "../../app/src/github/comments";
 import type { BotConfig } from "./config";
 import { STATE, decide, PHASE_DISPUTE, PHASE_INITIAL, type Decision } from "./decide";
 import { selectQuorum, type OwnVerdict } from "./quorum";
@@ -17,6 +16,7 @@ import {
   request, type Action,
 } from "./chain";
 import { openWindow } from "./window";
+import { mergeVerdictComments, postingTarget, readTargets } from "./boards";
 
 export interface Row { id: string; state: string; decision: string; action: string }
 export interface RunResult { exitCode: number; rows: Row[] }
@@ -71,10 +71,15 @@ export async function run(cfg: BotConfig, gh: GhApi, log: (line: string) => void
       const meta = { ownerRepo: m.ownerRepo, kind: m.kind, number: Number(m.number) };
       const phase = bounty.state === STATE.Disputed ? PHASE_DISPUTE : PHASE_INITIAL;
 
-      let comments: GhComment[] = [];
+      const work = { repo: meta.ownerRepo, number: meta.number };
+      const lists: ParsedVerdictComment[][] = [];
       let commentsOk = true;
-      try { comments = await gh.getComments(meta.ownerRepo, meta.number); } catch { commentsOk = false; }
-      const parsed = parseVerdictComments(comments);
+      const targets = readTargets(work, cfg.boards);
+      for (const [i, t] of targets.entries()) {
+        try { lists.push(parseVerdictComments(await gh.getComments(t.repo, t.number))); }
+        catch { if (i === 0) commentsOk = false; } // a board that can't be read only means fewer candidates
+      }
+      const parsed = mergeVerdictComments(lists);
 
       const decision: Decision = await decide({ id, bounty, meta, escrow: cfg.escrow, now, gh });
       let own: OwnVerdict | null = null;
@@ -93,7 +98,7 @@ export async function run(cfg: BotConfig, gh: GhApi, log: (line: string) => void
           const index = bounty.verifiers.findIndex((v) => v.toLowerCase() === me.toLowerCase());
           own = { index, verdict, message, signature };
           row.decision = `${decision.kind.toUpperCase()} (${decision.summary})`;
-          await maybePost(cfg, gh, meta, parsed, own, me, commentsOk, log, row);
+          await maybePost(cfg, gh, work, parsed, own, me, commentsOk, log, row);
         }
       }
 
@@ -143,7 +148,7 @@ export async function run(cfg: BotConfig, gh: GhApi, log: (line: string) => void
 }
 
 async function maybePost(
-  cfg: BotConfig, gh: GhApi, meta: { ownerRepo: string; number: number }, existing: ParsedVerdictComment[],
+  cfg: BotConfig, gh: GhApi, work: { repo: string; number: number }, existing: ParsedVerdictComment[],
   own: OwnVerdict, me: Address, commentsOk: boolean, log: (l: string) => void, row: Row,
 ) {
   if (!cfg.postComments || cfg.dryRun) return;
@@ -154,9 +159,11 @@ async function maybePost(
     format: BUNDLE_FORMAT, chainId: 9800, nativeChainId: "qorechain-diana", escrow: cfg.escrow,
     verdict: own.verdict, message: own.message, signatures: { [own.index]: own.signature },
   };
+  const target = postingTarget(work, cfg.boards, cfg.githubRepository);
+  if (!target) { log(`not posting: no verdict board in ${cfg.githubRepository ?? "this run's repository"} for ${work.repo}`); return; }
   try {
-    await gh.postComment(meta.ownerRepo, meta.number, formatVerdictComment(bundle, { signerIndex: own.index, signer: me, kind: "bot" }));
-    row.decision += " · comment posted";
+    await gh.postComment(target.repo, target.number, formatVerdictComment(bundle, { signerIndex: own.index, signer: me, kind: "bot" }));
+    row.decision += ` · comment posted on ${target.repo}#${target.number}`;
   } catch (e) { log(`could not post the verdict comment: ${e instanceof Error ? e.message : e}`); }
 }
 

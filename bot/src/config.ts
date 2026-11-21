@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { parseBoards, type IssueRef } from "./boards";
 import prod from "../../deployments/diana.json";
 import e2e from "../../deployments/diana-e2e.json";
 import verifierList from "../../app/src/data/verifiers.json";
@@ -13,6 +14,10 @@ export interface BotConfig {
   /** lower-case addresses that count as human verifiers for the dispute rule (never derived from comment labels) */
   humans: Set<string>;
   dryRun: boolean;
+  /** issues (owner/repo#n) where verdict signatures are shared for bounties on other repositories */
+  boards: IssueRef[];
+  /** the repository this run executes in (set by Actions); decides where comments may be posted */
+  githubRepository: string | undefined;
 }
 
 const flag = (v: string | undefined, dflt = false) =>
@@ -37,5 +42,7 @@ export function loadConfig(env: Record<string, string | undefined>): BotConfig {
     deployBlock: block,
     humans: new Set(humanList.filter(Boolean).map((a) => a.toLowerCase())),
     dryRun: flag(env.POSTMARK_DRY_RUN),
+    boards: parseBoards(env.POSTMARK_VERDICT_BOARDS),
+    githubRepository: env.GITHUB_REPOSITORY?.trim() || undefined,
   };
 }

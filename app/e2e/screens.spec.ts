@@ -47,7 +47,8 @@ test("create form + dashboard screenshots", async ({ page }, testInfo) => {
   if (await connectBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
     await connectBtn.click();
     const pick = page.getByText("Postmark E2E");
-    if (await pick.isVisible({ timeout: 5_000 }).catch(() => false)) await pick.click();
+    await pick.click({ timeout: 10_000 }).catch(() => undefined); // the wallet chunk loads on the click
+    await page.locator("dialog").first().waitFor({ state: "hidden", timeout: 10_000 }).catch(() => undefined);
   }
   await page.getByPlaceholder(/github\.com\/owner\/repo/i)
     .fill("https://github.com/postmark-e2e/sandbox/issues/1");
@@ -115,7 +116,8 @@ test("claim panel + signer page screenshots", async ({ page }, testInfo) => {
     if (await connectBtn.isVisible({ timeout: 6_000 }).catch(() => false)) {
       await connectBtn.click();
       const pick = page.getByText("Postmark E2E");
-      if (await pick.isVisible({ timeout: 6_000 }).catch(() => false)) await pick.click();
+      await pick.click({ timeout: 10_000 }).catch(() => undefined); // the wallet chunk loads on the click
+    await page.locator("dialog").first().waitFor({ state: "hidden", timeout: 10_000 }).catch(() => undefined);
     }
     await page.getByText(/postmark-claim v1 chain=9800/).first().waitFor({ timeout: 30_000 });
     await page.waitForTimeout(600);

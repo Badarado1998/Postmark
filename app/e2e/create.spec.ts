@@ -23,7 +23,8 @@ test("funder creates a bounty on diana e2e escrow", async ({ page }) => {
   if (await connectBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
     await connectBtn.click();
     const pick = page.getByText("Postmark E2E");
-    if (await pick.isVisible({ timeout: 5_000 }).catch(() => false)) await pick.click();
+    await pick.click({ timeout: 10_000 }).catch(() => undefined); // the wallet chunk loads on the click
+    await page.locator("dialog").first().waitFor({ state: "hidden", timeout: 10_000 }).catch(() => undefined);
   }
 
   await page.getByPlaceholder(/github\.com\/owner\/repo/i).fill(ISSUE_URL);
@@ -108,7 +109,8 @@ test("an account with no window sees the QoreX guide (no tx sent)", async ({ pag
   if (await connectBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
     await connectBtn.click();
     const pick = page.getByText("Postmark E2E");
-    if (await pick.isVisible({ timeout: 5_000 }).catch(() => false)) await pick.click();
+    await pick.click({ timeout: 10_000 }).catch(() => undefined); // the wallet chunk loads on the click
+    await page.locator("dialog").first().waitFor({ state: "hidden", timeout: 10_000 }).catch(() => undefined);
   }
   await page.getByPlaceholder(/github\.com/i).fill(ISSUE_URL);
   await openManualVerifiers(page);

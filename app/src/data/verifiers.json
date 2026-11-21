@@ -7,6 +7,13 @@
     "note": "Signs PAY only when the claim comment and a merged PR by the claimant check out; abstains when unsure."
   },
   {
+    "address": "0x4EaBC36D47dE61ECF41DBcFCeFffa8dDA9b5b023",
+    "name": "Postmark public verifier bot",
+    "kind": "bot",
+    "runner": "Postmark maintainer (@Ololadestephen): scheduled GitHub Action in the public Postmark repo, every 5 minutes",
+    "note": "Same checks as the Postmark verifier bot; its run logs are public in the Postmark repo's Actions tab."
+  },
+  {
     "address": "0x25174bd3a98cd833acaf288d94f4cc324227e99d",
     "name": "Ololade (human tie-breaker)",
     "kind": "human",

@@ -91,10 +91,10 @@ export function VerifierPicker({ slots, onChange, connected, children }: {
     <div>
       <p className="text-sm text-charcoal">3 verifiers review the work; any 2 agreeing releases the reward.</p>
       <p className="mt-1 text-xs text-gray">
-        Recommended: the Postmark bot, your own repo's verifier bot
-        ({" "}<a className="text-deep underline underline-offset-4" target="_blank" rel="noreferrer"
-          href="https://github.com/Ololadestephen/Postmark#run-your-own-verifier">run your own verifier</a>{" "}),
-        and a human tie-breaker.
+        The curated set is two Postmark maintainer-run bots plus a human tie-breaker. All three are run by the
+        Postmark maintainer today; replace one with your own repo's bot for more independence (
+        <a className="text-deep underline underline-offset-4" target="_blank" rel="noreferrer"
+          href="https://github.com/Ololadestephen/Postmark#run-your-own-verifier">run your own verifier</a>).
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={pick}

@@ -16,6 +16,9 @@ inputs:
   escrow:
     description: Escrow contract address. Empty means the production deployment.
     default: ""
+  verdict-boards:
+    description: Comma list of owner/repo#issue boards where verdict signatures are shared for bounties on other repositories. Empty means the Postmark public board.
+    default: ""
   dry-run:
     description: Log decisions only; post no comments and send no transactions.
     default: "false"
@@ -33,5 +36,6 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         POSTMARK_POST_COMMENTS: ${{ inputs.post-comments }}
         POSTMARK_ESCROW: ${{ inputs.escrow }}
+        POSTMARK_VERDICT_BOARDS: ${{ inputs.verdict-boards }}
         POSTMARK_DRY_RUN: ${{ inputs.dry-run }}
       run: node "${{ github.action_path }}/dist/postmark-verifier.mjs"
