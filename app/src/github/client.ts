@@ -4,7 +4,11 @@ import {
 // GitHub REST client with ETag conditional caching (localStorage, bounded),
 // rate-limit awareness, and an optional session-only personal token.
 
-export interface CachedResponse<T> { data: T; etag: string; url: string; }
+export interface CachedResponse<T> { data: T; etag: string; url: string; at?: number; }
+
+/** Issue, PR and timeline reads are served from the local cache for this long without any request:
+ * an unauthenticated 304 still counts against GitHub's 60/hour limit. Comment scans always revalidate. */
+export const FRESH_MS = 5 * 60_000;
 
 const CACHE_PREFIX = "pm-gh:";
 const CACHE_LIMIT = 200;
@@ -40,21 +44,22 @@ function cacheSet<T>(url: string, data: T, etag: string) {
     if (keys.length >= CACHE_LIMIT) {
       for (const k of keys.slice(0, keys.length - CACHE_LIMIT + 1)) localStorage.removeItem(k);
     }
-    localStorage.setItem(CACHE_PREFIX + url, JSON.stringify({ data, etag, url }));
+    localStorage.setItem(CACHE_PREFIX + url, JSON.stringify({ data, etag, url, at: Date.now() }));
   } catch { /* storage full/blocked — keep going */ }
 }
 
-async function ghFetch<T>(url: string): Promise<T> {
+async function ghFetch<T>(url: string, maxAgeMs = 0): Promise<T> {
   const headers: Record<string, string> = { accept: "application/vnd.github+json" };
   const token = githubToken();
   if (token) headers.authorization = `Bearer ${token}`;
   const cached = cacheGet<T>(url);
+  if (cached && maxAgeMs > 0 && cached.at !== undefined && Date.now() - cached.at < maxAgeMs) return cached.data;
   if (cached) headers["if-none-match"] = cached.etag;
 
   const res = await fetch(url, { headers });
   const remaining = res.headers.get("x-ratelimit-remaining");
   const reset = res.headers.get("x-ratelimit-reset");
-  if (res.status === 304 && cached) return cached.data;
+  if (res.status === 304 && cached) { cacheSet(url, cached.data, cached.etag); return cached.data; }
   if (res.status === 403 || res.status === 429) {
     if (remaining === "0" || res.status === 429) {
       throw new GithubRateLimitError(
@@ -88,14 +93,14 @@ export interface GhPull {
   user: { login: string }; html_url: string;
 }
 export const getIssue = (ownerRepo: string, n: number) =>
-  ghFetch<GhIssue>(`${API}/repos/${ownerRepo}/issues/${n}`);
+  ghFetch<GhIssue>(`${API}/repos/${ownerRepo}/issues/${n}`, FRESH_MS);
 export const getPull = (ownerRepo: string, n: number) =>
-  ghFetch<GhPull>(`${API}/repos/${ownerRepo}/pulls/${n}`);
+  ghFetch<GhPull>(`${API}/repos/${ownerRepo}/pulls/${n}`, FRESH_MS);
 
 /** Issue timeline events (cross-referenced PRs surface here). */
 export async function getLinkedPrs(ownerRepo: string, issueNumber: number) {
   const events = await ghFetch<GhTimelineEvent[]>(
-    `${API}/repos/${ownerRepo}/issues/${issueNumber}/timeline?per_page=100`);
+    `${API}/repos/${ownerRepo}/issues/${issueNumber}/timeline?per_page=100`, FRESH_MS);
   return linkedPrNumbers(events);
 }
 
