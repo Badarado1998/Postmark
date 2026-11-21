@@ -22,13 +22,18 @@ export const FEATURES: [string, string][] = [
   ["Pull payouts", "Pull payments: payee credits withdraw only while a live PQ key is registered."],
 ];
 
-export const PROOF = [
+export interface ProofItem { label: string; value: string; mono: boolean; href?: string; note?: string }
+
+export const PROOF: ProofItem[] = [
   { label: "production escrow", value: ESCROW_ADDRESS, mono: true,
     href: explorerAddress(ESCROW_ADDRESS) },
   { label: "bounty #17 dispute resolved", value: "resolveDispute", mono: false,
     href: explorerTx("0xeaf7dde973740f3fd2838fba70df3bf0ce6065f0829aa951e5147d1a5af3e8a0") },
   { label: "bounty #17 payout withdrawn", value: "withdraw", mono: false,
     href: explorerTx("0x9aaabb1eb2a780bca7e0093fdbe78445825c231abd154d350c3516548f089cac") },
+  { label: "bounty #18 finalized", value: "finalize", mono: false,
+    href: explorerTx("0xd4b904905997b9cfbb096833c71d7ccb8dc318b2563e77ea87dd0d30ee1a8601"),
+    note: "e2e contract, finalized after the real 24h window" },
   { label: "test suite", value: "126 Foundry tests, real ML-DSA-87 signatures", mono: false },
   { label: "audit", value: "QCAI Contract Auditor — docs/AUDIT.md", mono: false },
 ];

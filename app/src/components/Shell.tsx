@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { DeferredConnect } from "./Deferred";
 import { useFeedStatus } from "../chain/IndexerProvider";
 import { useBlockNumber } from "../hooks/queries";
@@ -46,6 +46,7 @@ const sheetLink = ({ isActive }: { isActive: boolean }) =>
 
 export function Shell({ children }: { children?: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const onLanding = useLocation().pathname === "/";
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -89,10 +90,11 @@ export function Shell({ children }: { children?: ReactNode }) {
           </nav>
         )}
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <main className={onLanding ? "w-full flex-1"
+        : "mx-auto w-full max-w-6xl flex-1 px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"}>
         {children ?? <Outlet />}
       </main>
-      <AppFooter />
+      {!onLanding && <AppFooter />}
     </div>
   );
 }

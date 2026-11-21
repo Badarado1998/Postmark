@@ -6,7 +6,7 @@ import { CtaBand, Footer } from "./landing/Closing";
 
 export default function Landing() {
   return (
-    <div className="-mx-4">
+    <div>
       <Hero />
       <BuiltOn />
       <ValueProp />
