@@ -84,7 +84,9 @@ describe("MeInner", () => {
     ]);
     renderApp(<MeInner />);
     expect(await screen.findByText("#1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Claims" }));
     expect(screen.getByText("round 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Verifying" }));
     expect(screen.getByRole("link", { name: "resolve dispute →" })).toHaveAttribute("href", "/bounty/3/review");
     expect(screen.getAllByText("Wire the funder flow").length).toBeGreaterThan(0);
   });

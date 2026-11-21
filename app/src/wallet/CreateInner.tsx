@@ -3,14 +3,14 @@ import { useNavigate } from "react-router";
 import { formatUnits } from "viem";
 import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
-import { parseGithubUrl } from "../github/parse";
+import { parseGithubUrl, githubItemLabel } from "../github/parse";
 import { ItemPreview, VerifierInput } from "./createParts";
 import { validateForm, verifierFieldError } from "../formats/createForm";
 import { livePqcKey } from "../chain/pqc";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
-import { Card } from "../components/ui";
+import { Card, Qor, SectionLabel, StatusChip } from "../components/ui";
 import { MS_PER_MINUTE, SECONDS_PER_DAY, SECONDS_PER_HOUR } from "../chain/time";
 
 const CLAIM_PRESETS = [
@@ -133,102 +133,156 @@ function CreateForm() {
 
   const total = form.ok ? formatUnits(form.parsed.amount + form.parsed.reward, 18) : "—";
 
+  const input = "mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-2 focus:ring-deep";
+  const label = "font-mono text-[10px] uppercase tracking-[0.18em] text-gray";
+  const deadlineDate = new Date(deadlineLocal);
+  const deadlineValid = Number.isFinite(deadlineDate.getTime());
+  const lockedWei = form.ok ? form.parsed.amount + form.parsed.reward : 0n;
+
   return (
-    <div className="mx-auto max-w-2xl py-10">
-      <h1 className="font-sans text-4xl font-semibold text-ink">Fund an issue</h1>
-      <p className="mt-2 text-sm text-gray">
-        Escrow test QOR against a real GitHub item on diana. No monetary value.
-      </p>
-
-      <label className="mt-8 block text-sm">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">GitHub issue or PR URL</span>
-        <input value={url} onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo/issues/42"
-          className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink placeholder:text-gray focus:outline-none focus:ring-1 focus:ring-deep" />
-      </label>
-      {urlTouched && !gref && (
-        <p role="alert" className="mt-2 text-sm text-orange">
-          Not a github.com issue or PR URL.
-        </p>
-      )}
-      {gref && <ItemPreview gref={gref} />}
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {[
-          ["Bounty amount", amount, setAmount],
-          ["Challenge reward", reward, setReward],
-          ["Dispute bond", bond, setBond],
-        ].map(([label, val, set]) => (
-          <label key={label as string} className="block text-sm">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">{label as string} (QOR)</span>
-            <input value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}
-              inputMode="decimal"
-              className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink focus:outline-none focus:ring-1 focus:ring-deep" />
-          </label>
-        ))}
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">Deadline ({tz})</span>
-          <input type="datetime-local" value={deadlineLocal}
-            onChange={(e) => setDeadlineLocal(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 font-mono text-sm text-ink focus:outline-none focus:ring-1 focus:ring-deep" />
-          <span className="mt-1 block font-mono text-[10px] text-gray">
-            {Number.isFinite(new Date(deadlineLocal).getTime())
-              ? new Date(deadlineLocal).toISOString().replace("T", " ").slice(0, 16) + " UTC" : ""}
-          </span>
-        </label>
-        <ClaimTimeoutPicker preset={preset} onPreset={setPreset}
-          custom={customTimeout} onCustom={setCustomTimeout} />
-      </div>
-
-      <fieldset className="mt-6">
-        <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">
-          Verifiers (need live ML-DSA-87 keys; any 2 settle)
-        </legend>
-        <div className="mt-2 space-y-2">
-          {verifiers.map((v, i) => (
-            <VerifierInput key={i} i={i} value={v}
-              checking={checkingKeys}
-              live={keyStates[i]}
-              error={verifierFieldError(v, i, verifiers, address)}
-              onChange={(nv) => {
-                const next = [...verifiers]; next[i] = nv; setVerifiers(next);
-                clearKeyState(i);
-              }} />
-          ))}
+    <div className="-mx-4 pb-4">
+      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
+        <div className="mx-auto max-w-6xl">
+          <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">Fund an issue</h1>
+          <p className="mt-2 text-sm text-charcoal">
+            Escrow test QOR against a real GitHub item on diana. No monetary value.
+          </p>
         </div>
-      </fieldset>
+      </header>
 
-      {!form.ok && (
-        <p role="alert" className="mt-4 text-sm text-orange">{form.error}</p>
-      )}
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 pt-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <SectionLabel>1 · work item</SectionLabel>
+            <label className="mt-3 block text-sm">
+              <span className={label}>GitHub issue or PR URL</span>
+              <input value={url} onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo/issues/42" className={input} />
+            </label>
+            {urlTouched && !gref && (
+              <p role="alert" className="mt-2 text-sm text-orange">
+                Not a github.com issue or PR URL.
+              </p>
+            )}
+            {gref && <ItemPreview gref={gref} />}
+          </Card>
 
-      <Card className="mt-6">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray">You send now</span>
-          <span className="font-mono text-ink">{total} QOR <span className="text-[10px] uppercase text-deep">testnet</span></span>
+          <Card>
+            <SectionLabel>2 · terms</SectionLabel>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                ["Bounty amount", amount, setAmount],
+                ["Challenge reward", reward, setReward],
+                ["Dispute bond", bond, setBond],
+              ].map(([name, val, set]) => (
+                <label key={name as string} className="block text-sm">
+                  <span className={label}>{name as string} (QOR)</span>
+                  <input value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}
+                    inputMode="decimal" className={input} />
+                </label>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <SectionLabel>3 · timing</SectionLabel>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className={label}>Deadline ({tz})</span>
+                <input type="datetime-local" value={deadlineLocal}
+                  onChange={(e) => setDeadlineLocal(e.target.value)} className={input} />
+                <span className="mt-1 block font-mono text-[10px] text-gray">
+                  {deadlineValid ? deadlineDate.toISOString().replace("T", " ").slice(0, 16) + " UTC" : ""}
+                </span>
+              </label>
+              <ClaimTimeoutPicker preset={preset} onPreset={setPreset}
+                custom={customTimeout} onCustom={setCustomTimeout} />
+            </div>
+          </Card>
+
+          <Card>
+            <fieldset>
+              <legend className={label}>
+                4 · Verifiers (need live ML-DSA-87 keys; any 2 settle)
+              </legend>
+              <div className="mt-3 space-y-2">
+                {verifiers.map((v, i) => (
+                  <VerifierInput key={i} i={i} value={v}
+                    checking={checkingKeys}
+                    live={keyStates[i]}
+                    error={verifierFieldError(v, i, verifiers, address)}
+                    onChange={(nv) => {
+                      const next = [...verifiers]; next[i] = nv; setVerifiers(next);
+                      clearKeyState(i);
+                    }} />
+                ))}
+              </div>
+            </fieldset>
+          </Card>
+
+          {!form.ok && (
+            <p role="alert" className="text-sm text-orange">{form.error}</p>
+          )}
         </div>
-        <p className="mt-2 text-xs text-gray">
-          amount + challenge reward. The bond is only required to dispute a verdict.
-          If no valid claim is merged, you can refund after the deadline.
-        </p>
-      </Card>
 
-      <TxStatusPanel state={tx.state} />
+        <aside aria-label="Summary" className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <Card tone="accent">
+            <SectionLabel tone="accent">summary</SectionLabel>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <span className="text-sm text-charcoal">You send now</span>
+              <span className="font-mono text-2xl font-semibold text-ink">{total} QOR</span>
+            </div>
+            <p className="mt-1 text-xs text-gray">
+              amount + challenge reward. The bond is only required to dispute a verdict.
+              If no valid claim is merged, you can refund after the deadline.
+            </p>
+            <dl className="mt-4 space-y-2 border-t border-ink/10 pt-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-charcoal">Deadline</dt>
+                <dd className="text-right font-mono text-xs">{deadlineValid ? deadlineDate.toLocaleString() : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-charcoal">Claim window</dt>
+                <dd className="font-mono text-xs">{Number.isFinite(claimTimeoutSec) ? `${+(claimTimeoutSec / SECONDS_PER_HOUR).toFixed(2)} h` : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-charcoal">Verifiers</dt>
+                <dd className="font-mono text-xs">
+                  {keyStates.map((k, i) => (k === undefined ? "?" : k ? "✓" : "✗") + (i < 2 ? " " : "")).join("")}
+                </dd>
+              </div>
+            </dl>
+            <TxStatusPanel state={tx.state} />
+            {!isConnected ? (
+              <p className="mt-4 text-sm text-charcoal">Connect an EVM wallet to continue.</p>
+            ) : (
+              <button onClick={() => void submit()}
+                disabled={!form.ok || !gref || tx.busy}
+                className="mt-4 w-full rounded-lg bg-deep px-6 py-3 font-medium text-paper hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
+                {tx.state.phase === "wallet" ? "Confirm in wallet…"
+                  : tx.state.phase === "submitted" || tx.state.phase === "confirming" ? "Confirming…"
+                  : `Create bounty (${total} QOR)`}
+              </button>
+            )}
+          </Card>
 
-      {!isConnected ? (
-        <p className="mt-6 text-sm text-gray">Connect an EVM wallet to continue.</p>
-      ) : (
-        <button onClick={() => void submit()}
-          disabled={!form.ok || !gref || tx.busy}
-          className="mt-6 w-full rounded-lg bg-deep px-6 py-3 font-medium text-paper hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
-          {tx.state.phase === "wallet" ? "Confirm in wallet…"
-            : tx.state.phase === "submitted" || tx.state.phase === "confirming" ? "Confirming…"
-            : `Create bounty (${total} QOR)`}
-        </button>
-      )}
+          <div aria-label="Bounty card preview" role="group">
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">live preview</div>
+            <div className="relative overflow-hidden rounded-xl border border-ink/10 bg-white p-4 pl-5">
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-leaf" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-sm font-semibold text-gray">#new</span>
+                <StatusChip state={0} />
+              </div>
+              <p className="mt-3 truncate font-mono text-sm">{gref ? githubItemLabel(gref) : "owner/repo#number"}</p>
+              <div className="mt-3 flex items-end justify-between text-sm">
+                <Qor wei={lockedWei} className="font-mono text-base font-semibold" />
+                <span className="font-mono text-xs text-gray">{deadlineValid ? deadlineDate.toLocaleDateString() : "no deadline"}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

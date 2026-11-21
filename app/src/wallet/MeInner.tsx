@@ -1,11 +1,11 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { creditOf, type Bounty } from "../chain/client";
 import { githubItemLabel } from "../github/parse";
 import { useIndex, useBounties, useGithubItem, usePqcStatus } from "../hooks/queries";
-import { Card, SectionLabel, StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
+import { StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
 import { useTxAction } from "../hooks/useTxAction";
 import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
@@ -28,36 +28,43 @@ function Credits() {
   if (credits.isPending) return <Skeleton className="h-28" />;
   const [ungated, gated] = credits.data ?? [0n, 0n];
   if (ungated === 0n && gated === 0n) {
-    return <p className="text-sm text-gray">No credits yet.</p>;
+    return (
+      <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <p className="text-sm text-gray">No credits yet.</p>
+        <p className="mt-1 text-xs text-gray">Payouts, refunds and dispute winnings appear here once a bounty settles.</p>
+      </div>
+    );
   }
   return (
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex gap-8">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">ungated</div>
-            <Qor wei={ungated} />
-          </div>
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">payee-gated</div>
-            <Qor wei={gated} />
-          </div>
-        </div>
-        <button disabled={tx.busy || (ungated === 0n && gated === 0n)}
+    <section aria-label="Withdrawable balance" className="rounded-2xl bg-ink p-6 text-paper">
+      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-paper/60">withdrawable</div>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+        <Qor wei={ungated + gated} className="text-4xl font-semibold tabular-nums tracking-tight" />
+        <button disabled={tx.busy}
           onClick={() => void tx.run({ functionName: "withdraw", args: [],
             onConfirmed: () => toast({ kind: "info", text: "Withdrawn." }) })}
-          className="rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
+          className="rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-ink hover:brightness-95 disabled:opacity-40">
           Withdraw
         </button>
       </div>
+      <dl className="mt-4 flex gap-8 border-t border-paper/10 pt-4 text-sm">
+        <div>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-paper/60">ungated</dt>
+          <dd className="mt-1 font-mono"><Qor wei={ungated} /></dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-paper/60">payee-gated</dt>
+          <dd className="mt-1 font-mono"><Qor wei={gated} /></dd>
+        </div>
+      </dl>
       {gated > 0n && (
-        <p className="mt-3 text-xs text-gray">
+        <p className="mt-3 text-xs text-paper/70">
           Payee-gated credit withdraws only while your ML-DSA-87 key is live.
           {pqc.data && !pqc.data.live && " Yours is not registered — withdrawals will revert."}
         </p>
       )}
       <TxStatusPanel state={tx.state} />
-    </Card>
+    </section>
   );
 }
 
@@ -171,33 +178,87 @@ function VerifierBounties() {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <>
-      <SectionLabel className="mt-8">{title}</SectionLabel>
-      <div className="mt-3">{children}</div>
-    </>
-  );
+const TABS = [
+  { id: "funded", label: "Funded", Panel: FundedBounties },
+  { id: "claims", label: "Claims", Panel: MyClaims },
+  { id: "verifying", label: "Verifying", Panel: VerifierBounties },
+] as const;
+
+function useMyCounts(address: string) {
+  const index = useIndex();
+  const bounties = useBounties(index.data?.bountyIds);
+  const rows = (bounties.data ?? []).flatMap((r) => (r.bounty ? [r.bounty] : []));
+  return {
+    funded: rows.filter((b) => sameAddress(b.funder, address)).length,
+    claims: rows.filter((b) => sameAddress(b.payee, address)).length,
+    verifying: rows.filter((b) => b.verifiers.some((v) => sameAddress(v, address))).length,
+  };
 }
 
 export default function MeInner() {
   const { address, isConnected } = useAccount();
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("funded");
   if (!isConnected || !address) {
     return (
-      <div className="py-16 text-center">
-        <h1 className="font-sans text-4xl font-semibold text-ink">My bounties</h1>
-        <p className="mt-4 text-gray">Connect an EVM wallet to see your funded bounties and credits.</p>
+      <div className="-mx-4 pb-4">
+        <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
+          </div>
+        </header>
+        <div className="mx-auto max-w-4xl px-4 pt-6">
+          <div className="rounded-2xl border border-dashed border-ink/20 bg-white p-10 text-center">
+            <p className="text-lg font-medium text-ink">Connect an EVM wallet to see your funded bounties and credits.</p>
+            <p className="mt-2 text-sm text-gray">Your balance, claims and verifier duties appear here once a wallet is connected.</p>
+          </div>
+        </div>
       </div>
     );
   }
+  return <Dashboard address={address} tab={tab} setTab={setTab} />;
+}
+
+function Dashboard({ address, tab, setTab }: {
+  address: `0x${string}`; tab: (typeof TABS)[number]["id"]; setTab: (t: (typeof TABS)[number]["id"]) => void;
+}) {
+  const counts = useMyCounts(address);
+  const tiles: [string, number][] = [["funded", counts.funded], ["claims", counts.claims], ["verifying", counts.verifying]];
   return (
-    <div className="mx-auto max-w-3xl py-10">
-      <h1 className="font-sans text-4xl font-semibold text-ink">My bounties</h1>
-      <p className="mt-1 font-mono text-sm text-gray">{shortAddr(address)}</p>
-      <Section title="credits"><Credits /></Section>
-      <Section title="funded"><FundedBounties /></Section>
-      <Section title="my claims"><MyClaims /></Section>
-      <Section title="verifier"><VerifierBounties /></Section>
+    <div className="-mx-4 pb-4">
+      <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">My bounties</h1>
+          <p className="mt-1 font-mono text-sm text-charcoal">{shortAddr(address)}</p>
+        </div>
+      </header>
+      <div className="mx-auto max-w-4xl space-y-6 px-4 pt-6">
+        <Credits />
+        <div className="grid grid-cols-3 gap-3">
+          {tiles.map(([label, n]) => (
+            <div key={label} className="rounded-xl border border-ink/10 bg-white px-4 py-3">
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-gray">{label}</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">{n}</div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div role="tablist" aria-label="My bounties" className="flex gap-1 border-b border-ink/10">
+            {TABS.map((t) => (
+              <button key={t.id} role="tab" id={`tab-${t.id}`} aria-selected={tab === t.id}
+                aria-controls={`panel-${t.id}`} onClick={() => setTab(t.id)}
+                className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium ${
+                  tab === t.id ? "border-deep text-ink" : "border-transparent text-gray hover:text-ink"}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {TABS.map(({ id, Panel }) => (
+            <div key={id} role="tabpanel" id={`panel-${id}`} aria-labelledby={`tab-${id}`} hidden={tab !== id} className="pt-5">
+              <Panel />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

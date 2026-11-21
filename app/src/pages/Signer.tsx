@@ -1,15 +1,21 @@
 export default function Signer() {
   return (
-    <div className="mx-auto max-w-2xl py-10">
-      <h1 className="font-sans text-4xl font-semibold text-ink">The local signer</h1>
-      <p className="mt-4 leading-relaxed text-gray">
+    <div className="-mx-4 pb-4">
+    <header className="border-b border-ink/10 bg-leaf/25 px-4 py-10">
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">The local signer</h1>
+        <p className="mt-2 text-sm text-charcoal">Post-quantum keys stay on your machine.</p>
+      </div>
+    </header>
+    <div className="mx-auto max-w-3xl px-4 pt-2">
+      <p className="mt-6 leading-relaxed text-charcoal">
         Claims and verdicts need an ML-DSA-87 signature over the exact message the chain will
         check. Your post-quantum secret never leaves your machine: a small local process holds
         the key, this app asks it to sign, and it signs only after you confirm the decoded
         request in the terminal.
       </p>
 
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">run it</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-deep">run it</h2>
       <div className="mt-3 space-y-3 text-sm text-gray">
         <p>From the repo root, with a QRC1 recovery-code profile:</p>
         <pre className="overflow-x-auto rounded-lg border border-ink/10 bg-paper p-4 font-mono text-xs text-ink">
@@ -25,7 +31,7 @@ export default function Signer() {
           It prints a decoded summary of every request and asks <span className="font-mono">y/N</span> before signing.</p>
       </div>
 
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">security model</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-deep">security model</h2>
       <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-gray">
         <li>Binds <span className="font-mono">127.0.0.1</span> only — nothing on the network can reach it.</li>
         <li>Serves exactly one browser origin; every other origin, including preflights, is refused.</li>
@@ -36,7 +42,7 @@ export default function Signer() {
         <li>Profile files must be mode <span className="font-mono">600</span>; the ECDSA key is never read.</li>
       </ul>
 
-      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-gray">troubleshooting</h2>
+      <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-deep">troubleshooting</h2>
       <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-gray">
         <li><span className="text-ink">"not reachable"</span> — start the signer; check the port (<span className="font-mono">--port</span>) matches 47321.</li>
         <li><span className="text-ink">"origin refused"</span> — pass <span className="font-mono">--origin</span> with exactly the URL you browse (http vs https, port included).</li>
@@ -46,6 +52,7 @@ export default function Signer() {
         <li><span className="text-ink">port busy</span> — pick another port and run the app URL pairing against it, or kill the old signer.</li>
       </ul>
       <p className="mt-8 text-xs text-gray">Signatures are ML-DSA-87 over diana testnet messages — test QOR, no monetary value.</p>
+    </div>
     </div>
   );
 }

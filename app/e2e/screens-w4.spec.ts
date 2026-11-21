@@ -173,6 +173,6 @@ test("w4 frozen, ruling and verifier dashboard", async ({ page, context }) => {
   const vpage = await context.newPage();
   await installTestWallet(vpage, "verifier0");
   await vpage.goto("/me");
-  await expect(vpage.getByText(/verifier/i).first()).toBeVisible({ timeout: 60_000 });
+  await expect(vpage.getByRole("tab", { name: /verifying/i })).toBeVisible({ timeout: 60_000 });
   await vpage.screenshot({ path: `${OUT}/me-verifier-${test.info().project.name}.png`, fullPage: true });
 });
