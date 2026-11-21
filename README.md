@@ -90,6 +90,41 @@ signature hex for copy/paste.
 | `cd app && npm run e2e` | Playwright on real diana with an injected EIP-6963 test wallet: create → claim → 2-of-3 verdict → dispute → resolution → withdraw. Only GitHub is route-mocked. **Spends test QOR** from disposable profiles in `~/.config/postmark/e2e/` and opens scoped windows |
 | `cd app && E2E_NO_WINDOWS=1 npx playwright test e2e/screens-w4.spec.ts` | Read-only/screenshot runs against existing e2e fixtures — no transactions, no windows |
 
+## Run your own verifier
+
+A verifier is an account with a registered ML-DSA-87 key that signs PAY or REFUND verdicts. `bot/` is a scheduled GitHub Action that does this automatically, so a claim doesn't wait on a person. Today's curated verifiers are the Postmark maintainer's bot (a private-repo Action, every 5 minutes) and the maintainer as a human tie-breaker; each funder is expected to run their own bot for their repository. These are not guaranteed to be independent parties, so choose who you rely on.
+
+**What the bot checks.** Every run, for each bounty that names its address as a verifier:
+
+- **Claim identity.** A `postmark-claim v1 …` comment on the issue or PR for this chain, escrow, bounty and claimant, whose GitHub login, claimant and comment id hash to the bounty's stored identity hash.
+- **The work.** For a PR bounty, that PR; for an issue bounty, PRs from the same repository that cross-reference it. A PR qualifies only if it is merged, merged before the deadline and before now, authored by the claimant's login, in the same repo, and has a merge commit.
+- **PAY** only when exactly one PR qualifies. The evidence hash is built from the repo, PR, merge commit, merge time and author.
+- **REFUND** only when it is conclusive: a PR bounty whose PR was closed unmerged (`not-merged`) or merged by someone else (`ineligible`); an issue closed as not planned (`withdrawn`); or an issue completed by merged PRs none of which are the claimant's (`ineligible`).
+- **Abstain** otherwise: past the deadline, no matching claim comment, GitHub unavailable (any API error), no merged PR from the claimant yet, several qualifying PRs, or the locally built message differs from the contract's `verdictMessage`. It never guesses.
+
+**The comment protocol.** With `post-comments` on, the bot posts its signed verdict on the issue or PR: a `<!-- postmark-verdict v1 -->` marker, a one-line summary, and a `postmark-verdict-bundle-v1` JSON block holding exactly its own signature. Humans can post the same thing from the review page ("Copy as GitHub comment"). Anyone's run can collect two valid matching comments and relay them; a comment is only trusted after its signature verifies against that verifier's live key. The `(bot)`/`(human)` label in a comment is self-declared and ignored.
+
+**Quorum, disputes and the human tie-break.** The bot relays two valid, matching signatures for the current nonce and claim round, preferring its own. If it has its own verdict it only counts that message; if it abstained it may still relay a matching pair from comments. In a dispute the bot never overrules alone: it relays a resolution only when the chosen pair includes a human verifier, identified strictly by address (`POSTMARK_HUMAN_VERIFIERS`, default the curated human entries). Every transaction is simulated first and skipped if it would revert. Pending bounties whose challenge window has closed are finalized.
+
+**Add the bot to your repository.**
+
+1. Copy [`bot/examples/funder-workflow.yml`](bot/examples/funder-workflow.yml) to `.github/workflows/postmark-verifier.yml` and pin `Ololadestephen/Postmark/bot@<sha>` to a reviewed commit.
+2. Create the verifier account and register its key (from this repo, with `npm ci`):
+
+   ```sh
+   node scripts/window.mjs new-account my-bot          # writes ~/.config/postmark/e2e/my-bot.env and my-bot-pqc.env
+   node scripts/window.mjs --env ~/.config/postmark/deployer send <0x-or-qor1-of-my-bot> 300000   # 0.3 test QOR (300000 uqor)
+   node scripts/window.mjs --env ~/.config/postmark/e2e/my-bot register
+   node scripts/key-status.mjs <qor1-of-my-bot>        # expect registered, alg 1, 2592-byte key, possession proven
+   ```
+
+   Fund it from any account that has test QOR, such as the faucet. The bot needs a little test QOR for gas and for opening its transaction window.
+3. Add two **encrypted repository secrets**: `POSTMARK_FUNDER_VERIFIER_KEY` (the `KEY=` value, 0x hex) and `POSTMARK_FUNDER_VERIFIER_PQC` (the `PQC_RECOVERY_CODE=` value). Never put them in a file.
+4. Start with `dry-run: "true"` and read the run log and job summary. Switch it to `"false"` once the decisions look right.
+5. Name the bot's `0x…` address as one of the three verifiers when you create a bounty.
+
+**Security notes.** Trigger the workflow only on `schedule` and `workflow_dispatch`; never `pull_request` or `pull_request_target`, which would expose secrets to pull requests. Keys live only in encrypted secrets and are never logged. The bot refuses to run unless its derived ML-DSA-87 key is the account's live registered key. Each run opens one EVM window scoped to the escrow contract (about 300 blocks, a handful of transactions) and always closes it. The committed `bot/dist/postmark-verifier.mjs` is built from the sources (`npm run build` in `bot/`) and checked by `npm test`.
+
 ## Security notes and limitations
 
 - Pull payments only; every value transfer is `nonReentrant`; every state change emits events.
