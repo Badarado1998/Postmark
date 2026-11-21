@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from "wagmi";
 import { useQorex } from "./qorex";
 import { useEvmWindow, usePqcStatus } from "../hooks/queries";
@@ -9,10 +9,14 @@ import { shortAddr } from "../components/ui";
 import { useToast } from "../components/Toasts";
 import { CANCELLED_MESSAGE, isUserRejection } from "../chain/errors";
 
-function ConnectButtonInner() {
+function ConnectButtonInner({ openOnMount }: { openOnMount: boolean }) {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending, error, reset } = useConnect();
   const picker = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (openOnMount && !picker.current?.open) picker.current?.showModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const toast = useToast();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
@@ -107,6 +111,6 @@ function ConnectButtonInner() {
 }
 
 /** Lazy boundary: wagmi + connector code stays out of the initial bundle. */
-export default function ConnectWallet() {
-  return <WalletRoot><ConnectButtonInner /></WalletRoot>;
+export default function ConnectWallet({ openOnMount = false }: { openOnMount?: boolean }) {
+  return <WalletRoot><ConnectButtonInner openOnMount={openOnMount} /></WalletRoot>;
 }

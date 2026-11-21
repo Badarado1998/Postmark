@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { CLAIMANT, FUNDER, META, makeBounty, renderApp } from "../fixtures";
 
 const route = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
@@ -26,6 +26,7 @@ vi.mock("../../src/wallet/DisputePanel", () => ({ default: () => <p>dispute pane
 vi.mock("../../src/wallet/ReviewPanel", () => ({ default: () => <p>review panel</p> }));
 
 import BountyDetail from "../../src/pages/BountyDetail";
+import { requestWallet, resetWalletIntent } from "../../src/components/walletIntent";
 import Review from "../../src/pages/Review";
 import { BountyFacts } from "../../src/pages/bounty/BountyFacts";
 import { GithubCard } from "../../src/pages/bounty/GithubCard";
@@ -71,7 +72,19 @@ describe("BountyDetail by state", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("rpc down");
   });
 
+  it("loads no wallet panels until the visitor asks for a wallet", async () => {
+    resetWalletIntent();
+    setRoute(makeBounty({ state: 0 }));
+    renderApp(<BountyDetail />);
+    expect(screen.getByText("Connect a wallet to claim this bounty.")).toBeInTheDocument();
+    expect(screen.queryByText("claim panel")).toBeNull();
+    expect(screen.queryByText("tx actions")).toBeNull();
+    act(() => requestWallet());
+    expect(await screen.findByText("claim panel")).toBeInTheDocument();
+  });
+
   it("Open: offers the claim panel, no review link", async () => {
+    requestWallet();
     setRoute(makeBounty({ state: 0 }));
     renderApp(<BountyDetail />);
     expect(screen.getByRole("heading", { name: /Bounty #7/ })).toBeInTheDocument();
@@ -81,6 +94,7 @@ describe("BountyDetail by state", () => {
   });
 
   it("Claimed: shows the note and the review link", async () => {
+    requestWallet();
     setRoute(makeBounty({ state: 1, payee: CLAIMANT, claimRound: 1n, claimExpiresAt: 4_000_000_000n }));
     renderApp(<BountyDetail />);
     expect(await screen.findByText("claimed note")).toBeInTheDocument();

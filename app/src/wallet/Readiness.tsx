@@ -12,7 +12,8 @@ import { Card, SectionLabel } from "../components/ui";
 import { useQorex } from "./qorex";
 import { accountMismatchMessage } from "./signerPreference";
 
-export const FAUCET_URL = "https://dashboard.qorechain.io/faucet";
+import { FAUCET_URL } from "../data/links";
+export { FAUCET_URL };
 
 export type RowStatus = "ok" | "todo" | "wait";
 export type RowAction =

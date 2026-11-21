@@ -5,6 +5,9 @@ import { useGithubItem } from "../hooks/queries";
 import { StatusChip, Skeleton, ErrorState, EmptyState, Qor } from "../components/ui";
 import { explainError } from "../chain/errors";
 import { PageBody, PageHeader } from "../components/Page";
+import { requestWallet, useWalletWanted } from "../components/walletIntent";
+import { nowSec } from "../chain/time";
+import { Card, SectionLabel } from "../components/ui";
 import { githubItemLabel } from "../github/parse";
 import { GithubCard } from "./bounty/GithubCard";
 import { BountyFacts } from "./bounty/BountyFacts";
@@ -20,6 +23,27 @@ const TxActions = lazy(() => import("../wallet/TxActions"));
 const ClaimPanel = lazy(() => import("../wallet/ClaimPanel"));
 const ClaimedNote = lazy(() => import("../wallet/ClaimedNote"));
 const FunderShare = lazy(() => import("../wallet/FunderShare"));
+
+/** Static stand-in for the action panels: no wallet code loads until the visitor asks for it. */
+function WalletPrompt({ bounty: b }: { bounty: Bounty }) {
+  const now = nowSec();
+  const text = b.state === STATE.Open && now < b.deadline ? "Connect a wallet to claim this bounty."
+    : b.state === STATE.Pending && now >= b.challengeEndsAt
+      ? "Challenge window closed — ready to finalize. Connect a wallet to finalize this payout; anyone can."
+    : b.state === STATE.Open || b.state === STATE.Claimed || b.state === STATE.Pending
+      ? "Connect a wallet to see the actions available to you." : null;
+  if (!text) return null;
+  return (
+    <Card tone="accent">
+      <SectionLabel tone="accent">actions</SectionLabel>
+      <p className="mt-3 text-sm text-charcoal">{text}</p>
+      <button type="button" onClick={() => { requestWallet(); document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')?.click(); }}
+        className="mt-3 rounded-lg bg-deep px-4 py-2 text-sm font-medium text-paper hover:brightness-110">
+        Connect wallet
+      </button>
+    </Card>
+  );
+}
 
 const STATE = { Open: 0, Claimed: 1, Pending: 2, Disputed: 3, Paid: 4, Refunded: 5 } as const;
 
@@ -61,6 +85,7 @@ function Header({ id, bounty: b, meta }: { id: bigint; bounty: Bounty; meta: Bou
 }
 
 export default function BountyDetail() {
+  const wanted = useWalletWanted();
   const { id, bounty, index, meta, notFound, loading } = useBountyRoute();
 
   if (id === undefined) {
@@ -85,14 +110,14 @@ export default function BountyDetail() {
         {showDetail && (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr]">
             <div data-slot="verdict" className="order-1 min-w-0 space-y-6 empty:hidden lg:order-none lg:col-start-1 lg:row-start-1">
-              <Suspense fallback={null}><FunderShare bounty={b} /></Suspense>
+              {wanted && <Suspense fallback={null}><FunderShare bounty={b} /></Suspense>}
               {meta?.workHashMismatch && (
                 <div role="alert" className="rounded-lg border border-salmon bg-salmon/25 p-3 font-mono text-xs text-ink">
                   Warning: emitted work metadata does not re-hash to the on-chain workHash. Do not trust this bounty.
                 </div>
               )}
               {b.state === STATE.Claimed && (
-                <Suspense fallback={null}><ClaimedNote bounty={b} /></Suspense>
+                wanted ? <Suspense fallback={null}><ClaimedNote bounty={b} /></Suspense> : null
               )}
               {(b.state === STATE.Claimed || b.state === STATE.Disputed) && (
                 <Link to={`/bounty/${id}/review`}
@@ -111,10 +136,14 @@ export default function BountyDetail() {
             <aside aria-label="Bounty summary"
               className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:min-w-0 lg:space-y-4 lg:sticky lg:top-24 lg:self-start">
               <div data-slot="actions" className="order-2 min-w-0 space-y-4 empty:hidden lg:order-none">
-                {b.state === STATE.Open && meta && (
-                  <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
-                )}
-                <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
+                {wanted ? (
+                  <>
+                    {b.state === STATE.Open && meta && (
+                      <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
+                    )}
+                    <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
+                  </>
+                ) : <WalletPrompt bounty={b} />}
               </div>
               <div data-slot="facts" className="order-4 min-w-0 space-y-4 lg:order-none">
                 <AmountBreakdown bounty={b} />
