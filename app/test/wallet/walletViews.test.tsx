@@ -34,6 +34,7 @@ vi.mock("../../src/hooks/queries", () => ({
   usePqcStatus: () => ({ data: m.pqcLive === undefined ? undefined : { live: m.pqcLive } }),
   useGithubItem: () => m.githubItem,
 }));
+vi.mock("../../src/wallet/Readiness", () => ({ ReadinessChecklist: () => null }));
 vi.mock("../../src/chain/pqc", () => ({ livePqcKey: (...a: unknown[]) => m.livePqcKey(...a) }));
 
 import MeInner from "../../src/wallet/MeInner";
@@ -148,10 +149,33 @@ describe("CreateInner", () => {
   it("shows the amount to lock and the preview from the form values without a wallet", () => {
     m.address = undefined;
     renderApp(<CreateInner />);
-    expect(screen.getByText("0.6 QOR")).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Bounty card preview" })).toHaveTextContent("0.6 QOR");
+    expect(screen.getAllByText("0.55 QOR")[0]).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Bounty card preview" })).toHaveTextContent("0.55 QOR");
     fill("https://github.com/owner/repo/issues/42", "https://github.com/acme/widgets/issues/7");
     expect(screen.getByRole("group", { name: "Bounty card preview" })).toHaveTextContent("acme/widgets#7");
+  });
+
+  it("recomputes reward and bond from the amount until they are edited", () => {
+    m.address = undefined;
+    renderApp(<CreateInner />);
+    const reward = () => (screen.getByLabelText(/Challenge reward/) as HTMLInputElement).value;
+    const bond = () => (screen.getByLabelText(/Dispute bond/) as HTMLInputElement).value;
+    expect([reward(), bond()]).toEqual(["0.05", "0.1"]);
+    fireEvent.click(screen.getByRole("button", { name: "1 QOR" }));
+    expect([reward(), bond()]).toEqual(["0.1", "0.2"]);
+    fireEvent.change(screen.getByLabelText(/Challenge reward/), { target: { value: "0.3" } });
+    fireEvent.click(screen.getByRole("button", { name: "0.1 QOR" }));
+    expect([reward(), bond()]).toEqual(["0.3", "0.02"]);
+  });
+
+  it("offers deadline presets, defaulting to one week", () => {
+    m.address = undefined;
+    renderApp(<CreateInner />);
+    expect(screen.getByRole("button", { name: "1 week" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "1 month" }));
+    expect(screen.getByRole("button", { name: "1 month" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Pick a date" }));
+    expect(screen.getByLabelText(/^Deadline \(/)).toBeInTheDocument();
   });
 
   it("creates the bounty with the entered terms once connected", async () => {
@@ -163,7 +187,7 @@ describe("CreateInner", () => {
     await waitFor(() => expect(m.run).toHaveBeenCalled());
     const call = m.run.mock.calls[0]![0];
     expect(call.functionName).toBe("createBounty");
-    expect(call.value).toBe(600_000_000_000_000_000n);
+    expect(call.value).toBe(550_000_000_000_000_000n);
     expect(call.args[1]).toBe("postmark-e2e/sandbox");
   });
 

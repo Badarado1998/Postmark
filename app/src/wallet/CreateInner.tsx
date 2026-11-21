@@ -6,6 +6,7 @@ import WalletRoot from "./WalletRoot";
 import { parseGithubUrl, githubItemLabel } from "../github/parse";
 import { ItemPreview, VerifierInput } from "./createParts";
 import { VerifierPicker } from "./VerifierPicker";
+import { ReadinessChecklist } from "./Readiness";
 import { validateForm, verifierFieldError } from "../formats/createForm";
 import { livePqcKey } from "../chain/pqc";
 import { useTxAction } from "../hooks/useTxAction";
@@ -13,14 +14,17 @@ import { useToast } from "../components/Toasts";
 import { TxStatusPanel } from "./TxWidgets";
 import { PageBody, PageHeader } from "../components/Page";
 import { Card, Qor, SectionLabel, StatusChip } from "../components/ui";
-import { MS_PER_MINUTE, SECONDS_PER_DAY, SECONDS_PER_HOUR } from "../chain/time";
+import { SECONDS_PER_DAY, SECONDS_PER_HOUR, nowSec } from "../chain/time";
+import {
+  AMOUNT_CHIPS, DEADLINE_PRESETS, DEFAULT_AMOUNT, DEFAULT_CLAIM_TIMEOUT_SEC, REWARD_PERCENT, BOND_PERCENT,
+  clampClaimTimeout, deadlineLocalIn, defaultBond, defaultReward, type DeadlineChoice,
+} from "./createDefaults";
 
 const CLAIM_PRESETS = [
   { label: "1 h", sec: SECONDS_PER_HOUR }, { label: "6 h", sec: 6 * SECONDS_PER_HOUR },
   { label: "24 h", sec: SECONDS_PER_DAY }, { label: "3 d", sec: 3 * SECONDS_PER_DAY },
   { label: "7 d", sec: 7 * SECONDS_PER_DAY },
 ];
-const DEFAULT_DEADLINE_DAYS = 3;
 
 /** Live-key lookups for the three verifier slots, plus shared-key detection. */
 function useVerifierKeyCheck() {
@@ -111,16 +115,24 @@ function CreateForm() {
   const show = (g: FieldGroup) => attempted || touched[g];
   const gref = useMemo(() => (url.trim() ? parseGithubUrl(url) : null), [url]);
   const urlTouched = url.trim().length > 0;
-  const [amount, setAmount] = useState("0.5");
-  const [reward, setReward] = useState("0.1");
-  const [bond, setBond] = useState("0.2");
-  const [preset, setPreset] = useState<number | "custom">(SECONDS_PER_DAY);
-  const [customTimeout, setCustomTimeout] = useState("24");
-  const claimTimeoutSec = preset === "custom" ? Math.floor(Number(customTimeout) * SECONDS_PER_HOUR) : preset;
+  const [amount, setAmount] = useState(DEFAULT_AMOUNT);
+  const [rewardEdit, setRewardEdit] = useState<string | null>(null);
+  const [bondEdit, setBondEdit] = useState<string | null>(null);
+  const reward = rewardEdit ?? defaultReward(amount);
+  const bond = bondEdit ?? defaultBond(amount);
+  const [deadlineChoice, setDeadlineChoice] = useState<DeadlineChoice>("1w");
+  const [customDeadline, setCustomDeadline] = useState(() => deadlineLocalIn(7));
+  const deadlineLocal = useMemo(() => {
+    if (deadlineChoice === "custom") return customDeadline;
+    return deadlineLocalIn(DEADLINE_PRESETS.find((p) => p.id === deadlineChoice)!.days);
+  }, [deadlineChoice, customDeadline]);
+  const [timeoutPick, setTimeoutPick] = useState<number | "custom" | null>(null);
+  const [customTimeout, setCustomTimeout] = useState("72");
+  const deadlineSec = Math.floor(new Date(deadlineLocal).getTime() / 1000);
+  const claimTimeoutSec = timeoutPick === "custom" ? Math.floor(Number(customTimeout) * SECONDS_PER_HOUR)
+    : timeoutPick ?? clampClaimTimeout(DEFAULT_CLAIM_TIMEOUT_SEC, deadlineSec, Number(nowSec()));
+  const preset = timeoutPick === "custom" ? "custom" : claimTimeoutSec;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const local = new Date(Date.now() + DEFAULT_DEADLINE_DAYS * SECONDS_PER_DAY * 1000);
-  const [deadlineLocal, setDeadlineLocal] = useState(
-    new Date(local.getTime() - local.getTimezoneOffset() * MS_PER_MINUTE).toISOString().slice(0, 16));
   const [verifiers, setVerifiers] = useState(["", "", ""]);
   const { keyStates, clearKeyState, checkingKeys, checkKeys } = useVerifierKeyCheck();
 
@@ -178,7 +190,7 @@ function CreateForm() {
       <PageBody className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6" onChangeCapture={markTouched} onBlurCapture={markTouched}>
           <Card>
-            <SectionLabel>1 · work item</SectionLabel>
+            <SectionLabel>1 · Which GitHub issue?</SectionLabel>
             <label data-group="url" className="mt-3 block text-sm">
               <span className={label}>GitHub issue or PR URL</span>
               <input value={url} onChange={(e) => setUrl(e.target.value)}
@@ -193,42 +205,81 @@ function CreateForm() {
           </Card>
 
           <Card>
-            <SectionLabel>2 · terms</SectionLabel>
-            <div data-group="terms" className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {[
-                ["Bounty amount", amount, setAmount],
-                ["Challenge reward", reward, setReward],
-                ["Dispute bond", bond, setBond],
-              ].map(([name, val, set]) => (
-                <label key={name as string} className="block text-sm">
-                  <span className={label}>{name as string} (QOR)</span>
-                  <input value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}
-                    inputMode="decimal" className={input} />
-                </label>
-              ))}
+            <SectionLabel>2 · Reward</SectionLabel>
+            <div data-group="terms" className="mt-3">
+              <label className="block text-sm">
+                <span className={label}>Reward (QOR)</span>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className={input} />
+              </label>
+              <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Quick amounts">
+                {AMOUNT_CHIPS.map((c) => (
+                  <button key={c} type="button" aria-pressed={amount === c} onClick={() => setAmount(c)}
+                    className={`rounded-full border px-3 py-1 text-xs ${amount === c ? "border-deep bg-leaf/30 text-ink" : "border-ink/15 bg-white text-charcoal hover:bg-ink/5"}`}>
+                    {c} QOR
+                  </button>
+                ))}
+              </div>
+              <details className="mt-4 rounded-lg border border-ink/10 bg-paper/60 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-charcoal">Advanced settings</summary>
+                <div className="mt-3 space-y-4">
+                  <label className="block text-sm">
+                    <span className={label}>Challenge reward (QOR)</span>
+                    <input value={reward} onChange={(e) => setRewardEdit(e.target.value)} inputMode="decimal" className={input} />
+                    <span className="mt-1 block text-xs text-gray">
+                      Paid to someone who successfully disputes a wrong verdict. Default {REWARD_PERCENT}% of the reward.
+                    </span>
+                  </label>
+                  <label className="block text-sm">
+                    <span className={label}>Dispute bond (QOR)</span>
+                    <input value={bond} onChange={(e) => setBondEdit(e.target.value)} inputMode="decimal" className={input} />
+                    <span className="mt-1 block text-xs text-gray">
+                      What a disputer has to put up, so disputes aren't free. Default {BOND_PERCENT}% of the reward.
+                    </span>
+                  </label>
+                  <div>
+                    <ClaimTimeoutPicker preset={preset} onPreset={(p) => setTimeoutPick(p)}
+                      custom={customTimeout} onCustom={setCustomTimeout} />
+                    <span className="mt-1 block text-xs text-gray">
+                      How long a contributor has to deliver once they claim. Default 3 days, shortened if your deadline is close.
+                    </span>
+                  </div>
+                </div>
+              </details>
             </div>
           </Card>
 
           <Card>
-            <SectionLabel>3 · timing</SectionLabel>
-            <div data-group="timing" className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="block text-sm">
-                <span className={label}>Deadline ({tz})</span>
-                <input type="datetime-local" value={deadlineLocal}
-                  onChange={(e) => setDeadlineLocal(e.target.value)} className={input} />
-                <span className="mt-1 block font-mono text-[10px] text-gray">
-                  {deadlineValid ? deadlineDate.toISOString().replace("T", " ").slice(0, 16) + " UTC" : ""}
-                </span>
-              </label>
-              <ClaimTimeoutPicker preset={preset} onPreset={setPreset}
-                custom={customTimeout} onCustom={setCustomTimeout} />
+            <SectionLabel>3 · Deadline</SectionLabel>
+            <div data-group="timing" className="mt-3">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Deadline">
+                {DEADLINE_PRESETS.map((p) => (
+                  <button key={p.id} type="button" aria-pressed={deadlineChoice === p.id} onClick={() => setDeadlineChoice(p.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm ${deadlineChoice === p.id ? "border-deep bg-leaf/30 text-ink" : "border-ink/15 bg-white text-charcoal hover:bg-ink/5"}`}>
+                    {p.label}
+                  </button>
+                ))}
+                <button type="button" aria-pressed={deadlineChoice === "custom"} onClick={() => setDeadlineChoice("custom")}
+                  className={`rounded-full border px-3 py-1.5 text-sm ${deadlineChoice === "custom" ? "border-deep bg-leaf/30 text-ink" : "border-ink/15 bg-white text-charcoal hover:bg-ink/5"}`}>
+                  Pick a date
+                </button>
+              </div>
+              {deadlineChoice === "custom" && (
+                <label className="mt-3 block text-sm">
+                  <span className={label}>Deadline ({tz})</span>
+                  <input type="datetime-local" value={customDeadline}
+                    onChange={(e) => setCustomDeadline(e.target.value)} className={input} />
+                </label>
+              )}
+              <p className="mt-2 font-mono text-[11px] text-gray">
+                {deadlineValid ? `${deadlineDate.toLocaleString()} · ${deadlineDate.toISOString().replace("T", " ").slice(0, 16)} UTC` : ""}
+              </p>
             </div>
           </Card>
 
           <Card>
             <fieldset>
               <legend className={label}>
-                4 · Verifiers (need live ML-DSA-87 keys; any 2 settle)
+                4 · Who checks the work?
               </legend>
               <div data-group="verifiers" className="mt-3">
                 <VerifierPicker slots={verifiers} connected={address}
@@ -258,6 +309,7 @@ function CreateForm() {
         </div>
 
         <aside aria-label="Summary" className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <ReadinessChecklist neededWei={lockedWei ?? 0n} />
           <Card tone="accent">
             <SectionLabel tone="accent">summary</SectionLabel>
             <div className="mt-3 flex items-end justify-between gap-3">

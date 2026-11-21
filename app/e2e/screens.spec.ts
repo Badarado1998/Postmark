@@ -1,3 +1,4 @@
+import { openManualVerifiers, openLocalSigner } from "./support/easyUi";
 import { test } from "@playwright/test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -53,6 +54,7 @@ test("create form + dashboard screenshots", async ({ page }, testInfo) => {
   await page.getByText("Postmark sandbox").waitFor({ timeout: 15_000 });
   const env = readFileSync(`${homedir()}/.config/postmark/e2e/verifier0.env`, "utf8");
   const v0 = env.match(/^ADDRESS=(0x[0-9a-fA-F]{40})/m)![1]!;
+  await openManualVerifiers(page);
   for (let i = 0; i < 3; i++) {
     await page.getByPlaceholder(new RegExp(`Verifier ${i + 1}`)).fill(v0);
   }
@@ -127,6 +129,7 @@ test("claim panel + signer page screenshots", async ({ page }, testInfo) => {
     const stateFile = new URL("./.signer-state.json", import.meta.url).pathname;
     if (existsSync(stateFile)) {
       const { pairingCode } = JSON.parse(readFileSync(stateFile, "utf8")) as { pairingCode: string };
+      await openLocalSigner(page);
       await page.getByPlaceholder(/8-char code/i).fill(pairingCode);
       await page.getByRole("button", { name: /sign the claim/i }).click();
       await page.getByText(/verified locally/i).waitFor({ timeout: 60_000 });

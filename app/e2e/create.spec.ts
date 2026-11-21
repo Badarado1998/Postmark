@@ -1,3 +1,4 @@
+import { openManualVerifiers, openAdvancedSettings } from "./support/easyUi";
 import { test, expect } from "@playwright/test";
 import { installTestWallet, installProvider, mockGithub, verifierAddr } from "./testWallet";
 import { readFileSync } from "node:fs";
@@ -30,6 +31,7 @@ test("funder creates a bounty on diana e2e escrow", async ({ page }) => {
     .toBeVisible({ timeout: 15_000 });
 
   // amounts: 0.2 / 0.05 / 0.05
+  await openAdvancedSettings(page);
   const inputs = page.locator('input[inputmode="decimal"]');
   await inputs.nth(0).fill("0.2");
   await inputs.nth(1).fill("0.05");
@@ -39,9 +41,11 @@ test("funder creates a bounty on diana e2e escrow", async ({ page }) => {
   const dl = new Date(Date.now() + 3 * 3600_000);
   const local = new Date(dl.getTime() - dl.getTimezoneOffset() * 60000)
     .toISOString().slice(0, 16);
+  await page.getByRole("button", { name: "Pick a date" }).click();
   await page.locator('input[type="datetime-local"]').fill(local);
   await page.getByRole("button", { name: "1 h", exact: true }).click();
 
+  await openManualVerifiers(page);
   for (let i = 0; i < 3; i++) {
     await page.getByPlaceholder(new RegExp(`Verifier ${i + 1}`)).fill(verifierAddr(i));
   }
@@ -107,6 +111,7 @@ test("an account with no window sees the QoreX guide (no tx sent)", async ({ pag
     if (await pick.isVisible({ timeout: 5_000 }).catch(() => false)) await pick.click();
   }
   await page.getByPlaceholder(/github\.com/i).fill(ISSUE_URL);
+  await openManualVerifiers(page);
   for (let i = 0; i < 3; i++) {
     await page.getByPlaceholder(new RegExp(`Verifier ${i + 1}`)).fill(verifierAddr(i));
   }

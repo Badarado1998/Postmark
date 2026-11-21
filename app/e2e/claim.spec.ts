@@ -1,3 +1,4 @@
+import { openLocalSigner } from "./support/easyUi";
 import { test, expect } from "@playwright/test";
 import { installTestWallet, mockGithub, nodePublic, profileAddress,
   openBountyOrCreate, connectInjected, pairingCodeFor } from "./testWallet";
@@ -59,6 +60,7 @@ test("a tampered signature is rejected by local verification", async ({ page }) 
   await installTestWallet(page, "claimant");
   await page.goto(`/bounty/${openId}`);
   await connectInjected(page);
+  await openLocalSigner(page);
   await expect(page.getByPlaceholder(/8-char code/i)).toBeVisible({ timeout: 90_000 });
   await page.getByPlaceholder(/8-char code/i).fill("anything");
   await page.getByRole("button", { name: /find my comment/i }).click();
@@ -87,6 +89,7 @@ test("claimant posts identity, signs with the local signer and claims", async ({
   // step 1 — identity
   await expect(page.getByText(/postmark-claim v1 chain=9800/).first())
     .toBeVisible({ timeout: 90_000 });
+  await openLocalSigner(page).catch(() => undefined);
   await page.getByPlaceholder(/8-char code/i).fill(pairingCode());
   await page.getByRole("button", { name: /find my comment/i }).click();
   await expect(page.getByText(/@e2e-claimant/i)).toBeVisible({ timeout: 30_000 });

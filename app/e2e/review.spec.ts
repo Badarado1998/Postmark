@@ -1,3 +1,4 @@
+import { openLocalSigner } from "./support/easyUi";
 import { test, expect } from "@playwright/test";
 import { installTestWallet, mockGithub, nodePublic, nodeWallet, profileAddress,
   openBountyOrCreate, connectInjected, pairingCodeFor, E2E_ESCROW as ESCROW } from "./testWallet";
@@ -59,6 +60,7 @@ const getBounty = (id: bigint) => nodePublic().readContract({
 async function pairSigner(page: import("@playwright/test").Page, port: number) {
   const portBox = page.getByRole("textbox", { name: /^port$/i }).or(page.locator("label:has-text('port') input")).first();
   await portBox.fill(String(port));
+  await openLocalSigner(page);
   await page.getByPlaceholder(/8-char code/i).fill(pairingCodeFor(port));
 }
 
