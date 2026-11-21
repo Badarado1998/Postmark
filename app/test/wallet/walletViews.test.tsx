@@ -113,14 +113,28 @@ describe("CreateInner", () => {
   const fill = (placeholder: string, value: string) =>
     fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value } });
 
-  it("blocks submission until the form is valid", () => {
+  it("shows field errors per field: URL only, then a blurred verifier, then a submit attempt", () => {
     m.address = undefined;
     renderApp(<CreateInner />);
     expect(screen.getByRole("heading", { name: "Fund an issue" })).toBeInTheDocument();
     expect(screen.getByText(/Connect an EVM wallet to continue/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
+
+    fill("https://github.com/owner/repo/issues/42", "https://github.com/acme/widgets/issues/7");
+    expect(screen.queryByText(/Required/)).toBeNull();
+
     fireEvent.blur(screen.getByPlaceholderText("Verifier 1 — 0x… or qor1…"));
-    expect(screen.getByRole("alert")).toHaveTextContent(/Verifier 1: Required/);
+    expect(screen.getAllByText(/Required — three verifier addresses/).length).toBeGreaterThan(0);
+  });
+
+  it("reveals every relevant error after a submit attempt on a pristine form", async () => {
+    m.address = FUNDER;
+    renderApp(<CreateInner />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Create bounty/ }));
+    expect(await screen.findByText("Enter a github.com issue or PR URL.")).toBeInTheDocument();
+    expect(screen.getAllByText(/Required — three verifier addresses/)).toHaveLength(3);
+    expect(m.run).not.toHaveBeenCalled();
   });
 
   it("rejects non-GitHub URLs and previews real ones", () => {

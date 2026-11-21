@@ -2,10 +2,10 @@ import { GithubRateLimitError, type GhPull } from "../github/client";
 import { githubItemLabel, type GithubRef } from "../github/parse";
 import { useGithubItem } from "../hooks/queries";
 
-export function VerifierInput({ i, value, onChange, live, checking, error }:
-  { i: number; value: string; onChange: (v: string) => void;
+export function VerifierInput({ i, value, onChange, live, checking, error, reveal = false }:
+  { reveal?: boolean; i: number; value: string; onChange: (v: string) => void;
     live: boolean | undefined; checking: boolean; error?: string | undefined }) {
-  const show = value.trim().length > 0;
+  const show = reveal || value.trim().length > 0;
   return (
     <div>
       <div className="flex items-center gap-2">

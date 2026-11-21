@@ -85,13 +85,29 @@ function lockedAmount(amount: string, reward: string): bigint | null {
   try { return parseUnits(amount, 18) + parseUnits(reward, 18); } catch { return null; }
 }
 
+type FieldGroup = "url" | "terms" | "timing" | "verifiers";
+
+/** Which form section a validation message belongs to (display timing only). */
+function errorGroup(message: string): FieldGroup {
+  if (message.startsWith("Verifier")) return "verifiers";
+  if (/^(Amount|Challenge reward|Dispute bond)/.test(message)) return "terms";
+  return "timing";
+}
+
 function CreateForm() {
   const { address, isConnected } = useAccount();
   const navigate = useNavigate();
   const toast = useToast();
   const tx = useTxAction();
   const [url, setUrl] = useState("");
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState<Record<FieldGroup, boolean>>(
+    { url: false, terms: false, timing: false, verifiers: false });
+  const [attempted, setAttempted] = useState(false);
+  const markTouched = (e: { target: EventTarget }) => {
+    const group = (e.target as HTMLElement).closest<HTMLElement>("[data-group]")?.dataset.group as FieldGroup | undefined;
+    if (group) setTouched((t) => (t[group] ? t : { ...t, [group]: true }));
+  };
+  const show = (g: FieldGroup) => attempted || touched[g];
   const gref = useMemo(() => (url.trim() ? parseGithubUrl(url) : null), [url]);
   const urlTouched = url.trim().length > 0;
   const [amount, setAmount] = useState("0.5");
@@ -113,6 +129,7 @@ function CreateForm() {
   });
 
   const submit = async () => {
+    setAttempted(true);
     if (!form.ok || !gref) return;
     const { shared, missing } = await checkKeys(form.parsed.verifiers);
     if (shared) {
@@ -158,17 +175,17 @@ function CreateForm() {
       </PageHeader>
 
       <PageBody className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0 space-y-6" onChangeCapture={() => setTouched(true)} onBlurCapture={() => setTouched(true)}>
+        <div className="min-w-0 space-y-6" onChangeCapture={markTouched} onBlurCapture={markTouched}>
           <Card>
             <SectionLabel>1 · work item</SectionLabel>
-            <label className="mt-3 block text-sm">
+            <label data-group="url" className="mt-3 block text-sm">
               <span className={label}>GitHub issue or PR URL</span>
               <input value={url} onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo/issues/42" className={input} />
             </label>
-            {urlTouched && !gref && (
+            {(urlTouched || attempted) && !gref && (
               <p role="alert" className="mt-2 text-sm text-orange">
-                Not a github.com issue or PR URL.
+                {urlTouched ? "Not a github.com issue or PR URL." : "Enter a github.com issue or PR URL."}
               </p>
             )}
             {gref && <ItemPreview gref={gref} />}
@@ -176,7 +193,7 @@ function CreateForm() {
 
           <Card>
             <SectionLabel>2 · terms</SectionLabel>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div data-group="terms" className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
                 ["Bounty amount", amount, setAmount],
                 ["Challenge reward", reward, setReward],
@@ -193,7 +210,7 @@ function CreateForm() {
 
           <Card>
             <SectionLabel>3 · timing</SectionLabel>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div data-group="timing" className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block text-sm">
                 <span className={label}>Deadline ({tz})</span>
                 <input type="datetime-local" value={deadlineLocal}
@@ -212,9 +229,9 @@ function CreateForm() {
               <legend className={label}>
                 4 · Verifiers (need live ML-DSA-87 keys; any 2 settle)
               </legend>
-              <div className="mt-3 space-y-2">
+              <div data-group="verifiers" className="mt-3 space-y-2">
                 {verifiers.map((v, i) => (
-                  <VerifierInput key={i} i={i} value={v}
+                  <VerifierInput key={i} i={i} value={v} reveal={show("verifiers")}
                     checking={checkingKeys}
                     live={keyStates[i]}
                     error={verifierFieldError(v, i, verifiers, address)}
@@ -227,7 +244,7 @@ function CreateForm() {
             </fieldset>
           </Card>
 
-          {!form.ok && touched && (
+          {!form.ok && errorGroup(form.error) !== "verifiers" && show(errorGroup(form.error)) && (
             <p role="alert" className="text-sm text-orange">{form.error}</p>
           )}
         </div>
@@ -264,7 +281,7 @@ function CreateForm() {
               <p className="mt-4 text-sm text-charcoal">Connect an EVM wallet to continue.</p>
             ) : (
               <button onClick={() => void submit()}
-                disabled={!form.ok || !gref || tx.busy}
+                disabled={tx.busy}
                 className="mt-4 w-full rounded-lg bg-deep px-6 py-3 font-medium text-paper hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
                 {tx.state.phase === "wallet" ? "Confirm in wallet…"
                   : tx.state.phase === "submitted" || tx.state.phase === "confirming" ? "Confirming…"

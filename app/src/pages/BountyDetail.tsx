@@ -84,15 +84,13 @@ export default function BountyDetail() {
         )}
         {showDetail && (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <div className="min-w-0 space-y-6">
+            <div data-slot="verdict" className="order-1 min-w-0 space-y-6 empty:hidden lg:order-none lg:col-start-1 lg:row-start-1">
               <Suspense fallback={null}><FunderShare bounty={b} /></Suspense>
               {meta?.workHashMismatch && (
                 <div role="alert" className="rounded-lg border border-salmon bg-salmon/25 p-3 font-mono text-xs text-ink">
                   Warning: emitted work metadata does not re-hash to the on-chain workHash. Do not trust this bounty.
                 </div>
               )}
-              {meta && <GithubCard ownerRepo={meta.ownerRepo} kind={meta.kind} number={meta.number} />}
-
               {b.state === STATE.Claimed && (
                 <Suspense fallback={null}><ClaimedNote bounty={b} /></Suspense>
               )}
@@ -107,22 +105,32 @@ export default function BountyDetail() {
               {b.state === STATE.Pending && <PendingVerdict id={id} bounty={b} meta={meta} />}
               {b.state === STATE.Disputed && <DisputedBanner bounty={b} />}
               {(b.state === STATE.Paid || b.state === STATE.Refunded) && <Ruling state={b.state} events={events} />}
+            </div>
+
+            {/* below lg the aside is transparent so its two groups order into the main flow; from lg it is one sticky column */}
+            <aside aria-label="Bounty summary"
+              className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:min-w-0 lg:space-y-4 lg:sticky lg:top-24 lg:self-start">
+              <div data-slot="actions" className="order-2 min-w-0 space-y-4 empty:hidden lg:order-none">
+                {b.state === STATE.Open && meta && (
+                  <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
+                )}
+                <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
+              </div>
+              <div data-slot="facts" className="order-4 min-w-0 space-y-4 lg:order-none">
+                <AmountBreakdown bounty={b} />
+                <Deadlines bounty={b} />
+                <Verifiers bounty={b} />
+              </div>
+            </aside>
+
+            <div data-slot="story" className="order-3 min-w-0 space-y-6 lg:order-none lg:col-start-1 lg:row-start-2">
+              {meta && <GithubCard ownerRepo={meta.ownerRepo} kind={meta.kind} number={meta.number} />}
               <Timeline events={events} />
               <details className="rounded-xl border border-ink/10 bg-white p-5">
                 <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.18em] text-gray">all fields</summary>
                 <div className="mt-4"><BountyFacts bounty={b} /></div>
               </details>
             </div>
-
-            <aside aria-label="Bounty summary" className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
-              {b.state === STATE.Open && meta && (
-                <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
-              )}
-              <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
-              <AmountBreakdown bounty={b} />
-              <Deadlines bounty={b} />
-              <Verifiers bounty={b} />
-            </aside>
           </div>
         )}
       </PageBody>
