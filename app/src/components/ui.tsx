@@ -1,24 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { formatUnits } from "viem";
 import { explorerAddress } from "../chain/config";
-
-export const STATE_NAMES = ["Open", "Claimed", "Pending", "Disputed", "Paid", "Refunded"] as const;
-export type BountyStateName = (typeof STATE_NAMES)[number];
-
-const CHIP_STYLES: Record<BountyStateName, string> = {
-  Open: "border-leaf bg-leaf/15 text-deep",
-  Claimed: "border-mustard bg-mustard/30 text-orange",
-  Pending: "border-orange bg-orange/15 text-orange",
-  Disputed: "border-salmon bg-salmon/25 text-ink",
-  Paid: "border-deep bg-deep text-paper",
-  Refunded: "border-gray/60 bg-ink/5 text-gray",
-};
+import { STATE_NAMES, statusStyle, type BountyStateName } from "./status";
+export { STATE_NAMES };
+export type { BountyStateName };
 
 export function StatusChip({ state }: { state: number }) {
   const name = STATE_NAMES[state] ?? `#${state}`;
+  const style = statusStyle(state)?.pill ?? "bg-gray text-paper";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-wide ${CHIP_STYLES[name as BountyStateName] ?? "border-gray text-gray"}`}>
-      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${style}`}>
+      <span className="size-1.5 rounded-full bg-current opacity-70" aria-hidden />
       {name}
     </span>
   );

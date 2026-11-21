@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { Routes, Route } from "react-router";
 import { renderApp } from "../fixtures";
 
 vi.mock("../../src/chain/IndexerProvider", async () => (await import("../mocks")).indexerModule("live"));
+vi.mock("../../src/hooks/queries", () => ({
+  useBlockNumber: () => ({ data: 12345n, isError: false }),
+}));
 vi.mock("../../src/wallet/ConnectWallet", () => ({
   default: () => <button>Connect wallet</button>,
 }));
@@ -24,11 +27,11 @@ describe("Shell", () => {
   it("shows the announcement, nav links, feed status and wallet button", async () => {
     renderApp(<Shell><p>page body</p></Shell>);
     expect(screen.getByText(/test QOR, no monetary value/i)).toBeInTheDocument();
-    for (const name of ["Explore", "Create", "Mine"]) {
+    for (const name of ["Explore", "Create", "Dashboard", "Signer"]) {
       expect(screen.getAllByRole("link", { name })[0]).toBeInTheDocument();
     }
     expect(screen.getByText("page body")).toBeInTheDocument();
-    expect(screen.getByTitle("Chain feed: live")).toBeInTheDocument();
+    expect(screen.getByTitle("Chain feed: live")).toHaveTextContent("#12345");
     expect(await screen.findByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
   });
 
@@ -38,8 +41,9 @@ describe("Shell", () => {
     expect(menu).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(menu);
     expect(menu).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getAllByRole("link", { name: "Explore" })).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole("link", { name: "Explore" })[1]!);
+    expect(within(screen.getByRole("navigation", { name: "Mobile" })).getAllByRole("link")).toHaveLength(5);
+    expect(screen.getByRole("navigation", { name: "Mobile" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Mobile" })).getByRole("link", { name: "Explore" }));
     expect(menu).toHaveAttribute("aria-expanded", "false");
   });
 

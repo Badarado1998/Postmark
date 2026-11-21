@@ -4,25 +4,30 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 
 @theme {
-  --color-paper: #f7f6f1;
-  --color-ink: #202820;
-  --color-charcoal: #3a473d;
-  --color-gray: #5f685f;
-  --color-deep: #2f5746;
-  --color-leaf: #b7c9b7;
-  --color-salmon: #b87e72;
-  --color-orange: #976135;
-  --color-mustard: #c5b285;
-  --color-olive: #707c66;
+  --color-paper: #f3f3ee;
+  --color-ink: #1c1c18;
+  --color-charcoal: #32312f;
+  --color-gray: #787873;
+  --color-deep: #23663f;
+  --color-leaf: #7db069;
+  --color-salmon: #f1a783;
+  --color-orange: #ce8e3d;
+  --color-mustard: #ddc362;
+  --color-olive: #7a825b;
+  --color-lime: #d4f57a;
 
   --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-::selection { background: rgba(183, 201, 183, 0.7); }
+::selection { background: rgba(125, 176, 105, 0.5); }
 
 /* the sticky shell header must not cover controls scrolled to the viewport top */
 main :is(button, input, select, textarea, a, [role="button"]) { scroll-margin-top: 6rem; }
+
+/* focus ring visible on every interactive element */
+:focus-visible { outline: 2px solid var(--color-deep); outline-offset: 2px; }
+.on-dark :focus-visible { outline-color: var(--color-lime); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

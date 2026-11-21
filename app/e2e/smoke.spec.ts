@@ -16,7 +16,7 @@ test("explore lists bounties from the e2e escrow", async ({ page }) => {
   await page.goto("/explore");
   await expect(page.getByRole("heading", { name: "Bounties" })).toBeVisible();
   // the e2e deployment has real bounties from prior runs
-  await expect(page.getByText(/#\d+|no bounties yet/i).first())
+  await expect(page.getByRole("main").getByText(/#\d+|no bounties yet/i).first())
     .toBeVisible({ timeout: 30_000 });
 });
 

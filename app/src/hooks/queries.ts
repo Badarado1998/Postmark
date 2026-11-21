@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getBounty, nextBountyId, totalLiabilities } from "../chain/client";
+import { getBounty, httpClient, escrow, nextBountyId, totalLiabilities } from "../chain/client";
 import { fetchIndex, type IndexerState } from "../chain/indexer";
 import { pqcKeyStatus, type PqcStatus } from "../chain/pqc";
 import { fetchEvmWindow } from "../chain/window";
@@ -39,8 +39,6 @@ export const useEvmWindow = (addr: string | undefined | null) => useQuery({
   enabled: !!addr,
   staleTime: 15_000, retry: 1,
 });
-import { httpClient, escrow } from "../chain/client";
-
 /** One multicall getBounty over every indexed id. */
 export const useBounties = (ids: bigint[] | undefined) => useQuery({
   queryKey: ["bounties", ids?.map(String).join(",")],
@@ -68,4 +66,10 @@ export const useGithubItem = (w: WorkItem, opts: {
     ? getPull(w.ownerRepo, Number(w.number)) : getIssue(w.ownerRepo, Number(w.number))),
   staleTime: opts.staleTime ?? 5 * 60_000,
   retry: opts.retry ?? false,
+});
+
+/** Latest block number, polled lightly; an error marks the network degraded. */
+export const useBlockNumber = () => useQuery({
+  queryKey: ["blockNumber"], queryFn: () => httpClient.getBlockNumber(),
+  refetchInterval: 15_000, staleTime: 10_000, retry: false,
 });
