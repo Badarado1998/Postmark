@@ -128,9 +128,12 @@ describe("review cards", () => {
       sigStatus: { 0: "valid", 1: "valid" } as never, validIndices: [0, 1], importText: "", setImportText: noop,
       importErr: "bad bundle", importBundle: asyncNoop, download: noop };
     const onSubmit = vi.fn();
-    renderApp(<BundleCard bounty={claimed} disputed={false} bundleView={view} onSubmit={onSubmit} onCopy={noop}><p>tx</p></BundleCard>);
+    const onCopyComment = vi.fn();
+    renderApp(<BundleCard bounty={claimed} disputed={false} bundleView={view} onSubmit={onSubmit} onCopy={noop} onCopyComment={onCopyComment}><p>tx</p></BundleCard>);
     fireEvent.click(screen.getByRole("button", { name: "Submit verdict (2/3 valid)" }));
     expect(onSubmit).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Copy as GitHub comment" }));
+    expect(onCopyComment).toHaveBeenCalled();
     expect(screen.getByText(/Anyone can relay/)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("bad bundle");
   });

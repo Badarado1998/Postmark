@@ -9,7 +9,7 @@ const SIG_STATUS_TONE: Record<SigStatus, string> = {
   valid: "text-deep", invalid: "text-orange", "key not live": "text-orange", pending: "text-gray",
 };
 
-export function BundleCard({ bounty, disputed, bundleView, onSubmit, onCopy, children }: {
+export function BundleCard({ bounty, disputed, bundleView, onSubmit, onCopy, onCopyComment, children }: {
   bounty: Bounty; disputed: boolean;
   bundleView: {
     bundle: { signatures: Record<number, string> } | null; bundleJson: string;
@@ -17,7 +17,7 @@ export function BundleCard({ bounty, disputed, bundleView, onSubmit, onCopy, chi
     importText: string; setImportText: (v: string) => void; importErr: string | null;
     importBundle: () => Promise<void>; download: () => void;
   };
-  onSubmit: () => void; onCopy: () => void; children: ReactNode;
+  onSubmit: () => void; onCopy: () => void; onCopyComment: () => void; children: ReactNode;
 }) {
   const v = bundleView;
   const validCount = v.validIndices.length;
@@ -40,6 +40,7 @@ export function BundleCard({ bounty, disputed, bundleView, onSubmit, onCopy, chi
           <pre className="mt-3 max-h-48 overflow-auto rounded-lg border border-ink/10 bg-paper p-3 font-mono text-[10px] text-gray">{v.bundleJson}</pre>
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={onCopy} className={`${GHOST_BTN} px-3 py-1.5 text-xs`}>Copy JSON</button>
+            <button type="button" onClick={onCopyComment} className={`${GHOST_BTN} px-3 py-1.5 text-xs`}>Copy as GitHub comment</button>
             <button type="button" onClick={v.download} className={`${GHOST_BTN} px-3 py-1.5 text-xs`}>Download .json</button>
           </div>
         </>

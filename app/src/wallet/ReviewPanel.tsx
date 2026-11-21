@@ -9,6 +9,7 @@ import { TxStatusPanel } from "./TxWidgets";
 import { PHASE } from "../chain/verdict";
 import { sameAddress } from "../chain/address";
 import { useQorex } from "./qorex";
+import { formatVerdictComment } from "../formats/verdictComment";
 import { usePrefersLocalSigner } from "./signerPreference";
 import { useIdentityCheck } from "./review/useIdentityCheck";
 import { usePrCheck } from "./review/usePrCheck";
@@ -75,6 +76,16 @@ function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; met
       )}
       {builder.built && (
         <BundleCard bounty={bounty} disputed={disputed} bundleView={bundle} onSubmit={submit}
+          onCopyComment={() => {
+            const b = bundle.bundle;
+            const i = signing.signedIndex;
+            if (!b || i === null || !b.signatures[i]) {
+              toast({ kind: "warning", title: "Sign first", text: "Sign the verdict with your own key, then copy it as a comment." });
+              return;
+            }
+            void navigator.clipboard.writeText(formatVerdictComment(b, { signerIndex: i, signer: bounty.verifiers[i]!, kind: "human" }));
+            toast({ kind: "success", title: "Copied", text: "Verdict comment copied — post it on the GitHub issue or PR." });
+          }}
           onCopy={() => { void navigator.clipboard.writeText(bundle.bundleJson); toast({ kind: "success", title: "Copied", text: "Bundle copied." }); }}>
           <TxStatusPanel state={tx.state} />
         </BundleCard>
