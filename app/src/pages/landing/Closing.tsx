@@ -51,7 +51,7 @@ export function Footer() {
             <li><Link className="hover:text-paper" to="/explore">Explore bounties</Link></li>
             <li><Link className="hover:text-paper" to="/create">Fund a bounty</Link></li>
             <li><Link className="hover:text-paper" to="/me">My bounties</Link></li>
-            <li><Link className="hover:text-paper" to="/signer">Local signer</Link></li>
+            <li><Link className="hover:text-paper" to="/signer">Signing help</Link></li>
           </ul>
         </div>
         <div>

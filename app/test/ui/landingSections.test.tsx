@@ -52,7 +52,7 @@ describe("landing sections", () => {
   it("Proof and Faq render links and questions", () => {
     render(<><Proof /><Faq /></>);
     expect(screen.getByRole("link", { name: "resolveDispute" })).toBeInTheDocument();
-    expect(screen.getByText("Why a local signer?")).toBeInTheDocument();
+    expect(screen.getByText("Where do my keys live?")).toBeInTheDocument();
   });
 
   it("CtaBand and Footer link into the app", () => {

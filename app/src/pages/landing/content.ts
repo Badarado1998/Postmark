@@ -18,7 +18,7 @@ export const FEATURES: [string, string][] = [
   ["2-of-3 quorum", "Two matching verifier seals release the escrow. No single signer can settle alone."],
   ["Bonded disputes", "A dispute posts a bond that freezes the payout until verifiers rule again."],
   ["GitHub merge check", "Verdict evidence binds to the merged PR — the payout can't drift from the work."],
-  ["Local signer", "ML-DSA-87 keys live in a local signer process, never in the browser."],
+  ["Sign with QoreX", "ML-DSA-87 signing happens in QoreX; your post-quantum secret never leaves it."],
   ["Pull payouts", "Pull payments: payee credits withdraw only while a live PQ key is registered."],
 ];
 
@@ -42,8 +42,8 @@ export const PROOF: ProofItem[] = [
 export const FAQ = [
   ["Is this real money?",
    "No. Postmark pays in diana test QOR, which has no monetary value. It's a testnet payout demonstration."],
-  ["Why a local signer?",
-   "QoreX can't yet sign arbitrary ML-DSA-87 messages, so claims and verdicts are signed by a small local process. Your PQ keys never touch the browser."],
+  ["Where do my keys live?",
+   "In QoreX. Claims and verdicts are signed there with your ML-DSA-87 key, and the app checks every signature against your live registered key before sending. Developers can opt into a local signer instead."],
   ["What happens on a dispute?",
    "Anyone can post a bond before the 24-hour challenge window closes. The bond freezes the payout and the verifiers rule a second time."],
   ["Who can verify?",

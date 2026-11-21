@@ -9,6 +9,9 @@ and payout needs 2-of-3 ML-DSA-87 verifier verdicts.
 
 Repository: [github.com/Ololadestephen/Postmark](https://github.com/Ololadestephen/Postmark) · Project page: [build.qorechain.io/p/postmark](https://build.qorechain.io/p/postmark)
 
+<!-- DEMO LINK: add the live demo URL here after the Vercel deploy -->
+**Live demo:** _coming soon_
+
 ## How it works
 
 1. **Fund** — a funder locks test QOR on a GitHub issue or PR, naming three verifier accounts and a claim deadline.
@@ -61,12 +64,16 @@ and a live **scoped EVM window** for the account — on diana, EVM writes are au
 Cosmos-lane `MsgOpenEVMWindow` (block limit, tx count, value cap, optional allowed targets). The
 app's preflight shows the exact QoreX steps when a window is missing or too small.
 
-### Local PQ signer
+### Signing: QoreX, with a local signer as an Advanced option
 
-QoreX cannot yet sign arbitrary ML-DSA-87 messages, so claim and verdict signatures come from a
-local signer, `scripts/signer.mjs` — a small HTTP service on 127.0.0.1 that holds the ML-DSA-87
-key, asks for confirmation on the TTY, and only signs after re-verifying the exact bytes the
-escrow will hash:
+Claim and verdict messages are signed in the browser with **QoreX** (`signArbitrary`, ML-DSA-87 hybrid
+signing): click *Sign with QoreX*, approve, and the app verifies the returned signature against your live
+registered key before anything is sent. QoreX still cannot send EVM transactions, so transactions come from
+an EVM wallet (for example MetaMask) holding the **same account** as QoreX.
+
+For developers, **Advanced: use the local signer** keeps the older terminal flow: `scripts/signer.mjs`, a small
+HTTP service on 127.0.0.1 that holds the ML-DSA-87 key, asks for confirmation on the TTY, and only signs after
+re-verifying the exact bytes the escrow will hash:
 
 ```sh
 npm run signer -- serve --env ~/.config/postmark/<profile> --origin http://localhost:5173 --port 47321
@@ -78,11 +85,22 @@ start unless the derived key equals the account's live registered key. It prints
 the app must send on every request. Offline `sign-claim` / `sign-verdict` subcommands print a
 signature hex for copy/paste.
 
+## Production bounties
+
+Real GitHub issues in [Ololadestephen/postmark](https://github.com/Ololadestephen/postmark), funded on the production escrow
+(`0x13De819fE37133d19287aAFE1991a921F84b9F45`) with test QOR, no monetary value. Verifiers: the Postmark bot, the funder's
+own bot and the maintainer as a human tie-breaker.
+
+| Bounty | Issue | Create tx | Claim | Verdict | Finalize | Withdraw |
+|---|---|---|---|---|---|---|
+| #1 | [issue #1](https://github.com/Ololadestephen/postmark/issues/1) | [`0x6e0a0548…514148`](https://dashboard.qorechain.io/explorer/tx/0x6e0a0548ab1eb584db1df015bb65338d2bac2a3c7c4b539bd987ef05b1514148) | pending | pending | pending | pending |
+| #2 | [issue #2](https://github.com/Ololadestephen/postmark/issues/2) | [`0xf465ab3d…99bf2a`](https://dashboard.qorechain.io/explorer/tx/0xf465ab3d0802f1c1287b02f3d8fc4e6bb1f034ce4a55797d21ea2ac36899bf2a) | pending | pending | pending | pending |
+
 ## Testing
 
 | Command | Covers |
 |---|---|
-| `forge test` (or `npm test`) | 125 Foundry tests: claims, verdicts, disputes, withdrawals, reentrancy, invariants — all against real ML-DSA-87 signatures, plus the live Diana precompiles in the `test-utils` mocks |
+| `forge test` (or `npm test`) | 126 Foundry tests: claims, verdicts, disputes, withdrawals, reentrancy, invariants — all against real ML-DSA-87 signatures, plus the live Diana precompiles in the `test-utils` mocks |
 | `npm run test:signer` | Node tests for the local signer: origin/pairing refusal, message-mismatch and claimant-mismatch refusal, key-equality and file-mode startup checks, and calldata regression against Viem `encodeFunctionData` |
 | `cd app && npm test` | Vitest suites: form validation, preflight decisions, comment-scan pagination, verdict-bundle merge/verify with real signatures, dispute hashes, mocked-clock finalize/dispute boundaries |
 | `cd app && npm run test:chain` | Live-RPC byte-match tests: app-built `claimMessage`/`verdictMessage` (both phases) vs the deployed escrow on diana |
@@ -129,7 +147,7 @@ A verifier is an account with a registered ML-DSA-87 key that signs PAY or REFUN
 
 - Pull payments only; every value transfer is `nonReentrant`; every state change emits events.
 - Keys and seeds never enter the repo — profiles live under `~/.config/postmark/` with mode-600 files; the signer enforces it.
-- Known limits: **no dispute timeout** (a Disputed bounty stays locked unless the verifier set signs a resolution — see THREAT_MODEL.md), the **local signer is required until QoreX learns `signArbitrary` for ML-DSA-87**, and the unauthenticated **GitHub REST API rate limit** (60 req/h per IP) can stall comment scans.
+- Known limits: **no dispute timeout** (a Disputed bounty stays locked unless the verifier set signs a resolution — see THREAT_MODEL.md), the **same-account requirement** (QoreX signs, but an EVM wallet must send the transaction from the same account until QoreX can send EVM transactions), and the unauthenticated **GitHub REST API rate limit** (60 req/h per IP) can stall comment scans.
 - Trust model, griefing analysis and the full format spec: [THREAT_MODEL.md](THREAT_MODEL.md), [SPEC.md](SPEC.md).
 
 ## Audit
@@ -140,13 +158,13 @@ Both QCAI runs (Nov 20, Ethereum EVM/Solidity) scored 65/100. Run 2 reported MED
 * [PostmarkEscrow specification and test plan](SPEC.md)
 * [Threat model](THREAT_MODEL.md)
 
-Credits: QoreChain's Build Before Q-Day workshop-2 QDayVault ABI and precompile Animated UI components in app/src/components/reactbits/ are adapted from [React Bits](https://reactbits.dev) by David Haz under its MIT + Commons Clause licence (included in that folder), not the project's MIT licence.
-addresses; QoreChain docs and SDK EVM-window/QoreX guidance;
-`@qorechain/pqc` and its shared vectors; noble post-quantum; Foundry and forge-std;
-OpenZeppelin Contracts 5.7.0 (`ReentrancyGuard` only).
-See the library README for precise sources/revisions. MIT; dependency/fixture
-licenses remain their own. This directory has no project Git remote and requires
-no pushes, mainnet deployments, or changes to any prior project.
+## Credits
+
+- **QoreChain**: the Build Before Q-Day workshop-2 QDayVault ABI and precompile addresses, and the QoreChain docs and SDK guidance for EVM windows and QoreX. See the [library README](src/test-utils/README.md) for exact sources and revisions.
+- **Libraries**: `@qorechain/pqc` and its shared vectors, noble post-quantum, Foundry and forge-std, and OpenZeppelin Contracts 5.7.0 (`ReentrancyGuard` only).
+- **Animated UI components** in `app/src/components/reactbits/` are adapted from [React Bits](https://reactbits.dev) by David Haz under its MIT + Commons Clause licence (included in that folder), not the project's MIT licence.
+
+The project is MIT; dependency and fixture licences remain their own. The repository is [github.com/Ololadestephen/Postmark](https://github.com/Ololadestephen/Postmark).
 
 * [Build plan and milestones](PLAN.md)
 * [Agent instructions](AGENTS.md)

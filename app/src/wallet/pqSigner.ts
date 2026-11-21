@@ -1,5 +1,5 @@
-// PQ signing abstraction: the local signer today, QoreX signArbitrary
-// automatically once the capability ships. ML-DSA-87 secrets never touch the app.
+// PQ signing abstraction: QoreX signArbitrary by default, the local signer as an Advanced option.
+// ML-DSA-87 secrets never touch the app.
 import type { QorexNativeProvider } from "@qorechain/qorex-types";
 import { NATIVE_CHAIN_ID } from "../chain/config";
 import { signClaim as localSignClaim, signVerdict as localSignVerdict,
