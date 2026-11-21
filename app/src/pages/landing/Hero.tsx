@@ -28,6 +28,9 @@ export function Hero() {
               Browse bounties
             </Link>
           </div>
+          <p className="mt-4 text-sm text-charcoal">
+            New here? <Link to="/start" className="font-medium text-deep underline underline-offset-4">Get started in a few steps</Link>
+          </p>
         </FadeIn>
       </div>
       <div className="relative mt-12 pb-16 md:pb-24">

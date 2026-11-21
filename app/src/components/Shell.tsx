@@ -12,6 +12,7 @@ const NAV = [
   { to: "/explore", label: "Explore" },
   { to: "/create", label: "Create" },
   { to: "/me", label: "Dashboard" },
+  { to: "/start", label: "Get started" },
   { to: "/signer", label: "Signer" },
 ];
 

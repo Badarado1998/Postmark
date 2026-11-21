@@ -14,6 +14,7 @@ const BountyDetail = lazy(() => import("./pages/BountyDetail"));
 const Create = lazy(() => import("./pages/Create"));
 const Me = lazy(() => import("./pages/Me"));
 const Signer = lazy(() => import("./pages/Signer"));
+const Start = lazy(() => import("./pages/Start"));
 const Review = lazy(() => import("./pages/Review"));
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="/bounty/:id/review" element={<B><Review /></B>} />
               <Route path="/create" element={<B><Create /></B>} />
               <Route path="/me" element={<B><Me /></B>} />
+              <Route path="/start" element={<B><Start /></B>} />
               <Route path="/signer" element={<B><Signer /></B>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

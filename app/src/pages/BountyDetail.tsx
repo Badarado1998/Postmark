@@ -83,7 +83,7 @@ export default function BountyDetail() {
           </EmptyState></div>
         )}
         {showDetail && (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr]">
             <div data-slot="verdict" className="order-1 min-w-0 space-y-6 empty:hidden lg:order-none lg:col-start-1 lg:row-start-1">
               <Suspense fallback={null}><FunderShare bounty={b} /></Suspense>
               {meta?.workHashMismatch && (

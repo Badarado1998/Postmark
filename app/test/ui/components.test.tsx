@@ -26,7 +26,7 @@ describe("Shell", () => {
   it("shows the announcement, nav links, feed status and wallet button", async () => {
     renderApp(<Shell><p>page body</p></Shell>);
     expect(screen.getByText(/test QOR, no monetary value/i)).toBeInTheDocument();
-    for (const name of ["Explore", "Create", "Dashboard", "Signer"]) {
+    for (const name of ["Explore", "Create", "Dashboard", "Get started", "Signer"]) {
       expect(screen.getAllByRole("link", { name })[0]).toBeInTheDocument();
     }
     expect(screen.getByText("page body")).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe("Shell", () => {
     expect(menu).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(menu);
     expect(menu).toHaveAttribute("aria-expanded", "true");
-    expect(within(screen.getByRole("navigation", { name: "Mobile" })).getAllByRole("link")).toHaveLength(5);
+    expect(within(screen.getByRole("navigation", { name: "Mobile" })).getAllByRole("link")).toHaveLength(6);
     expect(screen.getByRole("navigation", { name: "Mobile" })).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole("navigation", { name: "Mobile" })).getByRole("link", { name: "Explore" }));
     expect(menu).toHaveAttribute("aria-expanded", "false");
