@@ -1,0 +1,30 @@
+# Copy to .github/workflows/postmark-verifier.yml in the repository whose issues you fund.
+# Add two encrypted repository secrets: POSTMARK_FUNDER_VERIFIER_KEY and POSTMARK_FUNDER_VERIFIER_PQC.
+# Start with dry-run: "true", read the run log, then switch it to "false".
+name: Postmark verifier
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: postmark-verifier
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: Ololadestephen/Postmark/bot@<sha>   # pin a reviewed commit SHA
+        with:
+          verifier-key: ${{ secrets.POSTMARK_FUNDER_VERIFIER_KEY }}
+          pqc-recovery-code: ${{ secrets.POSTMARK_FUNDER_VERIFIER_PQC }}
+          post-comments: "true"
+          dry-run: "true"

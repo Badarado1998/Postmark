@@ -1,0 +1,37 @@
+name: Postmark verifier
+description: Scheduled Postmark verifier. Checks claims against GitHub, signs verdicts with ML-DSA-87 and relays a 2-of-3 quorum on QoreChain diana (testnet).
+inputs:
+  verifier-key:
+    description: The verifier's ECDSA private key (0x hex). Pass it from an encrypted secret.
+    required: true
+  pqc-recovery-code:
+    description: The verifier's ML-DSA-87 recovery code (QRC1...). Pass it from an encrypted secret.
+    required: true
+  github-token:
+    description: Token used to read issues and pull requests and, optionally, to post verdict comments.
+    default: ${{ github.token }}
+  post-comments:
+    description: Post the bot's signed verdict as a comment on the bounty's issue or PR.
+    default: "true"
+  escrow:
+    description: Escrow contract address. Empty means the production deployment.
+    default: ""
+  dry-run:
+    description: Log decisions only; post no comments and send no transactions.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Run the verifier
+      shell: bash
+      env:
+        POSTMARK_VERIFIER_KEY: ${{ inputs.verifier-key }}
+        POSTMARK_VERIFIER_PQC: ${{ inputs.pqc-recovery-code }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        POSTMARK_POST_COMMENTS: ${{ inputs.post-comments }}
+        POSTMARK_ESCROW: ${{ inputs.escrow }}
+        POSTMARK_DRY_RUN: ${{ inputs.dry-run }}
+      run: node "${{ github.action_path }}/dist/postmark-verifier.mjs"

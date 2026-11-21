@@ -1,0 +1,29 @@
+name: Funder verifier
+
+# The funder's own verifier bot for this repository. Keys live only in encrypted repository secrets.
+# Schedule and manual runs only: never pull_request or pull_request_target, so a PR can't reach the secrets.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: postmark-verifier
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./bot
+        with:
+          verifier-key: ${{ secrets.POSTMARK_FUNDER_VERIFIER_KEY }}
+          pqc-recovery-code: ${{ secrets.POSTMARK_FUNDER_VERIFIER_PQC }}
+          post-comments: "true"

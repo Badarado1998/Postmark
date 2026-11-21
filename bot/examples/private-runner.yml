@@ -1,0 +1,31 @@
+# For the maintainer's PRIVATE bot repository: runs the Postmark verifier with that repo's secrets.
+# Pin POSTMARK_SHA to a reviewed commit of Ololadestephen/Postmark; never track a branch.
+name: Postmark verifier
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: postmark-verifier
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Ololadestephen/Postmark
+          ref: POSTMARK_SHA
+          path: postmark
+      - uses: ./postmark/bot
+        with:
+          verifier-key: ${{ secrets.POSTMARK_VERIFIER_KEY }}
+          pqc-recovery-code: ${{ secrets.POSTMARK_VERIFIER_PQC }}
+          post-comments: "false"
