@@ -3,7 +3,7 @@
     "address": "0xA46B8DC7593eDEe0f31b6F7fD1362e855Ad50693",
     "name": "Postmark verifier bot",
     "kind": "bot",
-    "runner": "Postmark maintainer (@Ololadestephen): scheduled GitHub Action in a private repo, every 5 minutes",
+    "runner": "Postmark maintainer (@Ololadestephen): scheduled GitHub Action in a private repo, every 15 minutes",
     "note": "Signs PAY only when the claim comment and a merged PR by the claimant check out; abstains when unsure."
   },
   {

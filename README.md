@@ -92,7 +92,7 @@ signature hex for copy/paste.
 
 ## Run your own verifier
 
-A verifier is an account with a registered ML-DSA-87 key that signs PAY or REFUND verdicts. `bot/` is a scheduled GitHub Action that does this automatically, so a claim doesn't wait on a person. Today's curated verifiers are the Postmark maintainer's bot (a private-repo Action, every 5 minutes) and the maintainer as a human tie-breaker; each funder is expected to run their own bot for their repository. These are not guaranteed to be independent parties, so choose who you rely on.
+A verifier is an account with a registered ML-DSA-87 key that signs PAY or REFUND verdicts. `bot/` is a scheduled GitHub Action that does this automatically, so a claim doesn't wait on a person. Today's curated verifiers are the Postmark maintainer's bot (a private-repo Action, every 15 minutes) and the maintainer as a human tie-breaker; each funder is expected to run their own bot for their repository. These are not guaranteed to be independent parties, so choose who you rely on.
 
 **What the bot checks.** Every run, for each bounty that names its address as a verifier:
 
