@@ -9,8 +9,7 @@ and payout needs 2-of-3 ML-DSA-87 verifier verdicts.
 
 Repository: [github.com/Ololadestephen/Postmark](https://github.com/Ololadestephen/Postmark) · Project page: [build.qorechain.io/p/postmark](https://build.qorechain.io/p/postmark)
 
-<!-- DEMO LINK: add the live demo URL here after the Vercel deploy -->
-**Live demo:** _coming soon_
+**Live demo:** [usepostmark.vercel.app](https://usepostmark.vercel.app) (diana testnet; test QOR has no monetary value)
 
 ## How it works
 
