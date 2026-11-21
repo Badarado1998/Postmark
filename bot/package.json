@@ -1,0 +1,25 @@
+{
+  "name": "postmark-verifier-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled Postmark verifier: checks claims against GitHub, signs verdicts with ML-DSA-87 and relays a 2-of-3 quorum.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check-dist": "node scripts/check-dist.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/sdk": "0.14.0",
+    "viem": "2.57.19"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}
