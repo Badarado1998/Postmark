@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { creditOf, type Bounty } from "../chain/client";
 import { githubItemLabel } from "../github/parse";
 import { useIndex, useBounties, useGithubItem, usePqcStatus } from "../hooks/queries";
+import { AnimatedQor } from "../components/motion";
 import { PageBody, PageHeader } from "../components/Page";
 import { StatusChip, Qor, Countdown, shortAddr, Skeleton } from "../components/ui";
 import { useTxAction } from "../hooks/useTxAction";
@@ -40,7 +41,7 @@ function Credits() {
     <section aria-label="Withdrawable balance" className="rounded-2xl bg-ink p-6 text-paper">
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-paper/60">withdrawable</div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-        <Qor wei={ungated + gated} className="text-4xl font-semibold tabular-nums tracking-tight" />
+        <AnimatedQor wei={ungated + gated} className="text-4xl font-semibold tabular-nums tracking-tight" />
         <button disabled={tx.busy}
           onClick={() => void tx.run({ functionName: "withdraw", args: [],
             onConfirmed: () => toast({ kind: "info", text: "Withdrawn." }) })}

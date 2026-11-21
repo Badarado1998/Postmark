@@ -3,6 +3,7 @@ import { Logo } from "../../components/Logo";
 import { PixelBand, DitherEdge } from "../../components/PixelBand";
 import { ESCROW_ADDRESS, explorerAddress } from "../../chain/config";
 import { FadeIn } from "./FadeIn";
+import { StarLink } from "../../components/motion";
 
 export function CtaBand() {
   return (
@@ -13,10 +14,11 @@ export function CtaBand() {
           Fund your first bounty in minutes.
         </h2>
         <p className="mx-auto mt-4 max-w-md text-ink/75">Escrow test QOR against a real issue and let three post-quantum verifiers settle it.</p>
-        <Link to="/create"
-          className="mt-8 inline-block rounded-lg bg-ink px-8 py-3 font-medium text-paper transition hover:bg-charcoal">
-          Fund a bounty
-        </Link>
+        <div className="mt-8">
+          <StarLink to="/create" className="inline-block rounded-lg bg-ink px-8 py-3 font-medium text-paper transition hover:bg-charcoal">
+            Fund a bounty
+          </StarLink>
+        </div>
         <p className="mt-4 font-mono text-[11px] text-ink/70">diana testnet · test QOR, no monetary value</p>
       </FadeIn>
       <DitherEdge color="#D4F57A" className="absolute inset-x-0 bottom-0 translate-y-full" />

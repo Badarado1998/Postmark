@@ -16,6 +16,8 @@ import Me from "../../src/pages/Me";
 import Create from "../../src/pages/Create";
 import { ESCROW_ADDRESS } from "../../src/chain/config";
 
+vi.mock("motion/react", async (orig) => ({ ...(await orig<typeof import("motion/react")>()), useReducedMotion: () => true }));
+
 describe("Landing", () => {
   it("states the pitch and links to the app", () => {
     renderApp(<Landing />);
@@ -34,7 +36,7 @@ describe("Landing", () => {
     renderApp(<Landing />);
     expect(screen.getByRole("link", { name: ESCROW_ADDRESS })).toBeInTheDocument();
     expect(screen.getByText("Is this real money?")).toBeInTheDocument();
-    expect(screen.getByText(/126 Foundry tests/)).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "P" && /126 Foundry tests/.test(el.textContent ?? ""))).toBeInTheDocument();
   });
 });
 

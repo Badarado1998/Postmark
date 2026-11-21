@@ -414,9 +414,9 @@ const BlurText = ({
 
   return (
     <MotionConfig reducedMotion="user">
-      <p
+      <span
         ref={ref}
-        className={`blur-text flex flex-wrap ${trigger === 'click' ? 'cursor-pointer' : ''} ${className}`}
+        className={`blur-text inline-flex flex-wrap ${trigger === 'click' ? 'cursor-pointer' : ''} ${className}`}
         style={{ color }}
         onPointerEnter={trigger === 'hover' ? handleEnter : undefined}
         onClick={trigger === 'click' ? replay : undefined}
@@ -433,7 +433,7 @@ const BlurText = ({
             {indices.map(renderPiece)}
           </span>
         ))}
-      </p>
+      </span>
     </MotionConfig>
   );
 };

@@ -5,6 +5,7 @@ import { useFeedStatus } from "../chain/IndexerProvider";
 import { useBlockNumber } from "../hooks/queries";
 import { explorerBlock } from "../chain/config";
 import { Logo } from "./Logo";
+import { ShinyBar } from "./motion";
 import { PixelBand } from "./PixelBand";
 
 const NAV = [
@@ -57,7 +58,7 @@ export function Shell({ children }: { children?: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-paper text-ink">
       <div className="bg-ink px-4 py-1.5 text-center font-mono text-[11px] text-paper/80">
-        Live on QoreChain diana testnet · test QOR, no monetary value
+        <ShinyBar text="Live on QoreChain diana testnet · test QOR, no monetary value" />
       </div>
       <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/95 backdrop-blur">
         <div data-container="nav" className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5">

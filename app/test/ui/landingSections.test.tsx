@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { vi, describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { renderApp } from "../fixtures";
 import { Hero } from "../../src/pages/landing/Hero";
@@ -9,6 +9,8 @@ import { Faq, Proof } from "../../src/pages/landing/ProofFaq";
 import { CtaBand, Footer } from "../../src/pages/landing/Closing";
 import { FadeIn } from "../../src/pages/landing/FadeIn";
 import { BUILT_ON, FAQ, FEATURES, PROOF, STEPS } from "../../src/pages/landing/content";
+
+vi.mock("motion/react", async (orig) => ({ ...(await orig<typeof import("motion/react")>()), useReducedMotion: () => true }));
 
 describe("landing content", () => {
   it("lists the five steps, six features and six FAQ answers", () => {

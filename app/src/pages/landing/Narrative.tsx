@@ -1,14 +1,13 @@
 import { FadeIn } from "./FadeIn";
+import { TextMarquee } from "../../components/motion";
 import { BUILT_ON, STEPS } from "./content";
 
 export function BuiltOn() {
   return (
     <section className="on-dark border-b border-paper/10 bg-ink px-4 py-6">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/50">built on</span>
-        {BUILT_ON.map((b) => (
-          <span key={b} className="font-mono text-xs text-paper/85">{b}</span>
-        ))}
+      <div className="mx-auto max-w-5xl">
+        <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.25em] text-paper/50">built on</span>
+        <TextMarquee items={BUILT_ON} ariaLabel="Built on" />
       </div>
     </section>
   );

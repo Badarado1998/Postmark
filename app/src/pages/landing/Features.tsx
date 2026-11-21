@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { FadeIn } from "./FadeIn";
+import { SpotCard } from "../../components/motion";
 import { FEATURES } from "./content";
 import { DitherEdge } from "../../components/PixelBand";
 
@@ -23,13 +24,13 @@ export function Features() {
         </h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(([t, b], i) => (
-            <div key={t} className="rounded-xl border border-paper/10 bg-ink p-6">
+            <SpotCard key={t} className="rounded-xl border border-paper/10 bg-ink p-6" spotlightColor="rgba(212,245,122,0.14)">
               <span className={`grid size-10 place-items-center rounded-lg text-ink ${TILES[i]}`}>
                 <span className="size-5" aria-hidden>{ICONS[i]}</span>
               </span>
               <h3 className="mt-5 font-semibold tracking-tight">{t}</h3>
               <p className="mt-2 text-sm leading-relaxed text-paper/65">{b}</p>
-            </div>
+            </SpotCard>
           ))}
         </div>
       </FadeIn>
