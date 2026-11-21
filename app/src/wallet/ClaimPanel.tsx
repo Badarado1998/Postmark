@@ -16,6 +16,8 @@ import { signerStatus, SignerError } from "../chain/localSigner";
 import { pickSigner } from "./pqSigner";
 import { accountMismatchMessage, usePrefersLocalSigner } from "./signerPreference";
 import { AdvancedSigner } from "./AdvancedSigner";
+import { ReadinessChecklist } from "./Readiness";
+import { useEnableTransactions } from "./useEnableTransactions";
 import { useQorex } from "./qorex";
 import { usePqcStatus } from "../hooks/queries";
 import { Card, SectionLabel, shortAddr } from "../components/ui";
@@ -31,6 +33,7 @@ type Step = "identity" | "scan" | "signature" | "send";
 function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const { address } = useAccount();
   const qorex = useQorex();
+  const enable = useEnableTransactions();
   const preferLocal = usePrefersLocalSigner();
   const qoreXSigns = !preferLocal && qorex.canSignArbitrary && !!qorex.qorAddress;
   const mismatch = qoreXSigns ? accountMismatchMessage(qorex.qorAddress, address) : null;
@@ -149,6 +152,10 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
         </p>
       )}
       <AdvancedSigner />
+
+      <div className="mt-4">
+        <ReadinessChecklist neededWei={0n} title="Before you claim" onEnable={(n) => void enable.run(n)} />
+      </div>
 
       {/* step 1 — identity */}
       <div className="mt-4">

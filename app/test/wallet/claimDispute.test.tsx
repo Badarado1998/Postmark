@@ -19,6 +19,8 @@ vi.mock("../../src/hooks/useTxAction", () => ({
   useTxAction: () => ({ state: { phase: "idle" }, run: m.run, busy: false }),
 }));
 vi.mock("../../src/components/Toasts", () => ({ useToast: () => m.toast }));
+vi.mock("../../src/wallet/Readiness", () => ({ ReadinessChecklist: () => null }));
+vi.mock("../../src/wallet/useEnableTransactions", () => ({ useEnableTransactions: () => ({ run: vi.fn(), busy: false }) }));
 vi.mock("../../src/wallet/qorex", () => ({ useQorex: () => ({ canSignArbitrary: false, qorAddress: null, native: null }) }));
 vi.mock("../../src/hooks/queries", () => ({
   usePqcStatus: () => ({ data: m.myKeyLive === undefined ? undefined : { live: m.myKeyLive } }),
