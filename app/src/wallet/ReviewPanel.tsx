@@ -9,6 +9,7 @@ import { TxStatusPanel } from "./TxWidgets";
 import { PHASE } from "../chain/verdict";
 import { sameAddress } from "../chain/address";
 import { useQorex } from "./qorex";
+import { usePrefersLocalSigner } from "./signerPreference";
 import { useIdentityCheck } from "./review/useIdentityCheck";
 import { usePrCheck } from "./review/usePrCheck";
 import { useVerdictBuilder } from "./review/useVerdictBuilder";
@@ -23,6 +24,7 @@ import type { BountyMeta } from "../chain/indexer";
 function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const { address } = useAccount();
   const qorex = useQorex();
+  const preferLocal = usePrefersLocalSigner();
   const tx = useTxAction();
   const toast = useToast();
 
@@ -67,7 +69,7 @@ function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; met
         scanDone={identity.status === "done"} builder={builder} built={builder.built} />
       {builder.built && (
         <SignCard myVerifierIndex={myVerifierIndex}
-          usesQorex={!!(qorex.canSignArbitrary && qorex.qorAddress)}
+          usesQorex={!preferLocal && !!(qorex.canSignArbitrary && qorex.qorAddress)}
           signing={signing.signing} error={signing.error} signedIndex={signing.signedIndex}
           onSign={() => void signing.sign()} />
       )}

@@ -16,7 +16,13 @@ import {
   signerStatus, signClaim, signVerdict, signerPort, setSignerPort, signerUrl,
   pairingCode, setPairingCode, SignerError,
 } from "../../src/chain/localSigner";
-import { localSigner, pickSigner, qorexSigner } from "../../src/wallet/pqSigner";
+import { localSigner, pickSigner, qorexSigner, decodePqSignature } from "../../src/wallet/pqSigner";
+import { accountMismatchMessage } from "../../src/wallet/signerPreference";
+import { evmToQor } from "../../src/chain/bech32";
+import { bytesToHex } from "viem";
+import { CLAIMANT, FUNDER } from "../fixtures";
+
+const PREFIX = "qorechain-msg-v1|qorechain-diana|";
 import { useQorex, type QorexState } from "../../src/wallet/qorex";
 
 const SIG = `0x${"ab".repeat(8)}` as const;
@@ -93,17 +99,54 @@ describe("PQ signers", () => {
     expect(localSigner.label).toContain("127.0.0.1");
   });
 
-  it("the QoreX signer unwraps pq.signature or signature and prefixes 0x", async () => {
+  it("the QoreX signer strips the reserved prefix, enables the chain and decodes hex or base64", async () => {
+    const payload = new Uint8Array([1, 2, 3, 4]);
+    const message = bytesToHex(new Uint8Array([...new TextEncoder().encode(PREFIX), ...payload]));
+    const hexSig = "ab".repeat(4627);
+    const b64Sig = btoa(String.fromCharCode(...new Uint8Array(4627).fill(7)));
     const signArbitrary = vi.fn()
-      .mockResolvedValueOnce({ pq: { signature: "abcd" } })
-      .mockResolvedValueOnce({ signature: "0x1234" })
+      .mockResolvedValueOnce({ pq: { signature: hexSig } })
+      .mockResolvedValueOnce({ pq: { signature: `0x${hexSig}` } })
+      .mockResolvedValueOnce({ pq: { signature: b64Sig } })
       .mockResolvedValueOnce({});
-    const signer = qorexSigner({ signArbitrary } as never, "qor1x");
-    const req = { bountyId: 1n, identityHash: `0x${"11".repeat(32)}` as const, claimRound: 1n, message: "0x00" as const };
-    expect(await signer.sign(req)).toBe("0xabcd");
-    expect(await signer.sign(req)).toBe("0x1234");
+    const enable = vi.fn().mockResolvedValue(undefined);
+    const signer = qorexSigner({ signArbitrary, enable } as never, "qor1x");
+    const req = { bountyId: 1n, identityHash: `0x${"11".repeat(32)}` as const, claimRound: 1n, message };
+    expect(await signer.sign(req)).toBe(`0x${hexSig}`);
+    expect(await signer.sign(req)).toBe(`0x${hexSig}`);
+    expect(await signer.sign(req)).toBe(`0x${"07".repeat(4627)}`);
     await expect(signer.sign(req)).rejects.toThrow(/no PQ signature/);
-    expect(signArbitrary).toHaveBeenCalledWith("qorechain-diana", "qor1x", expect.any(Uint8Array));
+    expect(enable).toHaveBeenCalledWith("qorechain-diana");
+    const [chain, who, data] = signArbitrary.mock.calls[0]!;
+    expect([chain, who]).toEqual(["qorechain-diana", "qor1x"]);
+    expect(Array.from(data as Uint8Array)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("refuses a message without the exact prefix before calling QoreX", async () => {
+    const signArbitrary = vi.fn();
+    const enable = vi.fn();
+    const signer = qorexSigner({ signArbitrary, enable } as never, "qor1x");
+    const req = { bountyId: 1n, identityHash: `0x${"11".repeat(32)}` as const, claimRound: 1n };
+    await expect(signer.sign({ ...req, message: "0x1234" })).rejects.toThrow(/Refusing to sign/);
+    const wrong = bytesToHex(new TextEncoder().encode("qorechain-msg-v1|other-chain|x"));
+    await expect(signer.sign({ ...req, message: wrong })).rejects.toThrow(/Refusing to sign/);
+    expect(signArbitrary).not.toHaveBeenCalled();
+    expect(enable).not.toHaveBeenCalled();
+  });
+
+  it("decodePqSignature rejects wrong lengths and junk", () => {
+    expect(() => decodePqSignature("abcd")).toThrow(/unexpected format/);
+    expect(() => decodePqSignature("ab".repeat(4626))).toThrow(/unexpected format/);
+    expect(() => decodePqSignature("not a signature!")).toThrow(/unexpected format/);
+    expect(decodePqSignature(`0x${"cd".repeat(4627)}`)).toBe(`0x${"cd".repeat(4627)}`);
+  });
+
+  it("blocks when the QoreX account and the wallet are different accounts", () => {
+    const qor1 = evmToQor(CLAIMANT);
+    expect(accountMismatchMessage(qor1, CLAIMANT)).toBeNull();
+    expect(accountMismatchMessage(qor1, CLAIMANT.toLowerCase())).toBeNull();
+    expect(accountMismatchMessage(qor1, FUNDER)).toMatch(/different accounts.*Switch MetaMask to 0x/);
+    expect(accountMismatchMessage(null, FUNDER)).toBeNull();
   });
 
   it("pickSigner uses QoreX only when it can sign arbitrary messages for an account", () => {

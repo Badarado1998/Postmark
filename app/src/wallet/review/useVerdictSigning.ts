@@ -40,7 +40,7 @@ export function useVerdictSigning(
         if (!st.live) throw new SignerError(422, "The signer's key is not live on diana.");
       } else {
         index = bounty.verifiers.findIndex((v) => evmToQor(v) === qorex.qorAddress);
-        if (index < 0) throw new Error("The QoreX identity is not a verifier on this bounty.");
+        if (index < 0) throw new Error("Your QoreX account is not one of this bounty's verifiers. Select the matching account in QoreX.");
       }
       const signature = await signer.signVerdict({ verdict: built.verdict, message: built.message });
       const key = await pqcKeyStatus(bounty.verifiers[index]!);

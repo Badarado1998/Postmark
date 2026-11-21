@@ -137,8 +137,9 @@ describe("static pages", () => {
   });
 
   it("Signer page explains the security model", () => {
-    render(<Signer />);
-    expect(screen.getByRole("heading", { name: "The local signer" })).toBeInTheDocument();
+    renderApp(<Signer />);
+    expect(screen.getByRole("heading", { name: "Signing your claims" })).toBeInTheDocument();
+    expect(screen.getByText("Advanced: use the local signer")).toBeInTheDocument();
     expect(screen.getByText(/Binds/)).toBeInTheDocument();
     expect(screen.getByText(/pairing code/i, { selector: "p" })).toBeInTheDocument();
   });

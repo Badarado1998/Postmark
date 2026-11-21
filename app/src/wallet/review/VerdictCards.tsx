@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { Card, SectionLabel } from "../../components/ui";
 import { REFUND_REASONS } from "../../formats/hashes";
-import { pairingCode, setPairingCode, signerPort, setSignerPort } from "../../chain/localSigner";
+import { AdvancedSigner } from "../AdvancedSigner";
 import type { BuiltVerdict } from "../../chain/verdict";
 import { ACCENT_BTN, Alert, GHOST_BTN, SOLID_BTN, TEXT_INPUT } from "./reviewUi";
 
@@ -54,32 +53,22 @@ export function DecisionCard({ disputed, canPay, canResolve, scanDone, builder, 
   );
 }
 
-export function SignCard({ myVerifierIndex, usesQorex, signing, error, signedIndex, onSign }: {
-  myVerifierIndex: number; usesQorex: boolean; signing: boolean;
+export function SignCard({ myVerifierIndex, usesQorex, mismatch = null, signing, error, signedIndex, onSign }: {
+  myVerifierIndex: number; usesQorex: boolean; mismatch?: string | null; signing: boolean;
   error: string | null; signedIndex: number | null; onSign: () => void;
 }) {
-  const [pair, setPair] = useState(pairingCode() ?? "");
-  const [port, setPort] = useState(String(signerPort()));
   return (
     <Card tone="accent">
       <SectionLabel tone="accent">sign the verdict</SectionLabel>
       {myVerifierIndex >= 0 && (
         <p className="mt-2 text-xs text-gray">You are verifier #{myVerifierIndex}.</p>
       )}
-      {!usesQorex && (
-        <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-xs text-gray">
-          <label>Pairing code
-            <input value={pair} onChange={(e) => { setPair(e.target.value); setPairingCode(e.target.value); }}
-              placeholder="8-char code"
-              className="ml-2 w-32 rounded border border-ink/10 bg-paper px-2 py-1 text-ink" /></label>
-          <label>port
-            <input value={port} onChange={(e) => { setPort(e.target.value); setSignerPort(Number(e.target.value)); }}
-              className="ml-2 w-20 rounded border border-ink/10 bg-paper px-2 py-1 text-ink" /></label>
-          <span className="text-gray">the signer's address must be one of this bounty's verifiers</span>
-        </div>
-      )}
-      <button type="button" onClick={onSign} disabled={signing} className={`mt-3 ${ACCENT_BTN}`}>
-        {signing ? "Signing…" : "Sign with the local signer"}
+      {mismatch && <Alert>{mismatch}</Alert>}
+      <AdvancedSigner showPort>
+        <p>The signer's address must be one of this bounty's verifiers.</p>
+      </AdvancedSigner>
+      <button type="button" onClick={onSign} disabled={signing || !!mismatch} className={`mt-3 ${ACCENT_BTN}`}>
+        {signing ? "Signing…" : usesQorex ? "Sign with QoreX" : "Sign with the local signer"}
       </button>
       {error && <Alert>{error}</Alert>}
       {signedIndex !== null && (

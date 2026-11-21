@@ -115,8 +115,12 @@ describe("review cards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign with the local signer" }));
     expect(onSign).toHaveBeenCalled();
     rerender(<SignCard myVerifierIndex={-1} usesQorex signing error={null} signedIndex={null} onSign={onSign} />);
-    expect(screen.queryByPlaceholderText("8-char code")).toBeNull();
+    expect(screen.getByText("Advanced: use the local signer")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Signing…" })).toBeDisabled();
+    rerender(<SignCard myVerifierIndex={0} usesQorex signing={false} error={null} signedIndex={null} onSign={onSign} />);
+    expect(screen.getByRole("button", { name: "Sign with QoreX" })).toBeEnabled();
+    rerender(<SignCard myVerifierIndex={0} usesQorex mismatch="Your wallet and QoreX are on different accounts." signing={false} error={null} signedIndex={null} onSign={onSign} />);
+    expect(screen.getByRole("button", { name: "Sign with QoreX" })).toBeDisabled();
   });
 
   it("BundleCard enables submit at two valid signatures", () => {

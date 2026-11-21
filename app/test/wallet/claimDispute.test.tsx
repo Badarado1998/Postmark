@@ -32,7 +32,7 @@ vi.mock("../../src/github/client", async (importOriginal) => ({
 }));
 vi.mock("../../src/chain/localSigner", () => ({
   signerStatus: vi.fn(async () => ({ address: m.signerAddress, live: m.signerLive })),
-  pairingCode: () => "abcd1234", setPairingCode: vi.fn(),
+  pairingCode: () => "abcd1234", setPairingCode: vi.fn(), signerPort: () => 47321, setSignerPort: vi.fn(),
   SignerError: class extends Error { constructor(public status: number, msg: string) { super(msg); } },
 }));
 vi.mock("../../src/wallet/pqSigner", () => ({

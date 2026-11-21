@@ -12,8 +12,10 @@ import { identityHashOf } from "../formats/hashes";
 import { getAllComments, findClaimComments } from "../github/client";
 import { githubItemUrl, githubItemLabel } from "../github/parse";
 import { pqcKeyStatus } from "../chain/pqc";
-import { signerStatus, pairingCode, setPairingCode, SignerError } from "../chain/localSigner";
+import { signerStatus, SignerError } from "../chain/localSigner";
 import { pickSigner } from "./pqSigner";
+import { accountMismatchMessage, usePrefersLocalSigner } from "./signerPreference";
+import { AdvancedSigner } from "./AdvancedSigner";
 import { useQorex } from "./qorex";
 import { usePqcStatus } from "../hooks/queries";
 import { Card, SectionLabel, shortAddr } from "../components/ui";
@@ -29,6 +31,9 @@ type Step = "identity" | "scan" | "signature" | "send";
 function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta: BountyMeta }) {
   const { address } = useAccount();
   const qorex = useQorex();
+  const preferLocal = usePrefersLocalSigner();
+  const qoreXSigns = !preferLocal && qorex.canSignArbitrary && !!qorex.qorAddress;
+  const mismatch = qoreXSigns ? accountMismatchMessage(qorex.qorAddress, address) : null;
   const myKey = usePqcStatus(address);
   const tx = useTxAction();
   const toast = useToast();
@@ -39,7 +44,6 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
   const [claim, setClaim] = useState<{
     login: string; commentId: bigint; identityHash: `0x${string}`; commentUrl: string;
   } | null>(null);
-  const [pair, setPair] = useState(pairingCode() ?? "");
   const [sigStatus, setSigStatus] = useState<{
     ok: boolean; text: string } | null>(null);
   const [signature, setSignature] = useState<`0x${string}` | null>(null);
@@ -98,6 +102,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
       const claimRound = bounty.claimRound + 1n;
       const message = claimMessage(id, address, claim.identityHash, claimRound);
       const signer = pickSigner(qorex);
+      if (signer.id === "qorex" && mismatch) throw new Error(mismatch);
       if (signer.id === "local") {
         const st = await signerStatus();
         if (!sameAddress(st.address, address)) {
@@ -137,21 +142,13 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
     <Card tone="accent">
       <SectionLabel tone="accent">claim this bounty</SectionLabel>
 
-      {/* pairing — shown up front so the signer is ready before the signature step */}
-      {!(qorex.canSignArbitrary && qorex.qorAddress) && (
-        <div className="mt-3">
-          <label className="block font-mono text-xs text-gray">
-            Pairing code — the 8 characters printed by `signer serve`
-            <input value={pair} onChange={(e) => { setPair(e.target.value); setPairingCode(e.target.value); }}
-              className="ml-2 w-32 rounded border border-ink/10 bg-paper px-2 py-1 font-mono text-ink"
-              placeholder="8-char code" />
-          </label>
-          <p className="mt-1 text-xs text-gray">
-            Run <code className="text-ink">npm run signer -- serve --env ~/.config/postmark/&lt;profile&gt;</code> locally.{" "}
-            <a href="/signer" className="text-deep underline underline-offset-4">help</a>
-          </p>
-        </div>
+      {!qoreXSigns && (
+        <p className="mt-3 text-sm text-charcoal">
+          To sign your claim you need QoreX with a registered post-quantum key.{" "}
+          <a href="/start" className="text-deep underline underline-offset-4">Get started</a>
+        </p>
       )}
+      <AdvancedSigner />
 
       {/* step 1 — identity */}
       <div className="mt-4">
@@ -193,13 +190,14 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
               Your connected account has no live ML-DSA-87 key on diana — claims will revert with KeyIneligible.
             </p>
           )}
-          {qorex.canSignArbitrary && qorex.qorAddress && (
+          {qoreXSigns && (
             <p className="mt-2 text-xs text-gray">QoreX will sign as {qorex.qorAddress}.</p>
           )}
+          {mismatch && <p role="alert" className="mt-2 text-sm text-orange">{mismatch}</p>}
           {step === "signature" && (
-            <button type="button" onClick={() => void sign()} disabled={signing || (myKey.data !== undefined && !myKey.data.live)}
+            <button type="button" onClick={() => void sign()} disabled={signing || !!mismatch || (myKey.data !== undefined && !myKey.data.live)}
               className="mt-3 rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40">
-              {signing ? "Signing…" : "Sign the claim"}
+              {signing ? "Signing…" : qoreXSigns ? "Sign with QoreX" : "Sign the claim"}
             </button>
           )}
           {signError && <p role="alert" className="mt-2 text-sm text-orange">{signError}</p>}

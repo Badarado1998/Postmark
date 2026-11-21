@@ -1,0 +1,5 @@
+[
+  { "address": "0x01B451550bEf4cc51Bb24B8C5E5b4b23a368a9cE", "name": "Postmark test verifier 1", "note": "Operated by the Postmark team for testnet demos" },
+  { "address": "0x8e815476f878b05a2a0E4BC452112311eAEcEa31", "name": "Postmark test verifier 2", "note": "Operated by the Postmark team for testnet demos" },
+  { "address": "0xFac4a64980C8777799EBae562a82825185e20558", "name": "Postmark test verifier 3", "note": "Operated by the Postmark team for testnet demos" }
+]

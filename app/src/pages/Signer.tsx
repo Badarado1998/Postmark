@@ -1,23 +1,35 @@
+import { Link } from "react-router";
 import { PageBody, PageHeader } from "../components/Page";
+import { BECOME_VERIFIER_URL } from "../data/verifiers";
 
 export default function Signer() {
   return (
     <div>
     <PageHeader>
       <div>
-        <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">The local signer</h1>
-        <p className="mt-2 text-sm text-charcoal">Post-quantum keys stay on your machine.</p>
+        <h1 className="font-sans text-4xl font-semibold tracking-tight text-ink">Signing your claims</h1>
+        <p className="mt-2 text-sm text-charcoal">Post-quantum signatures, made in QoreX.</p>
       </div>
     </PageHeader>
     <PageBody className="max-w-6xl">
     <div className="max-w-3xl">
       <p className="mt-6 leading-relaxed text-charcoal">
-        Claims and verdicts need an ML-DSA-87 signature over the exact message the chain will
-        check. Your post-quantum secret never leaves your machine: a small local process holds
-        the key, this app asks it to sign, and it signs only after you confirm the decoded
-        request in the terminal.
+        Claims and verdicts need an ML-DSA-87 signature. In the browser, <strong>QoreX</strong> makes it:
+        click <em>Sign with QoreX</em>, approve the request, and the app checks the signature against your
+        registered key before anything is sent. Your post-quantum secret never leaves QoreX.
       </p>
+      <ul className="mt-4 list-inside list-disc space-y-2 text-sm text-gray">
+        <li>Your EVM wallet (for example MetaMask) and QoreX must use the <strong>same account</strong> today — QoreX can sign, but it cannot send EVM transactions yet.</li>
+        <li>New here? <Link to="/start" className="text-deep underline underline-offset-4">Get started</Link>.</li>
+        <li>Want to review work for others? <a className="text-deep underline underline-offset-4" href={BECOME_VERIFIER_URL} target="_blank" rel="noreferrer">Become a verifier</a>.</li>
+      </ul>
 
+      <details className="mt-8 rounded-xl border border-ink/10 bg-white p-5">
+        <summary className="cursor-pointer font-medium text-charcoal">Advanced: use the local signer</summary>
+        <p className="mt-4 leading-relaxed text-charcoal">
+          For developers: a small local process holds the key, this app asks it to sign, and it signs only after
+          you confirm the decoded request in the terminal.
+        </p>
       <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.18em] text-deep">run it</h2>
       <div className="mt-3 space-y-3 text-sm text-gray">
         <p>From the repo root, with a QRC1 recovery-code profile:</p>
@@ -54,6 +66,7 @@ export default function Signer() {
         <li><span className="text-ink">"no live key"</span> — register first: <span className="font-mono">npm run window -- --env &lt;profile&gt; register</span>.</li>
         <li><span className="text-ink">port busy</span> — pick another port and run the app URL pairing against it, or kill the old signer.</li>
       </ul>
+      </details>
       <p className="mt-8 text-xs text-gray">Signatures are ML-DSA-87 over diana testnet messages — test QOR, no monetary value.</p>
     </div>
     </PageBody>
