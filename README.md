@@ -9,8 +9,6 @@ and payout needs 2-of-3 ML-DSA-87 verifier verdicts.
 
 Repository: [github.com/Ololadestephen/Postmark](https://github.com/Ololadestephen/Postmark) · Project page: [build.qorechain.io/p/postmark](https://build.qorechain.io/p/postmark)
 
-Prior work: Proven, our outcome-paid escrow on NEAR. This is a new, post-quantum implementation built during the fest.
-
 ## How it works
 
 1. **Fund** — a funder locks test QOR on a GitHub issue or PR, naming three verifier accounts and a claim deadline.

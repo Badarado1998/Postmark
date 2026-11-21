@@ -5,7 +5,7 @@
 **Repo:** Ololadestephen/Postmark (draft; create/push only after owner approval).
 **Deadline:** Dec 2, 23:59 UTC. **Our target:** Dec 2, 12:00 UTC (1:00 PM WAT).
 **Wording rule:** "real issues, testnet payouts". Diana QOR has no monetary value.
-**Prior-work rule:** all code is new, in this repo. The README names Proven as prior work.
+**Code rule:** all code is new, in this repo.
 
 ## Milestones
 
