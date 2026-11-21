@@ -1,11 +1,13 @@
 # Postmark — Build Before Q-Day
 
+[![Built on QoreChain](https://build.qorechain.io/badge/postmark.svg)](https://build.qorechain.io/p/postmark)
+
 QoreChain Post-Quantum dApp track: a reusable **real ML-DSA-87 Foundry test
 library**, plus `PostmarkEscrow`, a GitHub bounty escrow: contributors make a PQ-signed claim,
 and payout needs 2-of-3 ML-DSA-87 verifier verdicts.
 **Real issues, testnet payouts**: diana pays test QOR, which has no monetary value.
 
-Repository (draft, not yet published): github.com/Ololadestephen/Postmark
+Repository: [github.com/Ololadestephen/Postmark](https://github.com/Ololadestephen/Postmark) · Project page: [build.qorechain.io/p/postmark](https://build.qorechain.io/p/postmark)
 
 Prior work: Proven, our outcome-paid escrow on NEAR. This is a new, post-quantum implementation built during the fest.
 
