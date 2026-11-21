@@ -59,12 +59,13 @@ export const useBounties = (ids: bigint[] | undefined) => useQuery({
 
 /** The GitHub issue or pull request a bounty (or a form field) points at. */
 export const useGithubItem = (w: WorkItem, opts: {
-  staleTime?: number; retry?: boolean | ((count: number, err: unknown) => boolean);
+  staleTime?: number; enabled?: boolean; retry?: boolean | ((count: number, err: unknown) => boolean);
 } = {}) => useQuery<GhIssue | GhPull>({
   queryKey: ["gh", w.kind === 1 ? "pull" : "issue", w.ownerRepo, Number(w.number)],
   queryFn: () => (w.kind === 1
     ? getPull(w.ownerRepo, Number(w.number)) : getIssue(w.ownerRepo, Number(w.number))),
   staleTime: opts.staleTime ?? 5 * 60_000,
+  enabled: opts.enabled ?? true,
   retry: opts.retry ?? false,
 });
 
