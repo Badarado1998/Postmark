@@ -20,7 +20,7 @@ what they do not cover.
 
 - **Funder**: trusted only with their own money. Can create, and refund after the deadline if no verdict landed.
 - **Claimant / payee**: there is no payee at creation. A contributor claims with an ML-DSA-87-signed ClaimV1 and becomes the payee for one claim timeout (1 h to 7 d, set by the funder). Trusted for nothing; must keep a live PQ key to be paid and to withdraw gated credit.
-- **Verifiers (3)**: three different people, operating independently. Any 2 are trusted for the facts. 1 is never enough. The same three also resolve disputes, so a dispute is a second look by the same people, not an independent appeal.
+- **Verifiers (3)**: three accounts chosen by the funder; today usually the Postmark bot, the funder's own repo bot and a human tie-breaker, so they are not guaranteed to be operated by independent parties. Any 2 are trusted for the facts. 1 is never enough. The same three also resolve disputes, so a dispute is a second look by the same people, not an independent appeal.
 - **Disputer**: anyone. Puts up the bond; trusted for nothing.
 - **Relayer / UI**: untrusted. It can submit or withhold transactions but never authorises a verdict.
 - **Chain**: trusted for consensus, the PQC registry and precompile correctness, and EVM-window enforcement.
@@ -41,7 +41,7 @@ An attacker who can forge or steal ECDSA keys (a future quantum attacker, or a p
 
 ### T-2 Verifier compromise or collusion
 - 1 verifier: no effect. A quorum needs 2 distinct indices with distinct live keys (D5, D6).
-- 2 verifiers: can attest false facts. The challenge window and dispute are the only check, and the same 2 can also reject a valid dispute. **Accepted risk**, stated in README and the demo. Mitigation is off chain: pick independent people, publish operator identities, and keep evidence public.
+- 2 verifiers: can attest false facts. The challenge window and dispute are the only check, and the same 2 can also reject a valid dispute. **Accepted risk**, stated in README and the demo. Mitigation is off chain: choose operators who don't share control, publish who runs each verifier, and keep evidence public.
 - **Sybil verifiers** (one person, three accounts): distinct accounts and distinct keys are enforced on chain; human independence is not. Funders choose the verifier set and see who it is.
 - **Verifier = funder:** rejected at creation (D2). **Funder or verifier claiming:** `ClaimantExcluded` (D3). **Claimant key shared with a verifier:** `ClaimantExcluded` (D3). Exclusion is by account and key; the same human with a fresh account and key is not detectable on chain.
 

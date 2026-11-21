@@ -8,7 +8,7 @@ export const BUILT_ON = [
 export const STEPS = [
   ["Fund", "A maintainer escrows test QOR against a real GitHub issue or PR."],
   ["Claim", "A contributor comments on the issue, then claims with an ML-DSA-87 signature."],
-  ["Verify 2 of 3", "Three independent verifiers sign a verdict; any two matching seals settle it."],
+  ["Verify 2 of 3", "Three verifiers sign a verdict; any two matching seals settle it."],
   ["24h challenge", "Every verdict sits open a day. Anyone can post a bond and dispute it."],
   ["Withdraw", "The payee pulls their credit; payee credits need a live registered PQ key."],
 ];

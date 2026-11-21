@@ -14,7 +14,7 @@ import {
   VerifierPicker, toggleVerifier, pickForMe, inviteMessage, MAX_VERIFIERS,
 } from "../../src/wallet/VerifierPicker";
 
-const [A, B, C] = VERIFIERS.map((v) => v.address);
+const [A, B] = VERIFIERS.map((v) => v.address);
 
 function Harness({ connected = CLAIMANT as string | undefined }) {
   const [slots, setSlots] = useState(["", "", ""]);
@@ -28,14 +28,16 @@ function Harness({ connected = CLAIMANT as string | undefined }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  m.live = { [A!]: true, [B!]: true, [C!]: true };
+  m.live = { [A!]: true, [B!]: true };
 });
 
 describe("verifier list", () => {
-  it("seeds the three e2e test verifiers", () => {
-    expect(VERIFIERS.map((v) => v.name)).toEqual([
-      "Postmark test verifier 1", "Postmark test verifier 2", "Postmark test verifier 3"]);
-    expect(VERIFIERS[0]!.address).toBe("0x01B451550bEf4cc51Bb24B8C5E5b4b23a368a9cE");
+  it("lists the Postmark bot and the human tie-breaker, with who runs them", () => {
+    expect(VERIFIERS.map((v) => [v.name, v.kind])).toEqual([
+      ["Postmark verifier bot", "bot"], ["Ololade (human tie-breaker)", "human"]]);
+    expect(VERIFIERS[0]!.address).toBe("0xA46B8DC7593eDEe0f31b6F7fD1362e855Ad50693");
+    expect(VERIFIERS[1]!.address.toLowerCase()).toBe("0x25174bd3a98cd833acaf288d94f4cc324227e99d");
+    expect(VERIFIERS.every((v) => v.runner.includes("@Ololadestephen"))).toBe(true);
   });
   it("prefills the address field of the issue form", () => {
     expect(becomeVerifierUrl()).toBe(BECOME_VERIFIER_URL);
@@ -70,26 +72,39 @@ describe("picker helpers", () => {
 });
 
 describe("VerifierPicker", () => {
-  it("toggles cards with aria-pressed and caps the choice at three", () => {
+  it("shows Bot and Human badges with the runner line", () => {
     render(<Harness />);
-    const card = (n: number) => screen.getByRole("button", { name: new RegExp(`Postmark test verifier ${n}`) });
-    fireEvent.click(card(1));
-    expect(card(1)).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(card(1));
-    expect(card(1)).toHaveAttribute("aria-pressed", "false");
-    [1, 2, 3].forEach((n) => fireEvent.click(card(n)));
-    expect(screen.getByText("3 of 3 chosen")).toBeInTheDocument();
-    expect(screen.getByTestId("slots")).toHaveTextContent(`${A},${B},${C}`);
+    expect(screen.getByText("Bot")).toBeInTheDocument();
+    expect(screen.getByText("Human")).toBeInTheDocument();
+    expect(screen.getByText(/scheduled GitHub Action in a private repo/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "run your own verifier" })).toHaveAttribute("href", expect.stringContaining("#run-your-own-verifier"));
   });
 
-  it("Pick 3 for me fills live verifiers and skips the connected account", () => {
+  it("toggles cards with aria-pressed", () => {
+    render(<Harness />);
+    const card = (n: RegExp) => screen.getByRole("button", { name: n });
+    fireEvent.click(card(/Postmark verifier bot/));
+    expect(card(/Postmark verifier bot/)).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(card(/Postmark verifier bot/));
+    expect(card(/Postmark verifier bot/)).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("Pick 3 for me selects both curated entries and prompts for the third slot", () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Pick 3 for me" }));
+    expect(screen.getByTestId("slots")).toHaveTextContent(`${A},${B},`);
+    expect(screen.getByText(/1 slot left: add your repo's verifier bot or another person/)).toBeInTheDocument();
+  });
+
+  it("Pick 3 for me skips the connected account", () => {
     render(<Harness connected={B} />);
     fireEvent.click(screen.getByRole("button", { name: "Pick 3 for me" }));
-    expect(screen.getByTestId("slots")).toHaveTextContent(`${A},${C},`);
+    expect(screen.getByTestId("slots")).toHaveTextContent(`${A},,`);
+    expect(screen.getByText(/2 slots left/)).toBeInTheDocument();
   });
 
   it("warns when no listed verifier is live", () => {
-    m.live = { [A!]: false, [B!]: false, [C!]: false };
+    m.live = { [A!]: false, [B!]: false };
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Pick 3 for me" }));
     expect(m.toast).toHaveBeenCalledWith(expect.objectContaining({ kind: "warning" }));

@@ -14,10 +14,13 @@ The claim records the claimant as payee and a nonzero `payeeIdentityHash`
 committing to the GitHub identity/linking evidence. One unexpired claim is active
 at a time; after expiry another valid claim may replace it. Funder and verifier
 accounts cannot claim. Claim identity evidence is public and verified off chain.
-Three verifier accounts are selected per bounty, representing **three different
-people operating independently** (not three keys under one operator). Distinct
-accounts and public keys are enforced on chain; human independence and GitHub
-identity/merge facts are verified off chain, not inferable cryptographically.
+Three verifier accounts are selected per bounty by the funder. The contract
+enforces distinct accounts and public keys; it cannot tell whether the operators
+behind them are independent. Today's curated verifiers are the Postmark
+maintainer's bot, the maintainer's own human tie-breaker, and (optionally) a
+per-funder bot running in the funder's repository, so independence depends on the
+funder's choices. Operator independence and GitHub identity/merge facts are
+verified off chain, not inferable cryptographically.
 
 V1 accepts **native test QOR only**, accounted in wei units. There is no token
 parameter, approval flow, or asset selection.
@@ -345,7 +348,7 @@ account address, not a proof that the same humans lack alternative accounts.
 Expiry may cost an honest contributor their reservation if they fail to submit
 a quorum in time; Pending freezes only a timely accepted claim snapshot.
 
-Two colluding/compromised independent verifiers can approve false facts or
+Two colluding or compromised verifiers can approve false facts or
 reject legitimate disputes; no contract proves GitHub merge/identity facts.
 Revoked/unproven keys fail live checks, but accepted verdicts remain historical
 facts for this contract. A payee losing its PQ key may strand gated credit;

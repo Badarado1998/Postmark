@@ -3,6 +3,9 @@ import list from "./verifiers.json";
 export interface VerifierEntry {
   address: `0x${string}`;
   name: string;
+  kind: "bot" | "human";
+  /** who runs this verifier and how, shown in the picker */
+  runner: string;
   github?: string;
   note: string;
 }

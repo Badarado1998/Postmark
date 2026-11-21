@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePqcStatus } from "../hooks/queries";
 import { VERIFIERS, becomeVerifierUrl, type VerifierEntry } from "../data/verifiers";
 import { sameAddress } from "../chain/address";
@@ -46,8 +46,13 @@ function Card({ v, picked, disabled, onToggle, live }: {
           {live === true ? "PQ key live" : live === false ? "no live key" : "checking…"}
         </span>
       </span>
-      <span className="mt-1 block font-mono text-[11px] text-gray">{shortAddr(v.address)}</span>
-      <span className="mt-1 block text-xs text-charcoal">{v.note}</span>
+      <span className="mt-1 flex items-center gap-2">
+        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+          v.kind === "bot" ? "bg-ink text-paper" : "bg-mustard text-ink"}`}>{v.kind === "bot" ? "Bot" : "Human"}</span>
+        <span className="font-mono text-[11px] text-gray">{shortAddr(v.address)}</span>
+      </span>
+      <span className="mt-1 block text-xs text-charcoal">{v.runner}</span>
+      <span className="mt-1 block text-xs text-gray">{v.note}</span>
     </button>
   );
 }
@@ -57,6 +62,8 @@ export function VerifierPicker({ slots, onChange, connected, children }: {
 }) {
   const toast = useToast();
   const [openManual, setOpenManual] = useState(false);
+  const [needsMore, setNeedsMore] = useState(false);
+  const manual = useRef<HTMLDivElement>(null);
   // VERIFIERS is a fixed list, so the hook count never changes between renders
   const statuses = VERIFIERS.map((v) => usePqcStatus(v.address).data?.live);
   const count = slots.filter((s) => s.trim() !== "").length;
@@ -68,14 +75,27 @@ export function VerifierPicker({ slots, onChange, connected, children }: {
       return;
     }
     onChange(Array.from({ length: MAX_VERIFIERS }, (_, i) => picks[i] ?? ""));
+    setNeedsMore(picks.length < MAX_VERIFIERS);
+    if (picks.length < MAX_VERIFIERS) setOpenManual(true);
   };
+  useEffect(() => {
+    if (!needsMore || !openManual) return;
+    const empty = [...(manual.current?.querySelectorAll<HTMLInputElement>("input") ?? [])].find((i) => i.value.trim() === "");
+    empty?.focus();
+  }, [needsMore, openManual, slots]);
   const invite = () => {
     void navigator.clipboard.writeText(inviteMessage(becomeVerifierUrl(connected)));
     toast({ kind: "success", title: "Copied", text: "Invite message copied — send it to a friend." });
   };
   return (
     <div>
-      <p className="text-sm text-charcoal">3 people review the work; any 2 agreeing releases the reward.</p>
+      <p className="text-sm text-charcoal">3 verifiers review the work; any 2 agreeing releases the reward.</p>
+      <p className="mt-1 text-xs text-gray">
+        Recommended: the Postmark bot, your own repo's verifier bot
+        ({" "}<a className="text-deep underline underline-offset-4" target="_blank" rel="noreferrer"
+          href="https://github.com/Ololadestephen/Postmark#run-your-own-verifier">run your own verifier</a>{" "}),
+        and a human tie-breaker.
+      </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={pick}
           className="rounded-lg bg-deep px-4 py-2 text-sm font-medium text-paper hover:brightness-110">Pick 3 for me</button>
@@ -88,9 +108,14 @@ export function VerifierPicker({ slots, onChange, connected, children }: {
             onToggle={() => onChange(toggleVerifier(slots, v.address))} />
         ))}
       </div>
+      {needsMore && count < MAX_VERIFIERS && (
+        <p role="status" className="mt-3 rounded-lg bg-mustard/40 p-2 text-sm text-ink">
+          {MAX_VERIFIERS - count} {MAX_VERIFIERS - count === 1 ? "slot" : "slots"} left: add your repo's verifier bot or another person below.
+        </p>
+      )}
       <details className="mt-3" open={openManual} onToggle={(e) => setOpenManual((e.target as HTMLDetailsElement).open)}>
         <summary className="cursor-pointer text-sm font-medium text-deep">Add someone else</summary>
-        <div className="mt-3 space-y-2">{children}</div>
+        <div ref={manual} className="mt-3 space-y-2">{children}</div>
       </details>
       <div className="mt-3 flex flex-wrap gap-4 text-sm">
         <button type="button" onClick={invite} className="text-deep underline underline-offset-4">Ask a friend to verify</button>
