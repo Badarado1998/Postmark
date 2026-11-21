@@ -107,7 +107,7 @@ Both QCAI runs (Nov 20, Ethereum EVM/Solidity) scored 65/100. Run 2 reported MED
 * [PostmarkEscrow specification and test plan](SPEC.md)
 * [Threat model](THREAT_MODEL.md)
 
-Credits: QoreChain's Build Before Q-Day workshop-2 QDayVault ABI and precompile
+Credits: QoreChain's Build Before Q-Day workshop-2 QDayVault ABI and precompile Animated UI components in app/src/components/reactbits/ are adapted from [React Bits](https://reactbits.dev) by David Haz under its MIT + Commons Clause licence (included in that folder), not the project's MIT licence.
 addresses; QoreChain docs and SDK EVM-window/QoreX guidance;
 `@qorechain/pqc` and its shared vectors; noble post-quantum; Foundry and forge-std;
 OpenZeppelin Contracts 5.7.0 (`ReentrancyGuard` only).
