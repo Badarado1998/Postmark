@@ -50,7 +50,7 @@ function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; met
         mergedAt: v.mergedAt, evidenceHash: v.evidenceHash, nonce: v.nonce, claimRound: v.claimRound,
       }, bundle.validIndices, bundle.validIndices.map((i) => bundle.bundle!.signatures[i]!)],
       onConfirmed: () => {
-        toast({ kind: "info", text: disputed ? "Dispute resolved on chain." : "Verdict stamped on chain." });
+        toast({ kind: "success", title: disputed ? "Dispute resolved" : "Verdict stamped", text: disputed ? "Dispute resolved on chain." : "Verdict stamped on chain." });
         bundle.persist(null);
       },
       invalidates: [["bounty", id.toString()], ["index"], ["bounties"], ["nextBountyId"]],
@@ -73,7 +73,7 @@ function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; met
       )}
       {builder.built && (
         <BundleCard bounty={bounty} disputed={disputed} bundleView={bundle} onSubmit={submit}
-          onCopy={() => { void navigator.clipboard.writeText(bundle.bundleJson); toast({ kind: "info", text: "Bundle copied." }); }}>
+          onCopy={() => { void navigator.clipboard.writeText(bundle.bundleJson); toast({ kind: "success", title: "Copied", text: "Bundle copied." }); }}>
           <TxStatusPanel state={tx.state} />
         </BundleCard>
       )}

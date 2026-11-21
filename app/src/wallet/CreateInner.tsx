@@ -133,11 +133,11 @@ function CreateForm() {
     if (!form.ok || !gref) return;
     const { shared, missing } = await checkKeys(form.parsed.verifiers);
     if (shared) {
-      toast({ kind: "error", text: "Two verifier slots share the same PQ key." });
+      toast({ kind: "error", title: "Check your verifiers", text: "Two verifier slots share the same PQ key — each verifier needs their own." });
       return;
     }
     if (missing) {
-      toast({ kind: "error", text: "A verifier has no live ML-DSA-87 key." });
+      toast({ kind: "error", title: "A verifier has no key yet", text: "A verifier has no live ML-DSA-87 key. Ask them to register one, or pick another verifier." });
       return;
     }
     const { parsed } = form;
@@ -149,7 +149,7 @@ function CreateForm() {
         parsed.bond, parsed.reward],
       value: total,
       onConfirmed: () => {
-        toast({ kind: "info", text: "Bounty created — redirecting…" });
+        toast({ kind: "success", title: "Bounty created", text: "Taking you to your bounty…" });
         setTimeout(() => navigate("/explore"), 800);
       },
     });

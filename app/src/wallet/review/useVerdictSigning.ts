@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { hexToBytes } from "viem";
 import { mldsa87 } from "@qorechain/pqc";
 import { signerStatus, SignerError } from "../../chain/localSigner";
+import { useToast } from "../../components/Toasts";
 import { pickSigner } from "../pqSigner";
 import { useQorex } from "../qorex";
 import { pqcKeyStatus } from "../../chain/pqc";
@@ -17,6 +18,7 @@ export function useVerdictSigning(
   onSigned: (index: number, signature: `0x${string}`) => void,
 ) {
   const qorex = useQorex();
+  const toast = useToast();
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedIndex, setSignedIndex] = useState<number | null>(null);
@@ -51,6 +53,7 @@ export function useVerdictSigning(
       onSigned(index, signature);
     } catch (e) {
       setError(errorMessage(e));
+      toast({ kind: "error", title: "Signing didn't work", text: errorMessage(e) });
     } finally { setSigning(false); }
   };
 

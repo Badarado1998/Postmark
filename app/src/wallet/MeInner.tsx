@@ -44,7 +44,7 @@ function Credits() {
         <AnimatedQor wei={ungated + gated} className="text-4xl font-semibold tabular-nums tracking-tight" />
         <button disabled={tx.busy}
           onClick={() => void tx.run({ functionName: "withdraw", args: [],
-            onConfirmed: () => toast({ kind: "info", text: "Withdrawn." }) })}
+            onConfirmed: () => toast({ kind: "success", title: "Withdrawn", text: "The QOR is on its way to your wallet." }) })}
           className="rounded-lg bg-lime px-6 py-2.5 text-sm font-semibold text-ink hover:brightness-95 disabled:opacity-40">
           Withdraw
         </button>

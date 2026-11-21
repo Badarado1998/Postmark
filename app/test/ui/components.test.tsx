@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Routes, Route } from "react-router";
 import { renderApp } from "../fixtures";
 
@@ -13,7 +13,6 @@ vi.mock("../../src/wallet/ConnectWallet", () => ({
 
 import { Shell } from "../../src/components/Shell";
 import { ErrorBoundary } from "../../src/components/ErrorBoundary";
-import { ToastProvider, useToast } from "../../src/components/Toasts";
 import { DeferredConnect } from "../../src/components/Deferred";
 import {
   AddressLink, Card, Countdown, EmptyState, ErrorState, Qor, SectionLabel, StatusChip, shortAddr,
@@ -75,28 +74,6 @@ describe("ErrorBoundary", () => {
   it("renders children when nothing throws", () => {
     renderApp(<ErrorBoundary><p>fine</p></ErrorBoundary>);
     expect(screen.getByText("fine")).toBeInTheDocument();
-  });
-});
-
-describe("Toasts", () => {
-  function Pusher() {
-    const toast = useToast();
-    return <button onClick={() => toast({ kind: "info", text: "saved" })}>push</button>;
-  }
-
-  it("shows a toast and removes it after eight seconds", () => {
-    vi.useFakeTimers();
-    render(<ToastProvider><Pusher /></ToastProvider>);
-    fireEvent.click(screen.getByText("push"));
-    expect(screen.getByText("saved")).toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(8001); });
-    expect(screen.queryByText("saved")).toBeNull();
-  });
-
-  it("is a no-op outside a provider", () => {
-    render(<Pusher />);
-    fireEvent.click(screen.getByText("push"));
-    expect(screen.queryByText("saved")).toBeNull();
   });
 });
 

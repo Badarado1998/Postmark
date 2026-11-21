@@ -57,7 +57,7 @@ export function useVerdictBundle(id: bigint, bounty: Bounty, phase: number, buil
       const merged = mergeBundles([{ ...(bundle ?? b), signatures: { ...(bundle?.signatures ?? {}) } }, b]);
       persist(merged);
       await refreshSigStatus(merged);
-      toast({ kind: "info", text: `Bundle merged${dups.length ? ` (duplicate signer index ${dups.join(", ")} ignored)` : ""}.` });
+      toast({ kind: "success", title: "Bundle merged", text: `Bundle merged${dups.length ? ` (duplicate signer index ${dups.join(", ")} ignored)` : ""}.` });
       setImportText("");
     } catch (e) {
       setImportErr(errorMessage(e));

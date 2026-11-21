@@ -20,7 +20,7 @@ function Share({ bounty }: { bounty: Bounty }) {
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button
           onClick={() => { void navigator.clipboard?.writeText(url)
-            .then(() => toast({ kind: "info", text: "Link copied — share it with contributors and verifiers." })); }}
+            .then(() => toast({ kind: "success", title: "Copied", text: "Link copied — share it with contributors and verifiers." })); }}
           className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink hover:bg-ink/5">
           Copy share link
         </button>

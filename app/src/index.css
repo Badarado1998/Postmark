@@ -25,6 +25,9 @@
 /* the sticky shell header must not cover controls scrolled to the viewport top */
 main :is(button, input, select, textarea, a, [role="button"]) { scroll-margin-top: 6rem; }
 
+@keyframes toast-progress { from { width: 100%; } to { width: 0; } }
+.toast-progress { animation-name: toast-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
+
 /* focus ring visible on every interactive element */
 :focus-visible { outline: 2px solid var(--color-deep); outline-offset: 2px; }
 .on-dark :focus-visible { outline-color: var(--color-lime); }

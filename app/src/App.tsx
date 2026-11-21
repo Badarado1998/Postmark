@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IndexerProvider } from "./chain/IndexerProvider";
 import { ToastProvider } from "./components/Toasts";
+import { GithubRateLimitToast } from "./components/GithubRateLimitToast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Shell } from "./components/Shell";
 import Landing from "./pages/Landing";
@@ -27,6 +28,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
+        <GithubRateLimitToast />
         <IndexerProvider>
           <Shell>
             <Routes>

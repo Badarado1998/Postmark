@@ -33,6 +33,24 @@ const MESSAGES: Record<string, string> = {
   WrongValue: "The transaction value does not match the required amount.",
 };
 
+const WALLET_REJECTION = /user rejected|user denied|rejected the request|request rejected/i;
+
+/** True when the user declined the request in their wallet (EIP-1193 code 4001 or a rejection message). */
+export function isUserRejection(err: unknown): boolean {
+  const seen = new Set<unknown>();
+  let cur: unknown = err;
+  while (cur && typeof cur === "object" && !seen.has(cur)) {
+    seen.add(cur);
+    const e = cur as { name?: unknown; code?: unknown; message?: unknown; cause?: unknown };
+    if (e.code === 4001 || e.name === "UserRejectedRequestError") return true;
+    if (typeof e.message === "string" && WALLET_REJECTION.test(e.message)) return true;
+    cur = e.cause;
+  }
+  return typeof cur === "string" && WALLET_REJECTION.test(cur);
+}
+
+export const CANCELLED_MESSAGE = "You cancelled the request in your wallet.";
+
 /** Message of an Error, or `fallback` (default: the stringified value). */
 export function errorMessage(err: unknown, fallback?: string): string {
   return err instanceof Error ? err.message : fallback ?? String(err);

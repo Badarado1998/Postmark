@@ -119,6 +119,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
       setStep("send");
     } catch (e) {
       setSignError(errorMessage(e));
+      toast({ kind: "error", title: "Signing didn't work", text: errorMessage(e) });
     } finally { setSigning(false); }
   };
 
@@ -127,7 +128,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
     void tx.run({
       functionName: "claim",
       args: [id, claim.identityHash, signature],
-      onConfirmed: () => toast({ kind: "info", text: "Claim stamped on chain." }),
+      onConfirmed: () => toast({ kind: "success", title: "Claim stamped on chain", text: "Your claim is recorded; verifiers can review it now." }),
       invalidates: [["bounty", id.toString()], ["index"], ["nextBountyId"]],
     });
   };
@@ -163,7 +164,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
         <div className="mt-2 flex items-start gap-2">
           <code className="grow break-all rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink">{line}</code>
           <button type="button"
-            onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "info", text: "Claim line copied." }); }}
+            onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "success", title: "Copied", text: "Claim line copied — post it as a GitHub comment." }); }}
             className="shrink-0 rounded-lg border border-ink/15 px-3 py-2 text-xs text-gray hover:bg-ink/5">copy</button>
         </div>
         {step === "identity" && (

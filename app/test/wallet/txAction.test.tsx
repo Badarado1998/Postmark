@@ -10,7 +10,7 @@ const m = vi.hoisted(() => ({
   estimate: vi.fn(), simulate: vi.fn(), receipt: vi.fn(),
   pqcLive: true, window: { live: true, remainingTxs: 5, remainingValue: 10n ** 12n,
     allowedTargets: [] as string[], remainingBlocks: 50 } as unknown,
-  preflight: vi.fn(),
+  preflight: vi.fn(), toast: vi.fn(),
 }));
 
 vi.mock("wagmi", () => ({
@@ -23,6 +23,7 @@ vi.mock("../../src/chain/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/chain/client")>()),
   httpClient: { estimateContractGas: m.estimate, simulateContract: m.simulate, waitForTransactionReceipt: m.receipt },
 }));
+vi.mock("../../src/components/Toasts", () => ({ useToast: () => m.toast }));
 vi.mock("../../src/chain/pqc", () => ({ pqcKeyStatus: async () => ({ live: m.pqcLive }) }));
 vi.mock("../../src/chain/window", () => ({ fetchEvmWindow: async () => m.window }));
 vi.mock("../../src/chain/preflight", () => ({ preflightTx: (...a: unknown[]) => m.preflight(...a) }));
@@ -120,5 +121,32 @@ describe("useTxAction", () => {
     await act(() => result.current.run(req));
     act(() => result.current.reset());
     expect(result.current.state.phase).toBe("idle");
+  });
+
+  it("raises exactly one friendly error toast when a transaction fails", async () => {
+    m.writeContractAsync.mockRejectedValue(new Error("RPC exploded"));
+    const { result } = renderHook(() => useTxAction(), { wrapper });
+    await act(() => result.current.run(req));
+    expect(result.current.state.phase).toBe("failed");
+    expect(m.toast).toHaveBeenCalledTimes(1);
+    expect(m.toast).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "error", title: "Transaction didn't go through", text: expect.stringContaining("RPC exploded") }));
+  });
+
+  it("treats a wallet rejection as a friendly cancel, not an error", async () => {
+    m.writeContractAsync.mockRejectedValue(Object.assign(new Error("User rejected the request."), { code: 4001 }));
+    const { result } = renderHook(() => useTxAction(), { wrapper });
+    await act(() => result.current.run(req));
+    expect(result.current.state.phase).toBe("ready");
+    expect(m.toast).toHaveBeenCalledTimes(1);
+    expect(m.toast).toHaveBeenCalledWith({ kind: "info", title: "Cancelled", text: "You cancelled the request in your wallet." });
+  });
+
+  it("raises one toast when the transaction reverts on chain", async () => {
+    m.receipt.mockResolvedValue({ status: "reverted" });
+    const { result } = renderHook(() => useTxAction(), { wrapper });
+    await act(() => result.current.run(req));
+    expect(m.toast).toHaveBeenCalledTimes(1);
+    expect(m.toast).toHaveBeenCalledWith(expect.objectContaining({ kind: "error" }));
   });
 });

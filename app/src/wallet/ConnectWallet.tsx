@@ -6,11 +6,14 @@ import { tryQorToEvm } from "../chain/bech32";
 import WalletRoot from "./WalletRoot";
 import { diana } from "../chain/config";
 import { shortAddr } from "../components/ui";
+import { useToast } from "../components/Toasts";
+import { CANCELLED_MESSAGE, isUserRejection } from "../chain/errors";
 
 function ConnectButtonInner() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending, error, reset } = useConnect();
   const picker = useRef<HTMLDialogElement>(null);
+  const toast = useToast();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -45,7 +48,10 @@ function ConnectButtonInner() {
                 <li key={c.uid}>
                   <button type="button" disabled={isPending}
                     onClick={() => connect({ connector: c, chainId: diana.id },
-                      { onSuccess: () => picker.current?.close() })}
+                      { onSuccess: () => picker.current?.close(),
+                        onError: (e) => toast(isUserRejection(e)
+                          ? { kind: "info", title: "Cancelled", text: CANCELLED_MESSAGE }
+                          : { kind: "error", title: "Couldn't connect", text: `Couldn't connect to ${c.name}. Try again or pick another wallet.` }) })}
                     className="w-full break-words rounded-lg border border-ink/15 bg-white px-4 py-2.5 text-left text-sm font-medium hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-deep disabled:opacity-50">
                     {c.name}
                   </button>

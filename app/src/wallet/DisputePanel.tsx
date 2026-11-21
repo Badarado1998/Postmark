@@ -54,7 +54,7 @@ function DisputePanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; me
       functionName: "dispute",
       args: [id, found.hash],
       value: bounty.bondAmount,
-      onConfirmed: () => toast({ kind: "info", text: "Dispute bonded — the payout is frozen." }),
+      onConfirmed: () => toast({ kind: "success", title: "Dispute bonded", text: "The payout is frozen until the verifiers rule." }),
       invalidates: [["bounty", id.toString()], ["index"]],
     });
   };
@@ -73,7 +73,7 @@ function DisputePanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; me
       <div className="mt-2 flex items-start gap-2">
         <code className="grow break-all rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink">{line}</code>
         <button type="button"
-          onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "info", text: "Dispute line copied." }); }}
+          onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "success", title: "Copied", text: "Dispute line copied — post it as a GitHub comment." }); }}
           className="shrink-0 rounded-lg border border-ink/15 px-3 py-2 text-xs text-gray hover:bg-ink/5">copy</button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">

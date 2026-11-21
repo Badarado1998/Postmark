@@ -30,7 +30,7 @@ function ActionsInner({ id, bounty, connected }: { id: bigint; bounty: Bounty; c
   const reopen = bounty.state === 1 && bounty.claimExpiresAt > 0n && t >= bounty.claimExpiresAt;
 
   const done = () => {
-    toast({ kind: "info", text: "Transaction confirmed." });
+    toast({ kind: "success", title: "Transaction confirmed", text: "The bounty is updated." });
   };
 
   if (!refund && !finalize && !reopen) return null;

@@ -7,7 +7,8 @@ import { type Abi, type ContractFunctionArgs } from "viem";
 import { escrow, httpClient } from "../chain/client";
 import { ESCROW_ADDRESS } from "../chain/config";
 import { preflightTx } from "../chain/preflight";
-import { explainError, errorMessage } from "../chain/errors";
+import { explainError, isUserRejection, CANCELLED_MESSAGE } from "../chain/errors";
+import { useToast, type ToastInput } from "../components/Toasts";
 import { evmToQor } from "../chain/bech32";
 import { fetchEvmWindow } from "../chain/window";
 import { pqcKeyStatus } from "../chain/pqc";
@@ -63,8 +64,6 @@ async function pickGasLimit(req: TxRequest, account: `0x${string}`) {
   }
 }
 
-const WALLET_REJECTION = /user rejected|denied|rejected the request/i;
-
 const BUSY_PHASES: readonly TxPhase[] = [
   "checking", "simulating", "wallet", "submitted", "confirming",
 ];
@@ -78,6 +77,11 @@ export function useTxAction() {
   const qc = useQueryClient();
   const [state, setState] = useState<TxState>({ phase: "idle" });
   const running = useRef(false);
+  const toast = useToast();
+  const fail = (error: string, extra: Partial<TxState> = {}) => {
+    setState({ phase: "failed", error, ...extra });
+    toast({ kind: "error", title: "Transaction didn't go through", text: error } satisfies ToastInput);
+  };
 
   const reset = useCallback(() => setState({ phase: "idle" }), []);
 
@@ -123,7 +127,7 @@ export function useTxAction() {
         try {
           await httpClient.simulateContract(contractCall(req, address));
         } catch (e2) {
-          setState({ phase: "failed", error: explainError(e2) });
+          fail(explainError(e2));
           return;
         }
       }
@@ -138,11 +142,12 @@ export function useTxAction() {
           gas: gasLimit,
         });
       } catch (e) {
-        if (WALLET_REJECTION.test(errorMessage(e))) {
+        if (isUserRejection(e)) {
           setState({ phase: "ready", error: "Rejected in the wallet — nothing was sent." });
+          toast({ kind: "info", title: "Cancelled", text: CANCELLED_MESSAGE });
           return;
         }
-        setState({ phase: "failed", error: explainError(e) });
+        fail(explainError(e));
         return;
       }
       setState({ phase: "submitted", hash, gasLimit, maxFeeWei });
@@ -152,12 +157,11 @@ export function useTxAction() {
           hash, timeout: 120_000,
         });
         if (receipt.status !== "success") {
-          setState({ phase: "failed", hash, error: "The transaction reverted on chain." });
+          fail("The transaction reverted on chain.", { hash });
           return;
         }
       } catch (e) {
-        setState({ phase: "failed", hash,
-          error: `Still unconfirmed — check the explorer. ${explainError(e)}` });
+        fail(`Still unconfirmed — check the explorer. ${explainError(e)}`, { hash });
         return;
       }
       setState({ phase: "confirmed", hash, gasLimit, maxFeeWei });
@@ -170,7 +174,7 @@ export function useTxAction() {
       running.current = false;
     }
   }, [address, isConnected, chainId, switchChainAsync, writeContractAsync,
-      walletClient, qc]);
+      walletClient, qc, toast]);
 
   return { state, run, reset, busy: BUSY_PHASES.includes(state.phase) };
 }
