@@ -4,7 +4,7 @@ import { QOREX_DOWNLOAD_URLS } from "@qorechain/qorex-types";
 import { PageBody, PageHeader } from "../components/Page";
 import { becomeVerifierUrl } from "../data/verifiers";
 
-const FAUCET_URL = "https://dashboard.qorechain.io";
+import { FAUCET_URL } from "../wallet/Readiness";
 const TABS = [
   { id: "fund", label: "Fund" },
   { id: "claim", label: "Claim" },

@@ -26,7 +26,7 @@ describe("Shell", () => {
   it("shows the announcement, nav links, feed status and wallet button", async () => {
     renderApp(<Shell><p>page body</p></Shell>);
     expect(screen.getByText(/test QOR, no monetary value/i)).toBeInTheDocument();
-    for (const name of ["Explore", "Create", "Dashboard", "Get started", "Signer"]) {
+    for (const name of ["Explore", "Create", "Dashboard", "Get started", "Signing"]) {
       expect(screen.getAllByRole("link", { name })[0]).toBeInTheDocument();
     }
     expect(screen.getByText("page body")).toBeInTheDocument();

@@ -13,7 +13,7 @@ const NAV = [
   { to: "/create", label: "Create" },
   { to: "/me", label: "Dashboard" },
   { to: "/start", label: "Get started" },
-  { to: "/signer", label: "Signer" },
+  { to: "/signer", label: "Signing" },
 ];
 
 /** diana network pill: latest block and whether the RPC and event feed are healthy. */
@@ -101,7 +101,7 @@ export function Shell({ children }: { children?: ReactNode }) {
 }
 
 const FOOTER_LINKS = [
-  { title: "App", links: [["Explore", "/explore"], ["Create", "/create"], ["Dashboard", "/me"], ["Signer", "/signer"]] },
+  { title: "App", links: [["Explore", "/explore"], ["Create", "/create"], ["Dashboard", "/me"], ["Get started", "/start"], ["Signing", "/signer"]] },
 ];
 
 function AppFooter() {
@@ -133,7 +133,7 @@ function AppFooter() {
             <h2 className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper/50">Protocol</h2>
             <ul className="mt-3 space-y-2 text-sm text-paper/80">
               <li><a className="hover:text-paper" href="https://dashboard.qorechain.io/explorer" target="_blank" rel="noreferrer">diana explorer</a></li>
-              <li><Link className="hover:text-paper" to="/signer">Local signer</Link></li>
+              <li><Link className="hover:text-paper" to="/signer">Signing help</Link></li>
             </ul>
           </div>
         </div>
