@@ -114,7 +114,7 @@ describe("ui primitives", () => {
 
   it("formats QOR amounts with the wei in the tooltip", () => {
     render(<Qor wei={1_500_000_000_000_000_000n} />);
-    expect(screen.getByText(/1\.5/)).toHaveAttribute("title", "1500000000000000000 wei");
+    expect(screen.getByText(/1\.5/)).toHaveAttribute("title", "1.5 QOR (1500000000000000000 wei)");
   });
 
   it("counts down and reports expiry", () => {

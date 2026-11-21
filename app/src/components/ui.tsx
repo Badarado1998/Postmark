@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { formatUnits } from "viem";
 import { explorerAddress } from "../chain/config";
+import { exactQor, formatQor } from "./qor";
 import { STATE_NAMES, statusStyle, type BountyStateName } from "./status";
 export { STATE_NAMES };
 export type { BountyStateName };
@@ -39,8 +39,8 @@ export function Countdown({ to, className }: { to: number | bigint; className?: 
 
 export function Qor({ wei, className }: { wei: bigint; className?: string }) {
   return (
-    <span className={className} title={`${wei.toString()} wei`}>
-      {formatUnits(wei, 18)} <span className="text-gray">QOR</span>
+    <span className={className} title={exactQor(wei)}>
+      {formatQor(wei)} <span className="text-gray">QOR</span>
     </span>
   );
 }
