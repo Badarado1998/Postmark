@@ -5,6 +5,7 @@ import { useGithubItem } from "../hooks/queries";
 import { StatusChip, Skeleton, ErrorState, EmptyState, Qor } from "../components/ui";
 import { explainError } from "../chain/errors";
 import { PageBody, PageHeader } from "../components/Page";
+import { ClaimIntro } from "./bounty/ClaimIntro";
 import { requestWallet, useWalletWanted } from "../components/walletIntent";
 import { nowSec } from "../chain/time";
 import { Card, SectionLabel } from "../components/ui";
@@ -27,7 +28,7 @@ const FunderShare = lazy(() => import("../wallet/FunderShare"));
 /** Static stand-in for the action panels: no wallet code loads until the visitor asks for it. */
 function WalletPrompt({ bounty: b }: { bounty: Bounty }) {
   const now = nowSec();
-  const text = b.state === STATE.Open && now < b.deadline ? "Connect a wallet to claim this bounty."
+  const text = b.state === STATE.Open && now < b.deadline ? null
     : b.state === STATE.Pending && now >= b.challengeEndsAt
       ? "Challenge window closed — ready to finalize. Connect a wallet to finalize this payout; anyone can."
     : b.state === STATE.Open || b.state === STATE.Claimed || b.state === STATE.Pending
@@ -136,14 +137,9 @@ export default function BountyDetail() {
             <aside aria-label="Bounty summary"
               className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:min-w-0 lg:space-y-4 lg:sticky lg:top-24 lg:self-start">
               <div data-slot="actions" className="order-2 min-w-0 space-y-4 empty:hidden lg:order-none">
-                {wanted ? (
-                  <>
-                    {b.state === STATE.Open && meta && (
-                      <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
-                    )}
-                    <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
-                  </>
-                ) : <WalletPrompt bounty={b} />}
+                {wanted
+                  ? <Suspense fallback={null}><TxActions id={id} bounty={b} /></Suspense>
+                  : <WalletPrompt bounty={b} />}
               </div>
               <div data-slot="facts" className="order-4 min-w-0 space-y-4 lg:order-none">
                 <AmountBreakdown bounty={b} />
@@ -155,6 +151,11 @@ export default function BountyDetail() {
             <div data-slot="story" className="order-3 min-w-0 space-y-6 lg:order-none lg:col-start-1 lg:row-start-2">
               {meta && <GithubCard ownerRepo={meta.ownerRepo} kind={meta.kind} number={meta.number} />}
               <Timeline events={events} />
+              {b.state === STATE.Open && meta && (
+                wanted
+                  ? <Suspense fallback={null}><ClaimPanel id={id} bounty={b} meta={meta} /></Suspense>
+                  : nowSec() < b.deadline && <ClaimIntro />
+              )}
               <details className="rounded-xl border border-ink/10 bg-white p-5">
                 <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.18em] text-gray">all fields</summary>
                 <div className="mt-4"><BountyFacts bounty={b} /></div>

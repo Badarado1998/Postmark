@@ -141,7 +141,18 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
     });
   };
 
+  const signLabel = signing ? "Signing…" : qoreXSigns ? "Sign with QoreX" : "Sign the claim";
+  const current = signature ? 3 : claim ? 3 : 1;
+  const stepBox = (n: number) =>
+    `rounded-lg border p-4 ${current === n ? "border-deep bg-white" : "border-ink/10 bg-white/60"}`;
+  const badge = (n: number, done: boolean) => (
+    <span className={`grid size-6 shrink-0 place-items-center rounded-full font-mono text-xs ${
+      done ? "bg-deep text-paper" : current === n ? "bg-leaf text-ink" : "bg-ink/10 text-charcoal"}`}>{done ? "✓" : n}</span>
+  );
+  const btn = "rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40";
+
   return (
+    <div data-testid="claim-card">
     <Card tone="accent">
       <SectionLabel tone="accent">claim this bounty</SectionLabel>
 
@@ -151,82 +162,100 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
           <a href="/start" className="text-deep underline underline-offset-4">Get started</a>
         </p>
       )}
-      <AdvancedSigner />
 
-      <div className="mt-4">
-        <ReadinessChecklist neededWei={0n} title="Before you claim" onEnable={(n) => void enable.run(n)} />
+      <div className="mt-3">
+        <ReadinessChecklist compact neededWei={0n} title="Ready to claim" onEnable={(n) => void enable.run(n)} />
       </div>
 
-      {/* step 1 — identity */}
-      <div className="mt-4">
-        <p className="text-sm text-gray">
-          <span className="font-mono text-xs text-gray">1 ·</span> Post this exact line as a comment
-          on <a className="text-deep underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
-            {githubItemLabel(meta)}
-          </a>, from the GitHub account that will open the PR:
-        </p>
-        <div className="mt-2 flex items-start gap-2">
-          <code className="grow break-all rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink">{line}</code>
-          <button type="button"
-            onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "success", title: "Copied", text: "Claim line copied — post it as a GitHub comment." }); }}
-            className="shrink-0 rounded-lg border border-ink/15 px-3 py-2 text-xs text-gray hover:bg-ink/5">copy</button>
-        </div>
-        {step === "identity" && (
-          <button type="button" onClick={() => void scan()} disabled={scanning}
-            className="mt-3 rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40">
-            {scanning ? "Scanning comments…" : "I've posted it — find my comment"}
-          </button>
-        )}
-        {scanError && <p role="alert" className="mt-2 text-sm text-orange">{scanError}</p>}
-      </div>
+      <ol className="mt-4 space-y-3">
+        {/* step 1 — post the claim line */}
+        <li className={stepBox(1)}>
+          <div className="flex items-center gap-3">
+            {badge(1, !!claim)}
+            <h3 className="font-semibold tracking-tight">Post your claim line</h3>
+          </div>
+          <p className="mt-2 text-sm text-charcoal">
+            Comment this exact line on the issue, from the GitHub account that will open the PR.{" "}
+            <a className="font-medium text-deep underline underline-offset-4" href={itemUrl} target="_blank" rel="noreferrer">
+              Open the issue to comment
+            </a>{" "}
+            <span className="text-gray">({githubItemLabel(meta)})</span>
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            <code className="w-full grow break-all rounded-lg border border-ink/10 bg-paper p-3 font-mono text-xs text-ink">{line}</code>
+            <button type="button"
+              onClick={() => { void navigator.clipboard.writeText(line); toast({ kind: "success", title: "Copied", text: "Claim line copied — post it as a GitHub comment." }); }}
+              className="shrink-0 rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110">Copy</button>
+          </div>
+        </li>
 
-      {/* step 2 — signature */}
-      {claim && (
-        <div className="mt-5 border-t border-ink/10 pt-4">
-          <p className="text-sm text-gray">
-            <span className="font-mono text-xs text-gray">2 ·</span>{" "}
-            Sign the claim with your ML-DSA-87 key
-            {sigStatus && <span className="ml-2 text-deep">{sigStatus.text}</span>}
-          </p>
-          <p className="mt-1 font-mono text-xs text-gray">
-            identity {claim.identityHash.slice(0, 18)}… ·{" "}
-            <a className="underline decoration-dotted hover:text-deep" href={claim.commentUrl} target="_blank" rel="noreferrer">comment</a>
-          </p>
-          {myKey.data && !myKey.data.live && (
-            <p role="alert" className="mt-2 text-sm text-orange">
-              Your connected account has no live ML-DSA-87 key on diana — claims will revert with KeyIneligible.
-            </p>
+        {/* step 2 — find the comment */}
+        <li className={stepBox(2)}>
+          <div className="flex items-center gap-3">
+            {badge(2, !!claim)}
+            <h3 className="font-semibold tracking-tight">Find my comment</h3>
+          </div>
+          {sigStatus && claim ? (
+            <p className="mt-2 text-sm text-deep">{sigStatus.text}</p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-gray">After you've posted it, we look it up on GitHub.</p>
+              <button type="button" onClick={() => void scan()} disabled={scanning || step !== "identity"} className={`mt-3 ${btn}`}>
+                {scanning ? "Scanning comments…" : "I've posted it — find my comment"}
+              </button>
+            </>
           )}
-          {qoreXSigns && (
-            <p className="mt-2 text-xs text-gray">QoreX will sign as {qorex.qorAddress}.</p>
+          {scanError && <p role="alert" className="mt-2 text-sm text-orange">{scanError}</p>}
+        </li>
+
+        {/* step 3 — sign and claim */}
+        <li className={stepBox(3)}>
+          <div className="flex items-center gap-3">
+            {badge(3, false)}
+            <h3 className="font-semibold tracking-tight">{qoreXSigns ? "Sign with QoreX and claim" : "Sign and claim"}</h3>
+          </div>
+          {!claim && <p className="mt-2 text-sm text-gray">Find your comment first, then sign and send the claim.</p>}
+          {claim && (
+            <>
+              <p className="mt-2 font-mono text-xs text-gray">
+                identity {claim.identityHash.slice(0, 18)}… ·{" "}
+                <a className="underline decoration-dotted hover:text-deep" href={claim.commentUrl} target="_blank" rel="noreferrer">comment</a>
+              </p>
+              {myKey.data && !myKey.data.live && (
+                <p role="alert" className="mt-2 text-sm text-orange">
+                  Your connected account has no live ML-DSA-87 key on diana — claims will revert with KeyIneligible.
+                </p>
+              )}
+              {qoreXSigns && <p className="mt-2 text-xs text-gray">QoreX will sign as {qorex.qorAddress}.</p>}
+              {mismatch && <p role="alert" className="mt-2 text-sm text-orange">{mismatch}</p>}
+            </>
           )}
-          {mismatch && <p role="alert" className="mt-2 text-sm text-orange">{mismatch}</p>}
-          {step === "signature" && (
-            <button type="button" onClick={() => void sign()} disabled={signing || !!mismatch || (myKey.data !== undefined && !myKey.data.live)}
-              className="mt-3 rounded-lg border border-salmon/50 px-4 py-2 text-sm text-deep hover:bg-salmon/10 disabled:opacity-40">
-              {signing ? "Signing…" : qoreXSigns ? "Sign with QoreX" : "Sign the claim"}
+          {!signature && (
+            <button type="button" onClick={() => void sign()}
+              disabled={!claim || step !== "signature" || signing || !!mismatch || (myKey.data !== undefined && !myKey.data.live)}
+              className={`mt-3 ${btn}`}>
+              {signLabel}
             </button>
           )}
+          {signature && (
+            <>
+              <p className="mt-2 text-sm text-gray">
+                Signature verified locally against your live key. Send the claim transaction
+                for <span className="font-mono">{shortAddr(address)}</span>.
+              </p>
+              <button type="button" onClick={send} disabled={tx.busy}
+                className="mt-3 rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
+                {tx.busy ? "Working…" : "Claim bounty"}
+              </button>
+            </>
+          )}
           {signError && <p role="alert" className="mt-2 text-sm text-orange">{signError}</p>}
-        </div>
-      )}
-
-      {/* step 3 — send */}
-      {signature && (
-        <div className="mt-5 border-t border-ink/10 pt-4">
-          <p className="text-sm text-gray">
-            <span className="font-mono text-xs text-gray">3 ·</span>{" "}
-            Signature verified locally against your live key. Send the claim transaction
-            for <span className="font-mono">{shortAddr(address)}</span>.
-          </p>
-          <button type="button" onClick={send} disabled={tx.busy}
-            className="mt-3 rounded-lg bg-deep px-5 py-2 text-sm font-medium text-paper hover:brightness-110 disabled:opacity-40">
-            {tx.busy ? "Working…" : "Claim bounty"}
-          </button>
-        </div>
-      )}
+        </li>
+      </ol>
       <TxStatusPanel state={tx.state} />
+      <AdvancedSigner />
     </Card>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { QOREX_DOWNLOAD_URLS } from "@qorechain/qorex-types";
@@ -76,9 +76,12 @@ const ICON: Record<RowStatus, ReactNode> = {
 };
 const STATUS_TEXT: Record<RowStatus, string> = { ok: "ready", todo: "needs attention", wait: "waiting" };
 
-export function ReadinessChecklist({ neededWei, onEnable, title = "Before you fund" }: {
+export function ReadinessChecklist({ neededWei, onEnable, title = "Before you fund", compact = false }: {
   neededWei: bigint; onEnable?: (neededWei: bigint) => void; title?: string;
+  /** one-line summary, only failing rows, passing ones behind a "show all" toggle */
+  compact?: boolean;
 }) {
+  const [showAll, setShowAll] = useState(false);
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -100,28 +103,47 @@ export function ReadinessChecklist({ neededWei, onEnable, title = "Before you fu
     else if (a.kind === "enable") onEnable?.(neededWei);
   };
   const btn = "shrink-0 rounded-md border border-ink/20 bg-white px-2.5 py-1 text-xs font-medium hover:bg-ink/5";
+  const ready = rows.filter((r) => r.status === "ok").length;
+  const shown = compact && !showAll ? rows.filter((r) => r.status !== "ok") : rows;
+  const list = (
+    <ul className="mt-3 space-y-2.5">
+      {shown.map((r) => (
+        <li key={r.id} className="flex items-start gap-2.5">
+          <span className="mt-0.5">{ICON[r.status]}</span>
+          <div className="min-w-0 grow">
+            <p className="text-sm font-medium leading-tight">{r.label} <span className="sr-only">— {STATUS_TEXT[r.status]}</span></p>
+            {r.status === "todo" && r.hint && <p className="mt-0.5 text-xs text-charcoal">{r.hint}</p>}
+          </div>
+          {r.status === "todo" && r.action && (
+            r.action.kind === "link"
+              ? <a className={btn} href={r.action.href} target={r.action.href.startsWith("/") ? undefined : "_blank"} rel="noreferrer">{r.action.label}</a>
+              : r.action.kind === "enable" && !onEnable ? null
+              : <button type="button" className={btn} onClick={() => run(r.action!)}>
+                  {r.action.kind === "connect" ? "Connect" : r.action.kind === "switch" ? "Switch" : "Enable"}
+                </button>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+  if (compact) {
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-medium">{title}: <span className="font-mono">{ready} of {rows.length} ready</span></p>
+          {ready > 0 && (
+            <button type="button" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}
+              className="text-xs text-deep underline underline-offset-4">{showAll ? "hide ready items" : "show all"}</button>
+          )}
+        </div>
+        {shown.length > 0 && list}
+      </div>
+    );
+  }
   return (
     <Card>
       <SectionLabel>{title}</SectionLabel>
-      <ul className="mt-3 space-y-2.5">
-        {rows.map((r) => (
-          <li key={r.id} className="flex items-start gap-2.5">
-            <span className="mt-0.5">{ICON[r.status]}</span>
-            <div className="min-w-0 grow">
-              <p className="text-sm font-medium leading-tight">{r.label} <span className="sr-only">— {STATUS_TEXT[r.status]}</span></p>
-              {r.status === "todo" && r.hint && <p className="mt-0.5 text-xs text-charcoal">{r.hint}</p>}
-            </div>
-            {r.status === "todo" && r.action && (
-              r.action.kind === "link"
-                ? <a className={btn} href={r.action.href} target={r.action.href.startsWith("/") ? undefined : "_blank"} rel="noreferrer">{r.action.label}</a>
-                : r.action.kind === "enable" && !onEnable ? null
-                : <button type="button" className={btn} onClick={() => run(r.action!)}>
-                    {r.action.kind === "connect" ? "Connect" : r.action.kind === "switch" ? "Switch" : "Enable"}
-                  </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      {list}
     </Card>
   );
 }

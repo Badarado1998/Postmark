@@ -76,11 +76,26 @@ describe("BountyDetail by state", () => {
     resetWalletIntent();
     setRoute(makeBounty({ state: 0 }));
     renderApp(<BountyDetail />);
-    expect(screen.getByText("Connect a wallet to claim this bounty.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect wallet to claim" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem").some((li) => li.textContent?.includes("Post your claim line"))).toBe(true);
     expect(screen.queryByText("claim panel")).toBeNull();
     expect(screen.queryByText("tx actions")).toBeNull();
     act(() => requestWallet());
     expect(await screen.findByText("claim panel")).toBeInTheDocument();
+  });
+
+  it("renders the claim card right after the Timeline with all three steps visible", async () => {
+    resetWalletIntent();
+    setRoute(makeBounty({ state: 0 }));
+    renderApp(<BountyDetail />);
+    const card = screen.getByTestId("claim-card");
+    const timeline = screen.getByRole("heading", { name: /timeline/i }).closest("div")!.parentElement!;
+    expect(timeline.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.previousElementSibling?.contains(screen.getByRole("heading", { name: /timeline/i }))
+      || card.previousElementSibling?.textContent?.toLowerCase().includes("timeline")).toBe(true);
+    for (const t of ["Post your claim line", "Find my comment", "Sign with QoreX and claim"]) {
+      expect(card).toHaveTextContent(t);
+    }
   });
 
   it("Open: offers the claim panel, no review link", async () => {
