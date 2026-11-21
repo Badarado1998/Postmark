@@ -133,7 +133,7 @@ describe("CreateInner", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Create bounty/ }));
     expect(await screen.findByText("Enter a github.com issue or PR URL.")).toBeInTheDocument();
-    expect(screen.getAllByText(/Required — three verifier addresses/)).toHaveLength(3);
+    expect(screen.getByText(/Verifier 1: Required — three verifier addresses/)).toBeInTheDocument();
     expect(m.run).not.toHaveBeenCalled();
   });
 

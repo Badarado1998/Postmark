@@ -1,0 +1,39 @@
+name: Become a verifier
+description: Offer to review bounty work on Postmark (diana testnet).
+title: "Verifier: "
+labels: ["verifier"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Verifiers review the work behind a bounty; any 2 of the 3 chosen verifiers agreeing releases the reward.
+        This is testnet only: payouts are test QOR with no monetary value.
+  - type: input
+    id: address
+    attributes:
+      label: Your address
+      description: Your 0x… EVM address or qor1… address on QoreChain diana.
+      placeholder: "0x… or qor1…"
+    validations:
+      required: true
+  - type: input
+    id: github
+    attributes:
+      label: GitHub login
+      placeholder: your-github-login
+    validations:
+      required: true
+  - type: textarea
+    id: note
+    attributes:
+      label: A short note
+      description: Which projects or languages can you review?
+    validations:
+      required: false
+  - type: checkboxes
+    id: key
+    attributes:
+      label: Post-quantum key
+      options:
+        - label: I have a live ML-DSA-87 key registered on diana.
+          required: true

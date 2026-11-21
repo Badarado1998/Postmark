@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import WalletRoot from "./WalletRoot";
 import { parseGithubUrl, githubItemLabel } from "../github/parse";
 import { ItemPreview, VerifierInput } from "./createParts";
+import { VerifierPicker } from "./VerifierPicker";
 import { validateForm, verifierFieldError } from "../formats/createForm";
 import { livePqcKey } from "../chain/pqc";
 import { useTxAction } from "../hooks/useTxAction";
@@ -229,22 +230,29 @@ function CreateForm() {
               <legend className={label}>
                 4 · Verifiers (need live ML-DSA-87 keys; any 2 settle)
               </legend>
-              <div data-group="verifiers" className="mt-3 space-y-2">
-                {verifiers.map((v, i) => (
-                  <VerifierInput key={i} i={i} value={v} reveal={show("verifiers")}
-                    checking={checkingKeys}
-                    live={keyStates[i]}
-                    error={verifierFieldError(v, i, verifiers, address)}
-                    onChange={(nv) => {
-                      const next = [...verifiers]; next[i] = nv; setVerifiers(next);
-                      clearKeyState(i);
-                    }} />
-                ))}
+              <div data-group="verifiers" className="mt-3">
+                <VerifierPicker slots={verifiers} connected={address}
+                  onChange={(next) => {
+                    setVerifiers(next);
+                    setTouched((t) => ({ ...t, verifiers: true }));
+                    next.forEach((_, i) => clearKeyState(i));
+                  }}>
+                  {verifiers.map((v, i) => (
+                    <VerifierInput key={i} i={i} value={v}
+                      checking={checkingKeys}
+                      live={keyStates[i]}
+                      error={verifierFieldError(v, i, verifiers, address)}
+                      onChange={(nv) => {
+                        const next = [...verifiers]; next[i] = nv; setVerifiers(next);
+                        clearKeyState(i);
+                      }} />
+                  ))}
+                </VerifierPicker>
               </div>
             </fieldset>
           </Card>
 
-          {!form.ok && errorGroup(form.error) !== "verifiers" && show(errorGroup(form.error)) && (
+          {!form.ok && show(errorGroup(form.error)) && (
             <p role="alert" className="text-sm text-orange">{form.error}</p>
           )}
         </div>
