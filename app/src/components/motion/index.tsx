@@ -1,16 +1,20 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, type ComponentProps, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 import { Link } from "react-router";
 import { exactQor, formatQor } from "../qor";
+import BlurText from "../reactbits/BlurText";
+import { createLoader, useEarlyAnimation } from "./early";
 
-const BlurText = lazy(() => import("../reactbits/BlurText"));
-const CountUp = lazy(() => import("../reactbits/CountUp"));
-const DecryptedText = lazy(() => import("../reactbits/DecryptedText"));
+const countUpLoader = createLoader(() => import("../reactbits/CountUp"));
+const decryptedLoader = createLoader(() => import("../reactbits/DecryptedText"));
 const LogoLoop = lazy(() => import("../reactbits/LogoLoop"));
 const Magnet = lazy(() => import("../reactbits/Magnet"));
 const ShinyText = lazy(() => import("../reactbits/ShinyText"));
 const SpotlightCard = lazy(() => import("../reactbits/SpotlightCard"));
 const StarBorder = lazy(() => import("../reactbits/StarBorder"));
+
+type CountUpProps = ComponentProps<typeof import("../reactbits/CountUp").default>;
+type DecryptedProps = ComponentProps<typeof import("../reactbits/DecryptedText").default>;
 
 /** Every wrapper renders its final content statically under prefers-reduced-motion. */
 
@@ -27,15 +31,13 @@ export function BlurHeadline({ line1, line2, accent, tail = "", accentClass }:
   );
   if (reduce) return finalText;
   return (
-    <Suspense fallback={finalText}>
-      <span aria-label={full}>
-        <span className="block"><BlurText text={line1} trigger="load" delay={70} className="justify-center" /></span>{" "}
-        <span className="block">
-          <BlurText text={line2} trigger="load" delay={70} className="justify-center" />{" "}
-          <BlurText text={accent} trigger="load" delay={70} className={accentClass} />{tail}
-        </span>
+    <span aria-label={full}>
+      <span className="block"><BlurText text={line1} trigger="load" delay={70} className="justify-center" /></span>{" "}
+      <span className="block">
+        <BlurText text={line2} trigger="load" delay={70} className="justify-center" />{" "}
+        <BlurText text={accent} trigger="load" delay={70} className={accentClass} />{tail}
       </span>
-    </Suspense>
+    </span>
   );
 }
 
@@ -78,12 +80,14 @@ export function TextMarquee({ items, ariaLabel }: { items: string[]; ariaLabel: 
 
 export function ScrambleText({ text, className = "" }: { text: string; className?: string }) {
   const reduce = useReducedMotion();
-  if (reduce) return <span className={className}>{text}</span>;
+  const [ref, Animated] = useEarlyAnimation<DecryptedProps, HTMLSpanElement>(decryptedLoader);
   return (
-    <Suspense fallback={<span className={className}>{text}</span>}>
-      <DecryptedText text={text} animateOn="view" speed={30} maxIterations={12} sequential revealDirection="start"
-        className={className} parentClassName={className} />
-    </Suspense>
+    <span ref={ref} className={className}>
+      {!reduce && Animated
+        ? <Animated text={text} animateOn="view" speed={30} maxIterations={12} sequential revealDirection="start"
+            className={className} parentClassName={className} />
+        : text}
+    </span>
   );
 }
 
@@ -97,15 +101,16 @@ export function countProps(text: string): { to: number; decimals: number } | nul
 export function CountText({ text, className, suffix = "" }: { text: string; className?: string; suffix?: string }) {
   const reduce = useReducedMotion();
   const props = countProps(text);
-  if (reduce || !props) return <span className={className}>{text}{suffix}</span>;
+  const [ref, Animated] = useEarlyAnimation<CountUpProps, HTMLSpanElement>(countUpLoader);
+  const counting = !reduce && props && Animated;
   return (
-    <span className={className}>
-      <span className="sr-only">{text}{suffix}</span>
-      <span aria-hidden>
-        <Suspense fallback={`${text}${suffix}`}>
-          <CountUp {...props} trigger="view" duration={1.2} suffix={suffix} />
-        </Suspense>
-      </span>
+    <span ref={ref} className={className}>
+      {counting ? (
+        <>
+          <span className="sr-only">{text}{suffix}</span>
+          <span aria-hidden><Animated {...props} trigger="view" duration={1.2} suffix={suffix} /></span>
+        </>
+      ) : `${text}${suffix}`}
     </span>
   );
 }

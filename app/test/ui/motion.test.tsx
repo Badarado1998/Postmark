@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { createLoader, useEarlyAnimation } from "../../src/components/motion/early";
 import { formatQor } from "../../src/components/qor";
 
 const state = vi.hoisted(() => ({ reduce: true }));
@@ -53,9 +54,9 @@ describe("animated path", () => {
     render(<h1><BlurHeadline line1="Bounties" line2="pay" accent="verified" tail="." accentClass="text-deep" /></h1>);
     expect(screen.getByRole("heading", { name: "Bounties pay verified." })).toBeInTheDocument();
   });
-  it("CountText exposes the final value and hides the counter", () => {
+  it("CountText exposes the final value and hides the counter once the chunk is ready off-screen", async () => {
     const { container } = render(<CountText text="18" />);
-    expect(container.querySelector(".sr-only")).toHaveTextContent("18");
+    await waitFor(() => expect(container.querySelector(".sr-only")).toHaveTextContent("18"));
     expect(container.querySelector("[aria-hidden]")).not.toBeNull();
   });
   it("TextMarquee duplicates are aria-hidden", async () => {
@@ -74,5 +75,46 @@ describe("countProps", () => {
       const c = countProps(formatQor(wei));
       if (c) expect(c.to.toFixed(c.decimals)).toBe(formatQor(wei));
     }
+  });
+});
+
+describe("useEarlyAnimation", () => {
+  const Animated = () => <b>animated</b>;
+  const Probe = ({ loader }: { loader: ReturnType<typeof createLoader<object>> }) => {
+    const [ref, Comp] = useEarlyAnimation<object, HTMLDivElement>(loader);
+    return <div ref={ref}>{Comp ? <Comp /> : "static"}</div>;
+  };
+  const deferred = () => {
+    let resolve!: () => void;
+    const loader = createLoader<object>(() => new Promise((r) => { resolve = () => r({ default: Animated }); }));
+    return { loader, resolve };
+  };
+  const rect = (top: number) => vi.spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockReturnValue({ top, bottom: top + 20, left: 0, right: 10, width: 10, height: 20, x: 0, y: top, toJSON: () => ({}) });
+
+  it("animates when the chunk resolves before the element is visible", async () => {
+    rect(5000);
+    const { loader, resolve } = deferred();
+    render(<Probe loader={loader} />);
+    expect(screen.getByText("static")).toBeInTheDocument();
+    await act(async () => { resolve(); await loader.promise; });
+    expect(screen.getByText("animated")).toBeInTheDocument();
+  });
+
+  it("stays static when the element was already visible before the chunk resolved", async () => {
+    rect(10);
+    const { loader, resolve } = deferred();
+    render(<Probe loader={loader} />);
+    await act(async () => { resolve(); await loader.promise; });
+    expect(screen.getByText("static")).toBeInTheDocument();
+    expect(screen.queryByText("animated")).toBeNull();
+  });
+
+  it("stays static under reduced motion", async () => {
+    state.reduce = true;
+    rect(5000);
+    render(<CountText text="18" />);
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByText("18")).toBeInTheDocument();
   });
 });
