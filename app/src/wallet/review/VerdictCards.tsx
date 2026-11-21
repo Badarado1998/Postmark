@@ -53,8 +53,8 @@ export function DecisionCard({ disputed, canPay, canResolve, scanDone, builder, 
   );
 }
 
-export function SignCard({ myVerifierIndex, usesQorex, mismatch = null, signing, error, signedIndex, onSign }: {
-  myVerifierIndex: number; usesQorex: boolean; mismatch?: string | null; signing: boolean;
+export function SignCard({ myVerifierIndex, usesQorex, checkFirst = false, mismatch = null, signing, error, signedIndex, onSign }: {
+  myVerifierIndex: number; usesQorex: boolean; checkFirst?: boolean; mismatch?: string | null; signing: boolean;
   error: string | null; signedIndex: number | null; onSign: () => void;
 }) {
   return (
@@ -68,7 +68,7 @@ export function SignCard({ myVerifierIndex, usesQorex, mismatch = null, signing,
         <p>The signer's address must be one of this bounty's verifiers.</p>
       </AdvancedSigner>
       <button type="button" onClick={onSign} disabled={signing || !!mismatch} className={`mt-3 ${ACCENT_BTN}`}>
-        {signing ? "Signing…" : usesQorex ? "Sign with QoreX" : "Sign with the local signer"}
+        {signing ? "Signing…" : checkFirst ? "Check with QoreX" : usesQorex ? "Sign with QoreX" : "Sign with the local signer"}
       </button>
       {error && <Alert>{error}</Alert>}
       {signedIndex !== null && (

@@ -70,9 +70,9 @@ function ReviewPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; met
         scanDone={identity.status === "done"} builder={builder} built={builder.built} />
       {builder.built && (
         <SignCard myVerifierIndex={myVerifierIndex}
-          usesQorex={!preferLocal && !!(qorex.canSignArbitrary && qorex.qorAddress)}
+          usesQorex={!preferLocal && qorex.canSignArbitrary} checkFirst={!preferLocal && qorex.canSignArbitrary && !qorex.qorAddress}
           signing={signing.signing} error={signing.error} signedIndex={signing.signedIndex}
-          onSign={() => void signing.sign()} />
+          onSign={() => (!preferLocal && qorex.canSignArbitrary && !qorex.qorAddress ? void qorex.connectAccount().catch(() => undefined) : void signing.sign())} />
       )}
       {builder.built && (
         <BundleCard bounty={bounty} disputed={disputed} bundleView={bundle} onSubmit={submit}

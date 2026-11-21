@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 const qx = vi.hoisted(() => ({
   installed: false, native: null as unknown, accounts: [] as { address: string }[], caps: new Set<string>(),
@@ -23,7 +23,7 @@ import { bytesToHex } from "viem";
 import { CLAIMANT, FUNDER } from "../fixtures";
 
 const PREFIX = "qorechain-msg-v1|qorechain-diana|";
-import { useQorex, type QorexState } from "../../src/wallet/qorex";
+import { useQorex, resetQorexProbe, type QorexState } from "../../src/wallet/qorex";
 
 const SIG = `0x${"ab".repeat(8)}` as const;
 const jsonResponse = (status: number, body: unknown) =>
@@ -159,29 +159,74 @@ describe("PQ signers", () => {
 });
 
 describe("useQorex", () => {
-  beforeEach(() => Object.assign(qx, { installed: false, native: null, accounts: [], caps: new Set(), eip1193: null }));
+  beforeEach(() => {
+    Object.assign(qx, { installed: false, native: null, accounts: [], caps: new Set(), eip1193: null });
+    localStorage.clear();
+    resetQorexProbe();
+  });
 
   it("stays idle when QoreX is not installed", async () => {
     const { result } = renderHook(() => useQorex());
-    await waitFor(() => expect(result.current.installed).toBe(false));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(result.current.installed).toBe(false);
     expect(result.current.canSignArbitrary).toBe(false);
   });
 
-  it("lights up capabilities and the active account when QoreX is present", async () => {
+  it("reads capabilities on load but never touches the account until the user links QoreX", async () => {
+    const listAccounts = vi.fn(); const enable = vi.fn();
     qx.installed = true;
     qx.caps = new Set(["listAccounts", "signArbitrary"]);
-    qx.native = { listAccounts: async () => ({ accounts: [{ address: "qor1a" }, { address: "qor1b" }], activeIndex: 1 }) };
+    qx.native = { listAccounts, enable };
     const { result } = renderHook(() => useQorex());
     await waitFor(() => expect(result.current.installed).toBe(true));
-    expect(result.current).toMatchObject({ qorAddress: "qor1b", canSignArbitrary: true, evmCanSend: false });
+    expect(result.current).toMatchObject({ qorAddress: null, canSignArbitrary: true, evmCanSend: false });
+    expect(listAccounts).not.toHaveBeenCalled();
+    expect(enable).not.toHaveBeenCalled();
   });
 
-  it("tolerates a site that is not connected yet", async () => {
+  it("reads the remembered account silently (read-only, no enable)", async () => {
+    localStorage.setItem("pm-qorex-linked", "1");
+    const enable = vi.fn();
+    qx.installed = true;
+    qx.caps = new Set(["listAccounts", "signArbitrary"]);
+    qx.native = { enable, listAccounts: async () => ({ accounts: [{ address: "qor1a" }, { address: "qor1b" }], activeIndex: 1 }) };
+    const { result } = renderHook(() => useQorex());
+    await waitFor(() => expect(result.current.qorAddress).toBe("qor1b"));
+    expect(enable).not.toHaveBeenCalled();
+  });
+
+  it("forgets the link when the silent read fails", async () => {
+    localStorage.setItem("pm-qorex-linked", "1");
     qx.installed = true;
     qx.caps = new Set(["listAccounts", "evmTransactions"]);
     qx.native = { listAccounts: async () => { throw new Error("not connected"); } };
     const { result } = renderHook(() => useQorex());
     await waitFor(() => expect(result.current.installed).toBe(true));
+    await waitFor(() => expect(localStorage.getItem("pm-qorex-linked")).toBeNull());
     expect(result.current).toMatchObject({ qorAddress: null, evmCanSend: true });
+  });
+
+  it("connectAccount is the interactive path: enable, then list, then remember", async () => {
+    const enable = vi.fn().mockResolvedValue(undefined);
+    qx.installed = true;
+    qx.caps = new Set(["listAccounts"]);
+    qx.native = { enable, listAccounts: async () => ({ accounts: [{ address: "qor1z" }], activeIndex: 0 }) };
+    const { result } = renderHook(() => useQorex());
+    await waitFor(() => expect(result.current.installed).toBe(true));
+    await act(async () => { await result.current.connectAccount(); });
+    expect(enable).toHaveBeenCalledWith("qorechain-diana");
+    expect(result.current.qorAddress).toBe("qor1z");
+    expect(localStorage.getItem("pm-qorex-linked")).toBe("1");
+  });
+
+  it("a rejected connectAccount leaves nothing remembered", async () => {
+    localStorage.setItem("pm-qorex-linked", "1");
+    qx.installed = true;
+    qx.caps = new Set(["listAccounts"]);
+    qx.native = { enable: async () => { throw Object.assign(new Error("User rejected"), { code: 4001 }); }, listAccounts: async () => { throw new Error("x"); } };
+    const { result } = renderHook(() => useQorex());
+    await waitFor(() => expect(result.current.installed).toBe(true));
+    await act(async () => { await expect(result.current.connectAccount()).rejects.toThrow(/rejected/); });
+    expect(localStorage.getItem("pm-qorex-linked")).toBeNull();
   });
 });

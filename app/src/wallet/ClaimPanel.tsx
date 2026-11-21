@@ -36,6 +36,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
   const enable = useEnableTransactions();
   const preferLocal = usePrefersLocalSigner();
   const qoreXSigns = !preferLocal && qorex.canSignArbitrary && !!qorex.qorAddress;
+  const needsQorexCheck = !preferLocal && qorex.canSignArbitrary && !qorex.qorAddress;
   const mismatch = qoreXSigns ? accountMismatchMessage(qorex.qorAddress, address) : null;
   const myKey = usePqcStatus(address);
   const tx = useTxAction();
@@ -141,7 +142,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
     });
   };
 
-  const signLabel = signing ? "Signing…" : qoreXSigns ? "Sign with QoreX" : "Sign the claim";
+  const signLabel = signing ? "Signing…" : needsQorexCheck ? "Check with QoreX" : qoreXSigns ? "Sign with QoreX" : "Sign the claim";
   const current = signature ? 3 : claim ? 3 : 1;
   const stepBox = (n: number) =>
     `rounded-lg border p-4 ${current === n ? "border-deep bg-white" : "border-ink/10 bg-white/60"}`;
@@ -231,7 +232,7 @@ function ClaimPanelBody({ id, bounty, meta }: { id: bigint; bounty: Bounty; meta
             </>
           )}
           {!signature && (
-            <button type="button" onClick={() => void sign()}
+            <button type="button" onClick={() => (needsQorexCheck ? void qorex.connectAccount().catch(() => undefined) : void sign())}
               disabled={!claim || step !== "signature" || signing || !!mismatch || (myKey.data !== undefined && !myKey.data.live)}
               className={`mt-3 ${btn}`}>
               {signLabel}

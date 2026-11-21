@@ -53,9 +53,10 @@ function ConnectButtonInner({ openOnMount }: { openOnMount: boolean }) {
                   <button type="button" disabled={isPending}
                     onClick={() => connect({ connector: c, chainId: diana.id },
                       { onSuccess: () => picker.current?.close(),
-                        onError: (e) => toast(isUserRejection(e)
+                        onError: (e) => { try { localStorage.removeItem("wagmi.recentConnectorId"); } catch { /* storage blocked */ }
+                          toast(isUserRejection(e)
                           ? { kind: "info", title: "Cancelled", text: CANCELLED_MESSAGE }
-                          : { kind: "error", title: "Couldn't connect", text: `Couldn't connect to ${c.name}. Try again or pick another wallet.` }) })}
+                          : { kind: "error", title: "Couldn't connect", text: `Couldn't connect to ${c.name}. Try again or pick another wallet.` }); } })}
                     className="w-full break-words rounded-lg border border-ink/15 bg-white px-4 py-2.5 text-left text-sm font-medium hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-deep disabled:opacity-50">
                     {c.name}
                   </button>

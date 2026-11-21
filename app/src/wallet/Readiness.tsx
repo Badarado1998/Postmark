@@ -17,7 +17,7 @@ export { FAUCET_URL };
 
 export type RowStatus = "ok" | "todo" | "wait";
 export type RowAction =
-  | { kind: "connect" } | { kind: "switch" } | { kind: "enable" }
+  | { kind: "connect" } | { kind: "switch" } | { kind: "enable" } | { kind: "checkQorex" }
   | { kind: "link"; href: string; label: string };
 export interface ReadinessRow { id: string; label: string; status: RowStatus; hint?: string | undefined; action?: RowAction }
 
@@ -49,7 +49,7 @@ export function readinessRows(i: ReadinessInput): ReadinessRow[] {
     ? { id: "qorex", label: "Same account as QoreX", status: "todo", hint: "Install QoreX to sign with your post-quantum key.",
         action: { kind: "link", href: QOREX_DOWNLOAD_URLS.chrome, label: "Get QoreX" } }
     : mismatch ? { id: "qorex", label: "Same account as QoreX", status: "todo", hint: mismatch }
-    : !i.qorAddress ? { id: "qorex", label: "Same account as QoreX", status: "todo", hint: "Open QoreX and connect this site." }
+    : !i.qorAddress ? { id: "qorex", label: "Same account as QoreX", status: "todo", hint: "QoreX hasn't been asked yet.", action: { kind: "checkQorex" } }
     : { id: "qorex", label: "Same account as QoreX", status: "ok" });
   rows.push(i.pqcLive === true ? { id: "pqc", label: "Post-quantum key registered", status: "ok" }
     : i.pqcLive === false ? { id: "pqc", label: "Post-quantum key registered", status: "todo",
@@ -100,6 +100,7 @@ export function ReadinessChecklist({ neededWei, onEnable, title = "Before you fu
   const run = (a: RowAction) => {
     if (a.kind === "connect") document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')?.click();
     else if (a.kind === "switch") switchChain({ chainId: 9800 });
+    else if (a.kind === "checkQorex") void qorex.connectAccount().catch(() => undefined);
     else if (a.kind === "enable") onEnable?.(neededWei);
   };
   const btn = "shrink-0 rounded-md border border-ink/20 bg-white px-2.5 py-1 text-xs font-medium hover:bg-ink/5";
@@ -119,7 +120,7 @@ export function ReadinessChecklist({ neededWei, onEnable, title = "Before you fu
               ? <a className={btn} href={r.action.href} target={r.action.href.startsWith("/") ? undefined : "_blank"} rel="noreferrer">{r.action.label}</a>
               : r.action.kind === "enable" && !onEnable ? null
               : <button type="button" className={btn} onClick={() => run(r.action!)}>
-                  {r.action.kind === "connect" ? "Connect" : r.action.kind === "switch" ? "Switch" : "Enable"}
+                  {r.action.kind === "connect" ? "Connect" : r.action.kind === "switch" ? "Switch" : r.action.kind === "checkQorex" ? "Check with QoreX" : "Enable"}
                 </button>
           )}
         </li>
